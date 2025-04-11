@@ -1,10 +1,10 @@
 module.exports = {
     apps: [
         {
-            name: 'kodus-ast',
+            name: 'kodus-microservice-ast',
             script: './dist/main.js',
-            out_file: '/app/logs/kodus-ast/out.log',
-            error_file: '/app/logs/kodus-ast/error.log',
+            out_file: '/app/logs/kodus-microservice-ast/out.log',
+            error_file: '/app/logs/kodus-microservice-ast/error.log',
             env_homolog: {
                 API_NODE_ENV: 'homolog',
             },

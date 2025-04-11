@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package kodus.ast.codeGraph;
+
+message CodeGraph {
+  map<string, FileAnalysis> files = 1;
+  map<string, FunctionAnalysis> functions = 2;
+  map<string, TypeAnalysis> types = 3;
+}
+
+message FileAnalysis {
+  repeated string defines = 1;
+  repeated Call calls = 2;
+  repeated string imports = 3;
+  repeated string className = 4;
+  FileUsage usedBy = 5;
+  FileDependencies dependencies = 6;
+}
+
+message FileUsage {
+  repeated string files = 1;
+  repeated string functions = 2;
+  repeated string types = 3;
+}
+
+message FileDependencies {
+  repeated string direct = 1;
+  repeated string transitive = 2;
+}
+
+message FunctionAnalysis {
+  string file = 1;
+  string name = 2;
+  repeated string params = 3;
+  int32 lines = 4;
+  string returnType = 5;
+  repeated Call calls = 6;
+  string className = 7;
+  int32 startLine = 8;
+  int32 endLine = 9;
+  string functionHash = 10;
+  string signatureHash = 11;
+  string bodyNode = 12;
+  string fullText = 13;
+}
+
+message TypeAnalysis {
+  string file = 1;
+  string type = 2;
+  string name = 3;
+  map<string, string> fields = 4;
+  repeated string implements = 5;
+  repeated string implementedBy = 6;
+  repeated string extends = 7;
+  repeated string extendedBy = 8;
+}
+
+message Call {
+  string function = 1;
+  string file = 2;
+  string caller = 3;
+}

@@ -1,0 +1,40 @@
+FROM --platform=linux/amd64 node:20-slim AS deps
+
+ARG RELEASE_VERSION
+WORKDIR /usr/src/app
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates git && \
+    rm -rf /var/lib/apt/lists/* && \
+    yarn global add clinic
+
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+COPY package.json yarn.lock ./
+
+FROM deps AS build
+WORKDIR /usr/src/app
+
+COPY . .
+
+RUN yarn build
+
+FROM deps AS production
+WORKDIR /usr/src/app
+EXPOSE 3002
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates git && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/dist ./dist
+COPY ecosystem.config.js ./
+COPY package.json yarn.lock ./
+
+RUN yarn global add pm2
+RUN pm2 install pm2-logrotate
+RUN pm2 set pm2-logrotate:max_size 30M
+RUN pm2 set pm2-logrotate:retain 10
+
+CMD ["pm2-runtime", "start", "ecosystem.config.js", "--env", "production"]

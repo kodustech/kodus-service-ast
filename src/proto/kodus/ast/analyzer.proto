@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package kodus.ast;
+
+service ASTAnalyzer {
+  rpc BuildEnrichedGraph(BuildEnrichedGraphRequest) returns (stream ChunkResponse);
+}
+
+message BuildEnrichedGraphRequest {
+    string headDir = 1;
+    string baseDir = 2;
+}
+
+message ChunkResponse {
+    string chunk = 1;
+}

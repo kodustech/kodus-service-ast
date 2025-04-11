@@ -1,0 +1,29 @@
+FROM node:20-slim AS deps
+WORKDIR /usr/src/app
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates git && \
+    rm -rf /var/lib/apt/lists/* && \
+    yarn global add clinic
+
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+COPY . .
+
+RUN yarn install --frozen-lockfile
+
+RUN yarn build
+
+FROM node:20-slim AS development
+WORKDIR /usr/src/app
+EXPOSE 3002
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates git && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY package.json yarn.lock ./
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY --from=deps /usr/src/app/dist ./dist
+
+CMD ["yarn", "start:dev"]

@@ -1,6 +1,6 @@
 services:
     kodus-ast:
-        image: kodus/microservice-ast:latest
+        image: kodus/service-ast:latest
         container_name: ${CONTAINER_NAME}
         build:
             context: .

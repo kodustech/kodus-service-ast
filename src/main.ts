@@ -46,7 +46,7 @@ async function bootstrap() {
     app.useLogger(pinoLogger);
 
     await app.listen();
-    console.log(`Microservice is listening on ${hostName}:${numberPort}`);
+    console.log(`AST service is listening on ${hostName}:${numberPort}`);
 }
 
 void bootstrap();

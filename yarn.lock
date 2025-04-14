@@ -308,6 +308,11 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
+"@bufbuild/protobuf@^2.0.0":
+  version "2.2.5"
+  resolved "https://registry.yarnpkg.com/@bufbuild/protobuf/-/protobuf-2.2.5.tgz#8e82c0af292113b4a89f8b658c71c4636c8d2e36"
+  integrity sha512-/g5EzJifw5GF8aren8wZ/G5oMuPoGeS6MQD3ca8ddcvdXR5UELUfdTZITCGNhNXynY/AYl3Z4plmxdj/tRl/hQ==
+
 "@colors/colors@1.5.0":
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
@@ -859,6 +864,18 @@
   version "4.4.2"
   resolved "https://registry.yarnpkg.com/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz#9299f82874bab9e4c7f9c48d865becbfe8d6907c"
   integrity sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==
+
+"@kwsites/file-exists@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@kwsites/file-exists/-/file-exists-1.1.1.tgz#ad1efcac13e1987d8dbaf235ef3be5b0d96faa99"
+  integrity sha512-m9/5YGR18lIwxSFDwfE3oA7bWuq9kdau6ugN4H2rJeyhFQZcG9AgSHkQtSD15a8WvTgfz9aikZMrKPHvbpqFiw==
+  dependencies:
+    debug "^4.1.1"
+
+"@kwsites/promise-deferred@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@kwsites/promise-deferred/-/promise-deferred-1.1.1.tgz#8ace5259254426ccef57f3175bc64ed7095ed919"
+  integrity sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==
 
 "@lukeed/csprng@^1.0.0":
   version "1.1.0"
@@ -2253,6 +2270,11 @@ caniuse-lite@^1.0.30001688:
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001712.tgz#41ee150f12de11b5f57c5889d4f30deb451deedf"
   integrity sha512-MBqPpGYYdQ7/hfKiet9SCI+nmN5/hp4ZzveOJubl5DTAMa5oggjAuoi0Z4onBpKPFI2ePGnQuQIzF3VxDjDJig==
 
+case-anything@^2.1.13:
+  version "2.1.13"
+  resolved "https://registry.yarnpkg.com/case-anything/-/case-anything-2.1.13.tgz#0cdc16278cb29a7fcdeb072400da3f342ba329e9"
+  integrity sha512-zlOQ80VrQ2Ue+ymH5OuM/DlDq64mEm+B9UTdHULv5osUMD6HalNTblf2b1u/m6QecjsnOkBpqVZ+XPwIVsy7Ng==
+
 chalk@^4.0.0, chalk@^4.0.2, chalk@^4.1.0, chalk@^4.1.2:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.2.tgz#aac4e2b7734a740867aeb16bf02aad556a1e7a01"
@@ -2563,6 +2585,11 @@ depd@2.0.0, depd@^2.0.0:
   resolved "https://registry.yarnpkg.com/depd/-/depd-2.0.0.tgz#b696163cc757560d09cf22cc8fad1571b79e76df"
   integrity sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==
 
+detect-libc@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-1.0.3.tgz#fa137c4bd698edf55cd5cd02ac559f91a4c4ba9b"
+  integrity sha512-pGjwhsmsp4kL2RTz08wcOlGN83otlqHeD/Z5T8GXZB+/YcpQ/dgo+lbU8ZsGxV0HIvqqxo9l7mqYwyYMD9bKDg==
+
 detect-newline@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/detect-newline/-/detect-newline-3.1.0.tgz#576f5dfc63ae1a192ff192d8ad3af6308991b651"
@@ -2585,6 +2612,13 @@ diff@^4.0.1:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/diff/-/diff-4.0.2.tgz#60f3aecb89d5fae520c11aa19efc2bb982aade7d"
   integrity sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==
+
+dprint-node@^1.0.8:
+  version "1.0.8"
+  resolved "https://registry.yarnpkg.com/dprint-node/-/dprint-node-1.0.8.tgz#a02470722d8208a7d7eb3704328afda1d6758625"
+  integrity sha512-iVKnUtYfGrYcW1ZAlfR/F59cUVL8QIhWoBJoSjkkdua/dkWIgjZfiLMeTjiB06X0ZLkQ0M2C1VbUj/CxkIf1zg==
+  dependencies:
+    detect-libc "^1.0.3"
 
 dunder-proto@^1.0.1:
   version "1.0.1"
@@ -4264,7 +4298,7 @@ mimic-response@^4.0.0:
   resolved "https://registry.yarnpkg.com/mimic-response/-/mimic-response-4.0.0.tgz#35468b19e7c75d10f5165ea25e75a5ceea7cf70f"
   integrity sha512-e5ISH9xMYU0DzrT+jl8q2ze9D6eWBto+I8CNpe+VI+K2J/F/k3PdkdTdz4wvGVH4NTpo+NRYTVIuMQEMMcsLqg==
 
-minimatch@^10.0.0:
+minimatch@^10.0.0, minimatch@^10.0.1:
   version "10.0.1"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-10.0.1.tgz#ce0521856b453c86e25f2c4c0d03e6ff7ddc440b"
   integrity sha512-ethXTt3SGGR+95gudmqJ1eNhRO7eGEGIgYA9vnPatK4/etz2MEVDno5GMCibdMTuBMyElzIlgxMna3K94XDIDQ==
@@ -5083,6 +5117,15 @@ signal-exit@^4.0.1, signal-exit@^4.1.0:
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-4.1.0.tgz#952188c1cbd546070e2dd20d0f41c0ae0530cb04"
   integrity sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==
 
+simple-git@^3.27.0:
+  version "3.27.0"
+  resolved "https://registry.yarnpkg.com/simple-git/-/simple-git-3.27.0.tgz#f4b09e807bda56a4a3968f635c0e4888d3decbd5"
+  integrity sha512-ivHoFS9Yi9GY49ogc6/YAi3Fl9ROnF4VyubNylgCkA+RVqLaKWnDSzXOVzya8csELIaWaYNutsEuAhZrtOjozA==
+  dependencies:
+    "@kwsites/file-exists" "^1.1.1"
+    "@kwsites/promise-deferred" "^1.1.1"
+    debug "^4.3.5"
+
 sisteransi@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/sisteransi/-/sisteransi-1.0.5.tgz#134d681297756437cc05ca01370d3a7a571075ed"
@@ -5569,6 +5612,30 @@ ts-node@^10.9.2:
     make-error "^1.1.1"
     v8-compile-cache-lib "^3.0.1"
     yn "3.1.1"
+
+ts-poet@^6.7.0:
+  version "6.11.0"
+  resolved "https://registry.yarnpkg.com/ts-poet/-/ts-poet-6.11.0.tgz#b41085c4ebf329bc6293a7d610a105978982b41a"
+  integrity sha512-r5AGF8vvb+GjBsnqiTqbLhN1/U2FJt6BI+k0dfCrkKzWvUhNlwMmq9nDHuucHs45LomgHjZPvYj96dD3JawjJA==
+  dependencies:
+    dprint-node "^1.0.8"
+
+ts-proto-descriptors@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/ts-proto-descriptors/-/ts-proto-descriptors-2.0.0.tgz#3a0e301a91cc6e932ac8dd13f7e07caa8a032c43"
+  integrity sha512-wHcTH3xIv11jxgkX5OyCSFfw27agpInAd6yh89hKG6zqIXnjW9SYqSER2CVQxdPj4czeOhGagNvZBEbJPy7qkw==
+  dependencies:
+    "@bufbuild/protobuf" "^2.0.0"
+
+ts-proto@^2.7.0:
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/ts-proto/-/ts-proto-2.7.0.tgz#ae2cc2e4cb5a28ba4af869f2ac4b1c3509b33b79"
+  integrity sha512-BGHjse2wTOeswOqnnPKinpxmbaRd882so/e1En6ww59YMG7AO9Kg4vPpJcbVfrpBixPRDqHafXD/RDyd2T99GA==
+  dependencies:
+    "@bufbuild/protobuf" "^2.0.0"
+    case-anything "^2.1.13"
+    ts-poet "^6.7.0"
+    ts-proto-descriptors "2.0.0"
 
 tsconfig-paths-webpack-plugin@4.2.0:
   version "4.2.0"

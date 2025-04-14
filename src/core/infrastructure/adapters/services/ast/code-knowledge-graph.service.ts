@@ -15,13 +15,14 @@ import { Piscina } from 'piscina';
 import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
 import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
+import { IMPORT_PATH_RESOLVER_TOKEN } from './import-path-resolver.service';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
     private piscina: Piscina;
 
     constructor(
-        @Inject('IImportPathResolver')
+        @Inject(IMPORT_PATH_RESOLVER_TOKEN)
         private readonly importPathResolver: IImportPathResolver,
         private readonly resolverFactory: ResolverFactory,
     ) {

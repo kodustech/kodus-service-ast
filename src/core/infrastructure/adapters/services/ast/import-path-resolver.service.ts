@@ -7,6 +7,8 @@ import {
 } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { AliasConfig } from '@/core/domain/ast/contracts/LanguageResolver';
 
+export const IMPORT_PATH_RESOLVER_TOKEN = Symbol('IImportPathResolver');
+
 @Injectable()
 export class ImportPathResolverService implements IImportPathResolver {
     private rootDir: string;

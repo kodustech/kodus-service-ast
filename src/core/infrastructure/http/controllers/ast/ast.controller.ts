@@ -1,22 +1,32 @@
-import { AnalyzeDependenciesUseCase } from '@/core/application/use-cases/ast/analyze-dependencies.use-cases';
-import { Injectable } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-import { from, switchMap } from 'rxjs';
+import { BuildEnrichedGraphUseCase } from '@/core/application/use-cases/ast/build-enriched-graph.use-case';
+import {
+    ASTAnalyzerController,
+    ASTAnalyzerControllerMethods,
+    kodusRPCBuildEnrichedGraphRequest,
+} from '@/proto/kodus/ast/analyzer';
+import { kodusRPCChunkResponse } from '@/proto/kodus/common/chunk';
+import { Controller } from '@nestjs/common';
+import { from, Observable, switchMap } from 'rxjs';
 
-@Injectable()
-export class ASTController {
+@Controller('ast')
+@ASTAnalyzerControllerMethods()
+export class ASTController implements ASTAnalyzerController {
     constructor(
-        private readonly analyzeDependenciesUseCase: AnalyzeDependenciesUseCase,
+        private readonly buildEnrichedGraphUseCase: BuildEnrichedGraphUseCase,
     ) {}
 
-    @GrpcMethod('ASTAnalyzer', 'BuildEnrichedGraph')
-    buildEnrichedGraph(data: { headDir: string; baseDir: string }) {
+    buildEnrichedGraph(
+        request: kodusRPCBuildEnrichedGraphRequest,
+    ): Observable<kodusRPCChunkResponse> {
         return from(
-            this.analyzeDependenciesUseCase.execute(data.headDir, data.baseDir),
-        ).pipe(
+            this.buildEnrichedGraphUseCase.execute({
+                baseRepo: request.baseRepo,
+                headRepo: request.headRepo,
+            }),
+        ).pipe<kodusRPCChunkResponse>(
             switchMap((result) => {
                 const jsonString = JSON.stringify(result);
-                const chunks = [];
+                const chunks = [] as kodusRPCChunkResponse[];
                 const chunkSize = 65536; // 64 KB
 
                 for (let i = 0; i < jsonString.length; i += chunkSize) {

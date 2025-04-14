@@ -72,7 +72,7 @@ export class PinoLoggerService {
         }
         // Se for ExecutionContext, tenta extrair a URL da requisição
         try {
-            const request = context.switchToHttp().getRequest();
+            const request = context.switchToHttp().getRequest<Request>();
             return request.url || 'unknown';
         } catch (error) {
             return 'unknown';

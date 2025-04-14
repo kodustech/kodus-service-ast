@@ -3,6 +3,7 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './modules/app.module';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service';
 import { join } from 'path';
+import { cwd } from 'process';
 
 async function bootstrap() {
     const hostName = process.env.CONTAINER_NAME;
@@ -32,8 +33,11 @@ async function bootstrap() {
             transport: Transport.GRPC,
             options: {
                 package: 'kodus.ast',
-                protoPath: join(__dirname, 'proto/kodus/ast/analyzer.proto'),
+                protoPath: join(cwd(), 'proto/kodus/ast/analyzer.proto'),
                 url: `0.0.0.0:${numberPort}`,
+                loader: {
+                    includeDirs: [join(cwd(), 'proto')],
+                },
             },
         },
     );

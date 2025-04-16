@@ -145,22 +145,6 @@ export class CodeAnalyzerService {
         this.addedNodes = {};
         this.relationshipKeys = {};
 
-        console.log('🔄 Processando classes e interfaces...');
-        console.log('🔄 enrichGraph - Tipos disponíveis:', data.types.size);
-        console.log(
-            '🔄 enrichGraph - Funções disponíveis:',
-            data.functions.size,
-        );
-        console.log('🔄 enrichGraph - Arquivos disponíveis:', data.files.size);
-
-        // Verificar estrutura de uma chave de tipo para debug
-        if (data.types.size > 0) {
-            const sampleTypeEntry = Array.from(data.types.entries())[0];
-            console.log('🔄 Exemplo de chave de tipo:', sampleTypeEntry[0]);
-            console.log('🔄 Valor do tipo:', sampleTypeEntry[1]);
-        }
-
-        // Converter Maps para objetos para compatibilidade com os métodos existentes
         const dataAsObjects = {
             types: Object.fromEntries(data.types),
             functions: Object.fromEntries(data.functions),
@@ -173,13 +157,6 @@ export class CodeAnalyzerService {
 
         this.processFunctionCalls(dataAsObjects);
         this.processInheritance(dataAsObjects);
-
-        console.log('✅ Processamento de relacionamentos concluído!');
-        console.log('✅ enrichGraph - Nós processados:', this.nodes.length);
-        console.log(
-            '✅ enrichGraph - Relacionamentos processados:',
-            this.relationships.size,
-        );
 
         return {
             nodes: this.nodes,
@@ -196,8 +173,6 @@ export class CodeAnalyzerService {
     }
 
     private processTypes(data: { types?: Record<string, any> }) {
-        console.log('🔄 Processando classes e interfaces...');
-
         const normalizedTypes = new Map<
             string,
             {
@@ -274,20 +249,15 @@ export class CodeAnalyzerService {
                 }
             }
         });
-
-        console.log('✅ Processamento de tipos concluído!');
     }
 
     private processFunctions(data: any) {
-        console.log('🔍 processFunctions() iniciado');
-
         Object.entries(data.functions || {}).forEach(
             ([funcKey, func]: [string, any]) => {
                 let className = func.className;
                 let functionName = func.name;
                 const filePath = func.file;
 
-                // 🔹 Se `className` estiver ausente, tenta inferir a classe pelo arquivo
                 if (!className) {
                     className = this.inferClassName(filePath, data);
 
@@ -305,7 +275,6 @@ export class CodeAnalyzerService {
                     return;
                 }
 
-                // Criar identificador do método
                 const methodId = `${className}.${functionName}`;
 
                 if (!this.addedNodes[methodId]) {
@@ -317,7 +286,6 @@ export class CodeAnalyzerService {
                     );
                 }
 
-                // Relacionar método com a classe
                 if (this.addedNodes[methodId]) {
                     this.addRelationship(
                         className,
@@ -329,8 +297,6 @@ export class CodeAnalyzerService {
                 }
             },
         );
-
-        console.log('✅ Processamento de funções concluído!');
     }
 
     private processImports(data: any) {
@@ -347,9 +313,7 @@ export class CodeAnalyzerService {
         const normalizedFrom = this.normalizePath(filePath);
         const className = fileData.className?.[0];
 
-        // Verificar se data é um CodeGraph (com Maps) ou um objeto
         if (data.files instanceof Map) {
-            // Obter os dados do arquivo importado do Map
             const importedFileData = data.files.get(normalizedFrom);
             if (importedFileData && importedFileData.className) {
                 const importedClassName = importedFileData.className[0];
@@ -363,7 +327,6 @@ export class CodeAnalyzerService {
                 );
             }
         } else {
-            // Versão para objetos
             const importedFileData = data.files?.[normalizedFrom];
             if (importedFileData && importedFileData.className) {
                 const importedClassName = importedFileData.className[0];
@@ -381,7 +344,7 @@ export class CodeAnalyzerService {
 
     private processFunctionCalls(data: any) {
         for (const [funcKey, func] of Object.entries(data.functions || {})) {
-            const typedFunc = func as FunctionData; // ✅ cast explícito
+            const typedFunc = func as FunctionData;
 
             const { filePath } = this.extractFilePathAndIdentifier(funcKey);
 
@@ -399,7 +362,6 @@ export class CodeAnalyzerService {
                 const { filePath: calledFilePath } =
                     this.extractFilePathAndIdentifier(call.file);
 
-                // Processamento CALLS (Chamadas diretas)
                 const calledId = this.findMethodId(
                     call.file,
                     call.function,
@@ -416,7 +378,6 @@ export class CodeAnalyzerService {
                     );
                 }
 
-                // Processamento CALLS_IMPLEMENTATION (Chamadas para interfaces implementadas)
                 const implMethod = this.findImplementation(
                     call.file,
                     call.function,
@@ -436,8 +397,6 @@ export class CodeAnalyzerService {
     }
 
     private processInheritance(data: any) {
-        console.log('🔍 processInheritance() iniciado');
-
         Object.entries(data.types || {}).forEach(
             ([key, type]: [string, any]) => {
                 if (
@@ -481,15 +440,11 @@ export class CodeAnalyzerService {
         filePath: string,
     ) {
         if (!id || id === 'undefined') {
-            console.warn(
-                `⚠️ Tentativa de adicionar nó com ID inválido: ${filePath}`,
-            );
             return;
         }
         if (!this.addedNodes[id]) {
-            // ✅ Agora correto!
             this.nodes.push({ id, type, file, filePath });
-            this.addedNodes[id] = true; // ✅ Marca que já foi adicionado
+            this.addedNodes[id] = true;
         }
     }
 
@@ -531,12 +486,10 @@ export class CodeAnalyzerService {
     }
 
     private inferClassName(filePath: string, data: any): string | null {
-        // Se data for um CodeGraph (com Maps)
         if (data.files instanceof Map) {
             return this.inferClassNameFromMap(filePath, data);
         }
 
-        // Versão original para objetos
         const foundClass = Object.values(data.types || {}).find(
             (type: any) =>
                 type && type.file === filePath && type.type === 'class',
@@ -549,10 +502,8 @@ export class CodeAnalyzerService {
         filePath: string,
         data: CodeGraph,
     ): string | null {
-        // Normalizar o caminho para garantir consistência
         const normalizedPath = this.normalizePath(filePath);
 
-        // Obter os dados do arquivo
         const fileData = data.files.get(normalizedPath);
         if (!fileData || !fileData.className || !fileData.className.length) {
             return null;
@@ -566,11 +517,9 @@ export class CodeAnalyzerService {
         functionName: string,
         data: any,
     ): string | null {
-        // Tenta encontrar a classe ou interface no arquivo
         const fileData = data.files?.[filePath];
         if (!fileData) return null;
 
-        // Procura pela classe ou interface que define esse método
         const className = fileData.className?.[0] || 'undefined';
 
         return `${className}.${functionName}`;
@@ -581,50 +530,34 @@ export class CodeAnalyzerService {
         methodName: string,
         data: any,
     ): { id: string; filePath: string } | null {
-        console.log(
-            `🔎 Buscando implementação para ${interfacePath}.${methodName}`,
-        );
-
-        // Normalizar interfacePath removendo o nome da interface (se necessário)
         const matchingClasses = Object.entries(data.types || {}).filter(
             ([, type]: [string, any]) =>
                 type.type === 'class' &&
                 Array.isArray(type.implements) &&
                 type.implements.some((impl: string) =>
                     impl.startsWith(`${interfacePath}:`),
-                ), // Verifica se começa com o caminho
+                ),
         );
 
         if (matchingClasses.length === 0) {
-            console.error(
-                `❌ ERRO: Nenhuma implementação encontrada para ${interfacePath}`,
-            );
             return null;
         }
 
-        // Pegar a primeira classe que implementa a interface
         const [implClassPath, implClass] = matchingClasses[0] as [
             string,
             { name: string },
         ];
 
         if (!implClass.name) {
-            console.error(
-                `❌ ERRO: Implementação sem nome em ${implClassPath}`,
-            );
             return null;
         }
 
-        // Buscar o método dentro da classe implementada
         const implMethodEntry = Object.entries(data.functions || {}).find(
             ([, func]: [string, any]) =>
                 func.className === implClass.name && func.name === methodName,
         );
 
         if (!implMethodEntry) {
-            console.error(
-                `❌ ERRO: Método ${methodName} não encontrado em ${implClass.name}`,
-            );
             return null;
         }
 

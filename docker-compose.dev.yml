@@ -1,5 +1,5 @@
 services:
-    kodus-ast:
+    kodus-service-ast:
         image: kodus/service-ast:latest
         container_name: ${CONTAINER_NAME}
         build:
@@ -12,8 +12,9 @@ services:
             - .env
         restart: unless-stopped
         volumes:
-            - .:/usr/src/app:delegated
-            - /usr/src/app/node_modules
+            - .:/usr/src/app
+            - ../kodus-proto:/usr/src/kodus-proto
+            - ../certs:/usr/src/app/certs
         networks:
             - kodus-backend-services
 

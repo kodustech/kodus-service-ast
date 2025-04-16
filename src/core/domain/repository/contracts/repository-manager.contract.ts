@@ -1,7 +1,7 @@
-import { kodusRPCCloneRepositoryRequest } from '@/proto/kodus/ast/analyzer';
+import { CloneRepositoryRequest } from 'kodus-proto';
 
 export interface IRepositoryManager {
-    gitCloneWithAuth(params: kodusRPCCloneRepositoryRequest): Promise<string>;
+    gitCloneWithAuth(params: CloneRepositoryRequest): Promise<string>;
     deleteLocalRepository(
         organizationId: string,
         repositoryId: string,

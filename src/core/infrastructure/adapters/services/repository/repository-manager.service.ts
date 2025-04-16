@@ -7,10 +7,7 @@ import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
 import { isError } from '@/shared/utils/errors';
-import {
-    kodusRPCCloneRepositoryRequest,
-    kodusRPCPlatformType,
-} from '@/proto/kodus/ast/analyzer';
+import { CloneRepositoryRequest, ProtoPlatformType } from 'kodus-proto';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -186,9 +183,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         return git;
     }
 
-    async gitCloneWithAuth(
-        params: kodusRPCCloneRepositoryRequest,
-    ): Promise<string> {
+    async gitCloneWithAuth(params: CloneRepositoryRequest): Promise<string> {
         this.validateGitUrl(params.url);
         await this.ensureClientDirExists(params.organizationId);
 
@@ -215,7 +210,10 @@ export class RepositoryManagerService implements IRepositoryManager {
             const urlObj = new URL(params.url);
 
             if (token) {
-                if (params.provider === kodusRPCPlatformType.GITHUB) {
+                if (
+                    params.provider ===
+                    ProtoPlatformType.PROTO_PLATFORM_TYPE_GITHUB
+                ) {
                     urlObj.username = token;
                 } else {
                     urlObj.username = 'oauth2';

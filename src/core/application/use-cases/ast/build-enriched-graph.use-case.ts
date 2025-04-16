@@ -6,19 +6,17 @@ import {
 import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/ast/code-knowledge-graph.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
-import {
-    kodusRPCBuildEnrichedGraphRequest,
-    kodusRPCCloneRepositoryRequest,
-} from '@/proto/kodus/ast/analyzer';
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
+import { BuildEnrichedGraphRequest, CloneRepositoryRequest } from 'kodus-proto';
+import { handleError } from '@/shared/utils/errors';
 
 type CodeGraphContext = {
     codeGraphFunctions: Map<string, FunctionAnalysis>;
     cloneDir: string;
 };
 
-type CodeAnalysisAST = {
+export type CodeAnalysisAST = {
     processedChunk?: string;
     headCodeGraph: CodeGraphContext;
     baseCodeGraph: CodeGraphContext;
@@ -36,7 +34,7 @@ export class BuildEnrichedGraphUseCase {
     ) {}
 
     async execute(
-        request: kodusRPCBuildEnrichedGraphRequest,
+        request: BuildEnrichedGraphRequest,
     ): Promise<CodeAnalysisAST> {
         try {
             const { baseRepo, headRepo } = request;
@@ -69,13 +67,22 @@ export class BuildEnrichedGraphUseCase {
             await this.deleteRepo(headRepo);
             await this.deleteRepo(baseRepo);
 
+            const serializedHeadGraph =
+                this.codeKnowledgeGraphService.prepareGraphForSerialization(
+                    headGraph,
+                );
+            const serializedBaseGraph =
+                this.codeKnowledgeGraphService.prepareGraphForSerialization(
+                    baseGraph,
+                );
+
             return {
                 baseCodeGraph: {
-                    codeGraphFunctions: baseGraph.functions,
+                    codeGraphFunctions: serializedHeadGraph.functions,
                     cloneDir: baseDirPath,
                 },
                 headCodeGraph: {
-                    codeGraphFunctions: headGraph.functions,
+                    codeGraphFunctions: serializedBaseGraph.functions,
                     cloneDir: headDirPath,
                 },
                 headCodeGraphEnriched: enrichedHeadGraph,
@@ -84,7 +91,7 @@ export class BuildEnrichedGraphUseCase {
             this.logger.error({
                 message: 'Failed to build enriched graph',
                 context: BuildEnrichedGraphUseCase.name,
-                error: error,
+                error: handleError(error),
                 metadata: {
                     request: JSON.stringify(request),
                 },
@@ -95,9 +102,7 @@ export class BuildEnrichedGraphUseCase {
         }
     }
 
-    private async cloneRepo(
-        repo: kodusRPCCloneRepositoryRequest,
-    ): Promise<string> {
+    private async cloneRepo(repo: CloneRepositoryRequest): Promise<string> {
         const repoDir =
             await this.repositoryManagerService.gitCloneWithAuth(repo);
 
@@ -116,9 +121,7 @@ export class BuildEnrichedGraphUseCase {
         return path.resolve(repoDir);
     }
 
-    private async deleteRepo(
-        repo: kodusRPCCloneRepositoryRequest,
-    ): Promise<void> {
+    private async deleteRepo(repo: CloneRepositoryRequest): Promise<void> {
         await this.repositoryManagerService.deleteLocalRepository(
             repo.organizationId,
             repo.repositoryId,

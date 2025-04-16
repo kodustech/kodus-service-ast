@@ -35,7 +35,7 @@ export class SourceFileAnalyzer {
             const fileSizeInMB = fileStats?.size / (1024 * 1024);
             if (fileSizeInMB > 5) {
                 console.warn(
-                    `Arquivo muito grande para análise (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
+                    `File too large for analysis (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
                 );
                 return this.emptyAnalysis();
             }
@@ -121,7 +121,7 @@ export class SourceFileAnalyzer {
                 types: context.types,
             };
         } catch (error) {
-            console.error(`Erro ao analisar arquivo ${filePath}:`, error);
+            console.error(`Error analyzing file ${filePath}:`, error);
             return this.emptyAnalysis();
         }
     }

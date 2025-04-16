@@ -2,8 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './modules/app.module';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service';
-import { join } from 'path';
+import { resolve } from 'path';
 import { cwd } from 'process';
+import * as grpc from '@grpc/grpc-js';
+import * as fs from 'fs';
 
 async function bootstrap() {
     const hostName = process.env.CONTAINER_NAME;
@@ -32,12 +34,29 @@ async function bootstrap() {
         {
             transport: Transport.GRPC,
             options: {
-                package: 'kodus.ast',
-                protoPath: join(cwd(), 'proto/kodus/ast/analyzer.proto'),
+                package: 'kodus.ast.v1',
+                protoPath: resolve(
+                    cwd(),
+                    'node_modules/kodus-proto/kodus/ast/v1/analyzer.proto',
+                ),
                 url: `0.0.0.0:${numberPort}`,
                 loader: {
-                    includeDirs: [join(cwd(), 'proto')],
+                    includeDirs: [resolve(cwd(), 'node_modules/kodus-proto/')],
                 },
+                credentials: grpc.ServerCredentials.createSsl(
+                    fs.readFileSync(resolve(cwd(), 'certs/ca.crt')),
+                    [
+                        {
+                            private_key: fs.readFileSync(
+                                resolve(cwd(), 'certs/server.key'),
+                            ),
+                            cert_chain: fs.readFileSync(
+                                resolve(cwd(), 'certs/server.crt'),
+                            ),
+                        },
+                    ],
+                    true,
+                ),
             },
         },
     );

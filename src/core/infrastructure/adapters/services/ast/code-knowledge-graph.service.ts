@@ -16,6 +16,8 @@ import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
 import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
 import { IMPORT_PATH_RESOLVER_TOKEN } from './import-path-resolver.service';
+import { PinoLoggerService } from '../logger/pino.service';
+import { handleError } from '@/shared/utils/errors';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
@@ -25,6 +27,8 @@ export class CodeKnowledgeGraphService {
         @Inject(IMPORT_PATH_RESOLVER_TOKEN)
         private readonly importPathResolver: IImportPathResolver,
         private readonly resolverFactory: ResolverFactory,
+
+        private readonly logger: PinoLoggerService,
     ) {
         this.piscina = new Piscina({
             // Piscina has no support for typescript, so we need to use the compiled version
@@ -51,38 +55,34 @@ export class CodeKnowledgeGraphService {
         return files;
     }
 
-    /**
-     * Constrói o grafo de conhecimento progressivamente, reportando o progresso.
-     * Esta abordagem é mais eficiente para repositórios grandes e permite
-     * acompanhar o progresso da análise.
-     *
-     * @param rootDir Diretório raiz do repositório
-     * @param onProgress Callback para reportar progresso (opcional)
-     * @returns Grafo de conhecimento completo
-     */
     public async buildGraphProgressively(
         rootDir: string,
         onProgress?: (processed: number, total: number) => void,
     ): Promise<CodeGraph> {
-        // Validar se o diretório existe e não está vazio
         if (!rootDir || rootDir.trim() === '') {
-            throw new Error(`Diretório raiz não pode ser vazio ${rootDir}`);
+            throw new Error(`Root directory can't be empty ${rootDir}`);
         }
 
-        // Verificar se o diretório existe
         try {
             await fs.promises.access(rootDir, fs.constants.F_OK);
         } catch {
-            throw new Error(`Diretório raiz não encontrado: ${rootDir}`);
+            throw new Error(`Root directory not found: ${rootDir}`);
         }
 
-        console.time('buildGraphProgressively');
         await this.initializeImportResolver(rootDir);
+        if (!this.importPathResolver) {
+            throw new Error(
+                `Import path resolver not initialized for directory: ${rootDir}`,
+            );
+        }
 
-        const result: CodeGraph = {
+        const result: CodeGraph & {
+            failedFiles: string[];
+        } = {
             files: new Map<string, FileAnalysis>(),
             functions: new Map<string, FunctionAnalysis>(),
             types: new Map<string, TypeAnalysis>(),
+            failedFiles: [],
         };
 
         const sourceFiles = await this.getAllSourceFiles(rootDir);
@@ -110,43 +110,36 @@ export class CodeKnowledgeGraphService {
                 : sourceFiles;
 
         const totalFiles = filteredFiles.length;
-        console.log(`Total de arquivos para análise: ${totalFiles}`);
+        console.log(`Analyzing ${rootDir} with ${totalFiles} files...`);
 
-        // Otimização: Calcular tamanho de lote baseado em número de CPUs e memória disponível
-        // Usar um lote menor para evitar sobrecarga de memória
         const cpuCount = os.cpus().length;
-        const batchSize = Math.max(5, Math.min(cpuCount * 3, 30)); // Aumentando o lote para melhor performance
+        const batchSize = Math.max(5, Math.min(cpuCount * 3, 30));
         let processedCount = 0;
 
-        // Análise com suporte a cancelamento e limitação de recursos
         const processBatches = async () => {
-            // Implementar uma fila de processamento
             for (let i = 0; i < totalFiles; i += batchSize) {
                 const batchFiles = filteredFiles.slice(
                     i,
                     Math.min(i + batchSize, totalFiles),
                 );
 
-                // Processamento paralelo otimizado com Promise.allSettled para processar todos os arquivos mesmo com falhas
                 const batchResults = await Promise.allSettled(
                     batchFiles.map(async (filePath) => {
                         const normalizedPath =
                             this.importPathResolver.getNormalizedPath(filePath);
                         try {
-                            // Processar arquivo com timeout
                             const timeoutPromise = new Promise<never>(
                                 (_, reject) => {
                                     setTimeout(() => {
                                         reject(
                                             new Error(
-                                                `Timeout ao processar arquivo ${filePath}`,
+                                                `Timeout while processing ${filePath}`,
                                             ),
                                         );
-                                    }, 60000); // 60 segundos timeout
+                                    }, 60000);
                                 },
                             );
 
-                            // Corrida entre análise do arquivo e timeout
                             const analysis = await Promise.race<ParserAnalysis>(
                                 [
                                     this.piscina.run(
@@ -161,7 +154,6 @@ export class CodeKnowledgeGraphService {
                                 ],
                             );
 
-                            // Converter resultados em Maps se vierem como objetos
                             const functionsMap =
                                 analysis.functions instanceof Map
                                     ? analysis.functions
@@ -181,28 +173,29 @@ export class CodeKnowledgeGraphService {
                                     types: typesMap,
                                 },
                             };
-                        } catch (error) {
-                            // Registrar erro e continuar com próximo arquivo
-                            console.error(
-                                `Erro ao analisar arquivo ${filePath}:`,
-                                error,
-                            );
-                            throw error; // Re-lançar o erro para que Promise.allSettled possa capturá-lo corretamente
+                        } catch (err) {
+                            this.logger.error({
+                                message: 'Error processing file',
+                                context: CodeKnowledgeGraphService.name,
+                                error: handleError(err),
+                                metadata: {
+                                    filePath,
+                                    normalizedPath,
+                                },
+                            });
+                            throw err;
                         }
                     }),
                 );
 
-                // Processar resultados do lote usando os métodos fulfilled/rejected do allSettled
                 for (const resultItem of batchResults) {
                     if (resultItem.status === 'fulfilled') {
                         const item = resultItem.value;
-                        // Mesclar fileAnalysis
                         result.files.set(
                             item.normalizedPath,
                             item.analysis.fileAnalysis,
                         );
 
-                        // Mesclar functions de forma otimizada
                         if (item.analysis.functions) {
                             for (const [k, v] of (
                                 item.analysis.functions as Map<
@@ -214,7 +207,6 @@ export class CodeKnowledgeGraphService {
                             }
                         }
 
-                        // Mesclar types de forma otimizada
                         if (item.analysis.types) {
                             for (const [k, v] of (
                                 item.analysis.types as Map<string, TypeAnalysis>
@@ -223,20 +215,22 @@ export class CodeKnowledgeGraphService {
                             }
                         }
                     } else {
-                        // Arquivo falhou, mas nós continuamos o processamento
-                        console.warn(
-                            `Falha ao processar um arquivo: ${resultItem.reason}`,
-                        );
+                        this.logger.warn({
+                            message: 'Failed to process file',
+                            context: CodeKnowledgeGraphService.name,
+                            error: handleError(resultItem.reason),
+                            metadata: {
+                                resultItem,
+                            },
+                        });
                     }
                 }
 
-                // Atualizar progresso
                 processedCount += batchFiles.length;
                 if (onProgress) {
                     onProgress(processedCount, totalFiles);
                 }
 
-                // Liberar memória periodicamente
                 if (global.gc && i % (batchSize * 5) === 0) {
                     global.gc();
                 }
@@ -245,19 +239,11 @@ export class CodeKnowledgeGraphService {
 
         await processBatches();
 
-        // Completar relações bidirecionais
         this.completeBidirectionalTypeRelations(result.types);
 
-        console.timeEnd('buildGraphProgressively');
         return result;
     }
 
-    /**
-     * Prepara o grafo para serialização JSON convertendo Maps para objetos.
-     *
-     * @param graph Grafo de conhecimento
-     * @returns Grafo serializado
-     */
     prepareGraphForSerialization(graph: CodeGraph): CodeGraph {
         const serialized: CodeGraph = {
             files: new Map<string, FileAnalysis>(),
@@ -265,17 +251,14 @@ export class CodeKnowledgeGraphService {
             types: new Map<string, TypeAnalysis>(),
         };
 
-        // Converter Map de files para objeto
         for (const [key, value] of graph.files.entries()) {
             serialized.files[key] = value;
         }
 
-        // Converter Map de functions para objeto
         for (const [key, value] of graph.functions.entries()) {
             serialized.functions[key] = value;
         }
 
-        // Converter Map de types para objeto
         for (const [key, value] of graph.types.entries()) {
             serialized.types[key] = value;
         }
@@ -283,12 +266,6 @@ export class CodeKnowledgeGraphService {
         return serialized;
     }
 
-    /**
-     * Converte um grafo serializado de volta para o formato com Maps.
-     *
-     * @param serialized Grafo serializado
-     * @returns Grafo de conhecimento
-     */
     private deserializeGraph(serialized: CodeGraph): CodeGraph {
         const graph: CodeGraph = {
             files: new Map(),
@@ -296,21 +273,18 @@ export class CodeKnowledgeGraphService {
             types: new Map(),
         };
 
-        // Converter objeto de files para Map
         if (serialized.files) {
             for (const [key, value] of Object.entries(serialized.files)) {
                 graph.files.set(key, value as FileAnalysis);
             }
         }
 
-        // Converter objeto de functions para Map
         if (serialized.functions) {
             for (const [key, value] of Object.entries(serialized.functions)) {
                 graph.functions.set(key, value as FunctionAnalysis);
             }
         }
 
-        // Converter objeto de types para Map
         if (serialized.types) {
             for (const [key, value] of Object.entries(serialized.types)) {
                 graph.types.set(key, value as TypeAnalysis);
@@ -320,17 +294,21 @@ export class CodeKnowledgeGraphService {
         return graph;
     }
 
-    /**
-     * Inicializa o resolver de imports para o diretório raiz.
-     */
     private async initializeImportResolver(rootDir: string): Promise<void> {
         const resolver = await this.resolverFactory.getResolver(rootDir);
+        if (!resolver) {
+            this.logger.error({
+                message: 'No resolver found for the project',
+                context: CodeKnowledgeGraphService.name,
+                metadata: {
+                    rootDir,
+                },
+            });
+            throw new Error(`No resolver found for the project: ${rootDir}`);
+        }
         this.importPathResolver.initialize(rootDir, resolver);
     }
 
-    /**
-     * Completa a relação bidirecional de tipos (interfaces e classes que implementam).
-     */
     private completeBidirectionalTypeRelations(
         types: Map<string, TypeAnalysis>,
     ): void {
@@ -367,11 +345,6 @@ export class CodeKnowledgeGraphService {
         });
     }
 
-    /**
-     * Converte um objeto para Map
-     * @param obj Objeto a ser convertido
-     * @returns Map equivalente ao objeto
-     */
     private objectToMap<T>(obj: Record<string, T>): Map<string, T> {
         const map = new Map<string, T>();
         if (obj && typeof obj === 'object') {

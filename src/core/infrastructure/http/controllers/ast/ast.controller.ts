@@ -1,42 +1,58 @@
-import { BuildEnrichedGraphUseCase } from '@/core/application/use-cases/ast/build-enriched-graph.use-case';
 import {
-    ASTAnalyzerController,
-    ASTAnalyzerControllerMethods,
-    kodusRPCBuildEnrichedGraphRequest,
-} from '@/proto/kodus/ast/analyzer';
-import { kodusRPCChunkResponse } from '@/proto/kodus/common/chunk';
+    BuildEnrichedGraphUseCase,
+    CodeAnalysisAST,
+} from '@/core/application/use-cases/ast/build-enriched-graph.use-case';
+import { errorToGrpc } from '@/shared/utils/errors';
 import { Controller } from '@nestjs/common';
+import {
+    BuildEnrichedGraphRequest,
+    ASTAnalyzerServiceController,
+    ASTAnalyzerServiceControllerMethods,
+    BuildEnrichedGraphResponse,
+} from 'kodus-proto';
 import { from, Observable, switchMap } from 'rxjs';
 
+function* createChunkStream(
+    result: CodeAnalysisAST,
+    chunkSize = 1024 * 1024,
+): Generator<BuildEnrichedGraphResponse> {
+    const jsonString = JSON.stringify(result);
+    const totalLength = jsonString.length;
+
+    for (let i = 0; i < totalLength; i += chunkSize) {
+        yield {
+            data: jsonString.slice(i, i + chunkSize),
+            errors: [],
+            success: true,
+        };
+    }
+}
 @Controller('ast')
-@ASTAnalyzerControllerMethods()
-export class ASTController implements ASTAnalyzerController {
+@ASTAnalyzerServiceControllerMethods()
+export class ASTController implements ASTAnalyzerServiceController {
     constructor(
         private readonly buildEnrichedGraphUseCase: BuildEnrichedGraphUseCase,
     ) {}
 
     buildEnrichedGraph(
-        request: kodusRPCBuildEnrichedGraphRequest,
-    ): Observable<kodusRPCChunkResponse> {
+        request: BuildEnrichedGraphRequest,
+    ): Observable<BuildEnrichedGraphResponse> {
         return from(
-            this.buildEnrichedGraphUseCase.execute({
-                baseRepo: request.baseRepo,
-                headRepo: request.headRepo,
-            }),
-        ).pipe<kodusRPCChunkResponse>(
-            switchMap((result) => {
-                const jsonString = JSON.stringify(result);
-                const chunks = [] as kodusRPCChunkResponse[];
-                const chunkSize = 65536; // 64 KB
-
-                for (let i = 0; i < jsonString.length; i += chunkSize) {
-                    chunks.push({
-                        chunk: jsonString.substring(i, i + chunkSize),
-                    });
-                }
-
-                return from(chunks);
-            }),
-        );
+            this.buildEnrichedGraphUseCase
+                .execute({
+                    baseRepo: request.baseRepo,
+                    headRepo: request.headRepo,
+                })
+                .then((result) => createChunkStream(result))
+                .catch((error) => {
+                    return [
+                        {
+                            data: '',
+                            errors: [errorToGrpc(error)],
+                            success: false,
+                        },
+                    ];
+                }),
+        ).pipe(switchMap((generator) => from(generator)));
     }
 }

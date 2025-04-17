@@ -42,23 +42,14 @@ export class BuildEnrichedGraphUseCase {
             const baseDirPath = await this.cloneRepo(baseRepo);
             const headDirPath = await this.cloneRepo(headRepo);
 
-            const progressCallback = (processed: number, total: number) => {
-                const percentage = Math.round((processed / total) * 100);
-                console.log(
-                    `Progess: ${processed}/${total} files (${percentage}%)`,
-                );
-            };
-
             const headGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     headDirPath,
-                    progressCallback,
                 );
 
             const baseGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     baseDirPath,
-                    progressCallback,
                 );
 
             const enrichedHeadGraph =

@@ -31,7 +31,7 @@
         "@nestjs/core": "^11.0.1",
         "@nestjs/microservices": "^11.0.14",
         "@nestjs/platform-express": "^11.0.1",
-        "kodus-proto": "git+ssh://git@github.com:kodustech/kodus-proto.git",
+        "kodus-proto": "git+ssh://git@github.com:kodustech/kodus-proto",
         "minimatch": "^10.0.1",
         "pino": "^9.6.0",
         "piscina": "^4.9.2",

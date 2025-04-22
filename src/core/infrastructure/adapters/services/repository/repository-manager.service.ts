@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
 import { isError } from '@/shared/utils/errors';
-import { CloneRepositoryRequest, ProtoPlatformType } from 'kodus-proto';
+import { RepositoryData, ProtoPlatformType } from 'kodus-proto';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -183,7 +183,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         return git;
     }
 
-    async gitCloneWithAuth(params: CloneRepositoryRequest): Promise<string> {
+    async gitCloneWithAuth(params: RepositoryData): Promise<string> {
         this.validateGitUrl(params.url);
         await this.ensureClientDirExists(params.organizationId);
 

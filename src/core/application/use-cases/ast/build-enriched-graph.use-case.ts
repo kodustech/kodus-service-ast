@@ -8,7 +8,7 @@ import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logge
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
-import { BuildEnrichedGraphRequest, CloneRepositoryRequest } from 'kodus-proto';
+import { BuildEnrichedGraphRequest, RepositoryData } from 'kodus-proto';
 import { handleError } from '@/shared/utils/errors';
 
 type CodeGraphContext = {
@@ -93,7 +93,7 @@ export class BuildEnrichedGraphUseCase {
         }
     }
 
-    private async cloneRepo(repo: CloneRepositoryRequest): Promise<string> {
+    private async cloneRepo(repo: RepositoryData): Promise<string> {
         const repoDir =
             await this.repositoryManagerService.gitCloneWithAuth(repo);
 
@@ -112,7 +112,7 @@ export class BuildEnrichedGraphUseCase {
         return path.resolve(repoDir);
     }
 
-    private async deleteRepo(repo: CloneRepositoryRequest): Promise<void> {
+    private async deleteRepo(repo: RepositoryData): Promise<void> {
         await this.repositoryManagerService.deleteLocalRepository(
             repo.organizationId,
             repo.repositoryId,

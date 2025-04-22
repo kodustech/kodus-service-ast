@@ -1,7 +1,7 @@
-import { CloneRepositoryRequest } from 'kodus-proto';
+import { RepositoryData } from 'kodus-proto';
 
 export interface IRepositoryManager {
-    gitCloneWithAuth(params: CloneRepositoryRequest): Promise<string>;
+    gitCloneWithAuth(params: RepositoryData): Promise<string>;
     deleteLocalRepository(
         organizationId: string,
         repositoryId: string,

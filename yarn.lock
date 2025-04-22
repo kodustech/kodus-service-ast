@@ -4091,9 +4091,9 @@ kleur@^3.0.3:
   resolved "https://registry.yarnpkg.com/kleur/-/kleur-3.0.3.tgz#a79c9ecc86ee1ce3fa6206d1216c501f147fc07e"
   integrity sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==
 
-"kodus-proto@git+ssh://git@github.com:kodustech/kodus-proto.git":
+"kodus-proto@git+ssh://git@github.com:kodustech/kodus-proto":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:kodustech/kodus-proto.git#5fb556e8484dd941ba88b7fc3e0ef295b916a428"
+  resolved "git+ssh://git@github.com:kodustech/kodus-proto#932eb06d6dc8fde8ff8dbc27b1dcbf149ab00a35"
 
 leven@^3.1.0:
   version "3.1.0"

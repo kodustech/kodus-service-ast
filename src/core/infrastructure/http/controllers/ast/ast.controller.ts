@@ -2,7 +2,7 @@ import {
     BuildEnrichedGraphUseCase,
     CodeAnalysisAST,
 } from '@/core/application/use-cases/ast/build-enriched-graph.use-case';
-import { errorToGrpc } from '@/shared/utils/errors';
+import { handleError } from '@/shared/utils/errors';
 import { Controller } from '@nestjs/common';
 import {
     BuildEnrichedGraphRequest,
@@ -22,8 +22,7 @@ function* createChunkStream(
     for (let i = 0; i < totalLength; i += chunkSize) {
         yield {
             data: jsonString.slice(i, i + chunkSize),
-            errors: [],
-            success: true,
+            code: 0,
         };
     }
 }
@@ -48,8 +47,8 @@ export class ASTController implements ASTAnalyzerServiceController {
                     return [
                         {
                             data: '',
-                            errors: [errorToGrpc(error)],
-                            success: false,
+                            code: 2,
+                            error: handleError(error).message,
                         },
                     ];
                 }),

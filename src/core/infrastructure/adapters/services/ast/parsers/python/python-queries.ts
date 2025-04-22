@@ -98,7 +98,7 @@ const typeQuery: ParserQuery = {
 (
   class_definition
   name: (identifier) @className
-  superclasses: (argument_list) @classHeritage?
+  superclasses: (argument_list)? @classHeritage
   body: (block) @classBody
 ) @classDecl
 `,

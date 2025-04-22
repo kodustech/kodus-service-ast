@@ -26,7 +26,7 @@ export class TypeScriptResolver implements LanguageResolver {
             await this.readTsConfig(tsconfigPath);
             return true;
         } catch (error) {
-            if (error.code === 'ENOENT') {
+            if (error?.code === 'ENOENT') {
                 return false;
             }
 

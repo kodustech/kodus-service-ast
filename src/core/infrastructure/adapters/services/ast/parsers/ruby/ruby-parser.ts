@@ -1,5 +1,5 @@
 import { BaseParser, QueryType } from '../base-parser';
-import RubyLang from 'tree-sitter-ruby';
+import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
 import * as Parser from 'tree-sitter';
 import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
@@ -147,9 +147,9 @@ export class RubyParser extends BaseParser {
                 key = `${mapped}:${superclassName}`;
             }
 
-            const existingExtends = new Set(classAnalysis.extends || []);
+            const existingExtends = new Set(classAnalysis.implements || []);
             existingExtends.add(key);
-            classAnalysis.extends = Array.from(existingExtends);
+            classAnalysis.implements = Array.from(existingExtends);
         }
 
         const bodyNode = node.namedChildren.find(
@@ -482,9 +482,9 @@ export class RubyParser extends BaseParser {
                         key = `${mapped}:${classHeritageNode.text}`;
                     }
 
-                    const existingExtends = new Set(classObj.extends || []);
+                    const existingExtends = new Set(classObj.implements || []);
                     existingExtends.add(key);
-                    classObj.extends = Array.from(existingExtends);
+                    classObj.implements = Array.from(existingExtends);
                 }
 
                 this.context.types.set(key, classObj);

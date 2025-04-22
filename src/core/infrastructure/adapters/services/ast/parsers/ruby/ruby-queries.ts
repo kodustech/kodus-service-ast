@@ -99,15 +99,13 @@ const typeQuery: ParserQuery = {
     query: `
 ;; class
 (class
-    name: (constant @className)
-    superclass: (constant @classHeritage)?
-    body: (block) @classBody
+    name: (constant) @className
+    superclass: (constant)? @classHeritage
 ) @classDecl
 
 ;; module
 (module
-    name: (constant @moduleName)
-    body: (block) @moduleBody
+    name: (constant) @moduleName
 ) @moduleDecl
 `,
 };

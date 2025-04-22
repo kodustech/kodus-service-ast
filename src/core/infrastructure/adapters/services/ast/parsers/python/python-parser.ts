@@ -172,9 +172,9 @@ export class PythonParser extends BaseParser {
             });
 
             if (keys.length > 0) {
-                const existing = new Set(classAnalysis.extends || []);
+                const existing = new Set(classAnalysis.implements || []);
                 keys.forEach((key) => existing.add(key));
-                classAnalysis.extends = Array.from(existing);
+                classAnalysis.implements = Array.from(existing);
             }
         }
 
@@ -463,9 +463,9 @@ export class PythonParser extends BaseParser {
                     });
 
                     if (keys.length > 0) {
-                        const existing = new Set(classObj.extends || []);
+                        const existing = new Set(classObj.implements || []);
                         keys.forEach((key) => existing.add(key));
-                        classObj.extends = Array.from(existing);
+                        classObj.implements = Array.from(existing);
                     }
                 }
 

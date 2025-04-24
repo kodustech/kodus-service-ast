@@ -8,7 +8,7 @@ import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logge
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
-import { BuildEnrichedGraphRequest, RepositoryData } from 'kodus-proto';
+import { BuildEnrichedGraphRequest, RepositoryData } from '@kodus/kodus-proto';
 import { handleError } from '@/shared/utils/errors';
 
 type CodeGraphContext = {

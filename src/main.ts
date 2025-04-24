@@ -37,11 +37,13 @@ async function bootstrap() {
                 package: 'kodus.ast.v1',
                 protoPath: resolve(
                     cwd(),
-                    'node_modules/kodus-proto/kodus/ast/v1/analyzer.proto',
+                    'node_modules/@kodus/kodus-proto/kodus/ast/v1/analyzer.proto',
                 ),
                 url: `0.0.0.0:${numberPort}`,
                 loader: {
-                    includeDirs: [resolve(cwd(), 'node_modules/kodus-proto/')],
+                    includeDirs: [
+                        resolve(cwd(), 'node_modules/@kodus/kodus-proto/'),
+                    ],
                 },
                 credentials: grpc.ServerCredentials.createSsl(
                     fs.readFileSync(resolve(cwd(), 'certs/ca.crt')),

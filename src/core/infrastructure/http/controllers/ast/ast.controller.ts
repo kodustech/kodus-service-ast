@@ -9,7 +9,7 @@ import {
     ASTAnalyzerServiceController,
     ASTAnalyzerServiceControllerMethods,
     BuildEnrichedGraphResponse,
-} from 'kodus-proto';
+} from '@kodus/kodus-proto';
 import { from, Observable, switchMap } from 'rxjs';
 
 function* createChunkStream(

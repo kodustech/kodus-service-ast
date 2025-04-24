@@ -6,8 +6,8 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
-import { isError } from '@/shared/utils/errors';
-import { RepositoryData, ProtoPlatformType } from 'kodus-proto';
+import { handleError, isError } from '@/shared/utils/errors';
+import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -260,7 +260,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error cloning repository',
                 context: RepositoryManagerService.name,
-                error,
+                error: handleError(error),
                 metadata: { params, repoPath, cloneUrl },
             });
 
@@ -340,7 +340,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 message:
                     'Error while attempting to delete the local repository',
                 context: RepositoryManagerService.name,
-                error,
+                error: handleError(error),
                 metadata: {
                     organizationId,
                     repositoryId,
@@ -486,7 +486,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error reading file content',
                 context: RepositoryManagerService.name,
-                error,
+                error: handleError(error),
                 metadata: {
                     organizationId,
                     repositoryId,

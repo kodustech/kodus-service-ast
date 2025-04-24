@@ -18,6 +18,7 @@ import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
 import { IMPORT_PATH_RESOLVER_TOKEN } from './import-path-resolver.service';
 import { PinoLoggerService } from '../logger/pino.service';
 import { handleError } from '@/shared/utils/errors';
+import { SourceFileAnalyzer } from './analyze-source-file';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
@@ -100,7 +101,7 @@ export class CodeKnowledgeGraphService {
             // 'user.py',
             // 'example.rb',
             // 'src/ee/codeBase/ast/resolvers',
-            // 'src/core/application/use-cases/codeBase/ruby_project',
+            // 'src/core/application/use-cases/codeBase/python_project',
         ];
         const filteredFiles =
             filterCriteria.length > 0
@@ -142,13 +143,18 @@ export class CodeKnowledgeGraphService {
 
                             const analysis = await Promise.race<ParserAnalysis>(
                                 [
-                                    this.piscina.run(
-                                        {
-                                            rootDir,
-                                            filePath,
-                                            normalizedPath,
-                                        },
-                                        { name: 'analyze' },
+                                    // this.piscina.run(
+                                    //     {
+                                    //         rootDir,
+                                    //         filePath,
+                                    //         normalizedPath,
+                                    //     },
+                                    //     { name: 'analyze' },
+                                    // ),
+                                    new SourceFileAnalyzer().analyzeSourceFile(
+                                        rootDir,
+                                        filePath,
+                                        normalizedPath,
                                     ),
                                     timeoutPromise,
                                 ],

@@ -1,4 +1,4 @@
-import { ParserQuery, QueryType } from '../base-parser';
+import { ParserQuery, QueryType } from '../query';
 
 const mainQuery: ParserQuery = {
     type: QueryType.MAIN_QUERY,
@@ -82,6 +82,7 @@ const functionQuery: ParserQuery = {
               parameters: (block_parameters) @params*)
 )
 `,
+    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
@@ -92,6 +93,7 @@ const functionCallQuery: ParserQuery = {
     method: (identifier) @callName
 )
 `,
+    captureNames: undefined,
 };
 
 const typeQuery: ParserQuery = {
@@ -108,9 +110,15 @@ const typeQuery: ParserQuery = {
     name: (constant) @moduleName
 ) @moduleDecl
 `,
+    captureNames: {
+        class: ['className', 'classHeritage'],
+        interface: [],
+        enum: [],
+        type: [],
+    },
 };
 
-export const rubyQueries: Map<QueryType, ParserQuery> = new Map([
+export const rubyQueries = new Map<QueryType, ParserQuery>([
     [QueryType.MAIN_QUERY, mainQuery],
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],

@@ -1,28 +1,14 @@
-import { BaseParser, QueryType } from '../base-parser';
+import { BaseParser } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
-import * as Parser from 'tree-sitter';
 import { Language, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { Call } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
+import { QueryType } from '../query';
 
 export class TypeScriptParser extends BaseParser {
     protected setupLanguage(): void {
         this.language = TypeScriptLang as Language;
-    }
-
-    protected setupParser(): void {
-        if (this.parser) {
-            return;
-        }
-
-        if (!this.language) {
-            throw new Error('Language not set up');
-        }
-
-        const parser = new Parser();
-        parser.setLanguage(this.language);
-        this.parser = parser;
     }
 
     protected setupQueries(): void {
@@ -30,7 +16,7 @@ export class TypeScriptParser extends BaseParser {
     }
 
     public async collectAllInOnePass(
-        rootNode: Parser.SyntaxNode,
+        rootNode: SyntaxNode,
         filePath: string,
         absolutePath: string,
     ): Promise<void> {
@@ -612,7 +598,7 @@ export class TypeScriptParser extends BaseParser {
     }
 
     public collectTypeDetailsUsingQuery(
-        rootNode: Parser.SyntaxNode,
+        rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
         const query = this.newQueryFromType(QueryType.TYPE_QUERY);

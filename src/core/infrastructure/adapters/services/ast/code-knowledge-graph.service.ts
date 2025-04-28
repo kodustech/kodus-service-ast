@@ -101,7 +101,8 @@ export class CodeKnowledgeGraphService {
             // 'user.py',
             // 'example.rb',
             // 'src/ee/codeBase/ast/resolvers',
-            // 'src/core/application/use-cases/codeBase/python_project',
+            // 'src/core/application/use-cases/codeBase/php_project',
+            'relation.php',
         ];
         const filteredFiles =
             filterCriteria.length > 0
@@ -109,6 +110,17 @@ export class CodeKnowledgeGraphService {
                       filterCriteria.some((keyword) => file.includes(keyword)),
                   )
                 : sourceFiles;
+
+        if (filteredFiles.length === 0) {
+            this.logger.warn({
+                message: 'No source files found',
+                context: CodeKnowledgeGraphService.name,
+                metadata: {
+                    rootDir,
+                },
+            });
+            return result;
+        }
 
         const totalFiles = filteredFiles.length;
         console.log(`Analyzing ${rootDir} with ${totalFiles} files...`);

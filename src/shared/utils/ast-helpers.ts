@@ -54,3 +54,30 @@ export function normalizeSignature(
     const signature = `(${normalizedParams})=>${returnType}`;
     return crypto.createHash('sha256').update(signature).digest('hex');
 }
+
+export function findNamedChildByType(
+    node: SyntaxNode,
+    type: string,
+): SyntaxNode | null {
+    for (let i = 0; i < node.namedChildCount; i++) {
+        const child = node.namedChild(i);
+        if (child && child.type === type) {
+            return child;
+        }
+    }
+    return null;
+}
+
+export function findNamedChildrenByType(
+    node: SyntaxNode,
+    type: string,
+): SyntaxNode[] {
+    const children: SyntaxNode[] = [];
+    for (let i = 0; i < node.namedChildCount; i++) {
+        const child = node.namedChild(i);
+        if (child && child.type === type) {
+            children.push(child);
+        }
+    }
+    return children;
+}

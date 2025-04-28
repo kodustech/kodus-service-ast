@@ -9,7 +9,7 @@
                 "outDir": "dist/proto"
             }
         ],
-        "deleteOutDir": false,
+        "deleteOutDir": true,
         "watchAssets": true
     }
 }

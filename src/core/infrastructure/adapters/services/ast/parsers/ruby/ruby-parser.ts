@@ -1,28 +1,14 @@
-import { BaseParser, QueryType } from '../base-parser';
+import { BaseParser } from '../base-parser';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
-import * as Parser from 'tree-sitter';
-import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
+import { Language, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { Call, TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
+import { QueryType } from '../query';
 
 export class RubyParser extends BaseParser {
     protected setupLanguage(): void {
         this.language = RubyLang as Language;
-    }
-
-    protected setupParser(): void {
-        if (this.parser) {
-            return;
-        }
-
-        if (!this.language) {
-            throw new Error('Language not set up');
-        }
-
-        const parser = new Parser();
-        parser.setLanguage(this.language);
-        this.parser = parser;
     }
 
     protected setupQueries(): void {
@@ -303,7 +289,7 @@ export class RubyParser extends BaseParser {
     }
 
     public collectFunctionDetailsWithQuery(
-        rootNode: Parser.SyntaxNode,
+        rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
         const funcQuery = this.newQueryFromType(QueryType.FUNCTION_QUERY);
@@ -434,7 +420,7 @@ export class RubyParser extends BaseParser {
     }
 
     public collectTypeDetailsUsingQuery(
-        rootNode: Parser.SyntaxNode,
+        rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
         const typeQuery = this.newQueryFromType(QueryType.TYPE_QUERY);
@@ -443,10 +429,7 @@ export class RubyParser extends BaseParser {
         matches.forEach((match) => this.processTypeMatch(match, absolutePath));
     }
 
-    private processTypeMatch(
-        match: Parser.QueryMatch,
-        absolutePath: string,
-    ): void {
+    private processTypeMatch(match: QueryMatch, absolutePath: string): void {
         const matches = match.captures.reduce(
             (acc, capture) => {
                 acc[capture.name] = capture;

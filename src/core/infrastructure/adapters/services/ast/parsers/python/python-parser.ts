@@ -1,28 +1,14 @@
-import { BaseParser, QueryType } from '../base-parser';
-import * as Parser from 'tree-sitter';
+import { BaseParser } from '../base-parser';
 import { Language, SyntaxNode, QueryMatch, QueryCapture } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
 import { pythonQueries } from './python-queries';
 import { Call, TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
+import { QueryType } from '../query';
 
 export class PythonParser extends BaseParser {
     protected setupLanguage(): void {
         this.language = PythonLang as Language;
-    }
-
-    protected setupParser(): void {
-        if (this.parser) {
-            return;
-        }
-
-        if (!this.language) {
-            throw new Error('Language not set up');
-        }
-
-        const parser = new Parser();
-        parser.setLanguage(this.language);
-        this.parser = parser;
     }
 
     protected setupQueries(): void {

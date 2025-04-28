@@ -19,28 +19,15 @@ export class RubyResolver implements LanguageResolver {
     async canHandle(projectRoot: string): Promise<boolean> {
         this.projectRoot = projectRoot;
         try {
-            console.log(
-                'RubyResolver.canHandle - Checking directory:',
-                projectRoot,
-            );
-
             // Verifica se o diretório existe
             if (!fs.existsSync(projectRoot)) {
-                console.log(
-                    'RubyResolver.canHandle - Directory does not exist',
-                );
                 return false;
             }
 
             const files = await fs.promises.readdir(projectRoot);
-            console.log('RubyResolver.canHandle - Files found:', files);
 
             const hasRubyFiles = files.some((file) =>
                 ['Gemfile', '.gemspec', 'lib'].includes(file),
-            );
-            console.log(
-                'RubyResolver.canHandle - Has Ruby files:',
-                hasRubyFiles,
             );
 
             if (hasRubyFiles) {

@@ -1,28 +1,15 @@
 import * as Parser from 'tree-sitter';
-import { Query, QueryCapture, SyntaxNode } from 'tree-sitter';
+import { QueryCapture, SyntaxNode } from 'tree-sitter';
 import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-
-export enum QueryType {
-    MAIN_QUERY,
-    FUNCTION_QUERY,
-    FUNCTION_CALL_QUERY,
-    TYPE_QUERY,
-}
-
-export type ParserQuery = {
-    type: QueryType;
-    query: string;
-    captureNames?: MainQueryCaptureNames;
-};
-
-export type MainQueryCaptureNames = {
-    import: string[];
-    definition: string[];
-    call: string[];
-};
+import {
+    CaptureNamesForType,
+    EnhancedQuery,
+    ParserQuery,
+    QueryType,
+} from './query';
 
 export abstract class BaseParser {
     private importCache: Map<string, ResolvedImport> = new Map();
@@ -46,8 +33,21 @@ export abstract class BaseParser {
     }
 
     protected abstract setupLanguage(): void;
-    protected abstract setupParser(): void;
     protected abstract setupQueries(): void;
+
+    private setupParser(): void {
+        if (this.parser) {
+            return;
+        }
+
+        if (!this.language) {
+            throw new Error('Language not set up');
+        }
+
+        const parser = new Parser();
+        parser.setLanguage(this.language);
+        this.parser = parser;
+    }
 
     public getParser(): Parser {
         if (!this.parser) {
@@ -63,7 +63,9 @@ export abstract class BaseParser {
         return this.language;
     }
 
-    public getQuery(type: QueryType): ParserQuery {
+    public getQuery<T extends QueryType>(
+        type: T,
+    ): Extract<ParserQuery, { type: T }> {
         if (!this.queries) {
             throw new Error('Queries not set up');
         }
@@ -71,18 +73,27 @@ export abstract class BaseParser {
         if (!query) {
             throw new Error(`Query not found for type: ${type}`);
         }
-        return query;
+        return query as Extract<ParserQuery, { type: T }>;
     }
 
-    protected newQueryFromType(queryType: QueryType): Query {
-        return new Query(this.language, this.getQuery(queryType).query);
+    protected newQueryFromType<T extends QueryType>(
+        queryType: T,
+    ): EnhancedQuery<T> {
+        const parserQuery = this.getQuery(queryType);
+        return this.newQuery(parserQuery);
     }
 
-    protected newQuery(query: ParserQuery): Query {
-        return new Query(this.language, query.query);
+    protected newQuery<T extends QueryType>(
+        query: Extract<ParserQuery, { type: T }>,
+    ): EnhancedQuery<T> {
+        return new EnhancedQuery(
+            this.language,
+            query.query,
+            query.captureNames as CaptureNamesForType<T>,
+        );
     }
 
-    public async collectAllInOnePass(
+    public collectAllInOnePass(
         rootNode: SyntaxNode,
         filePath: string,
         absolutePath: string,
@@ -115,10 +126,9 @@ export abstract class BaseParser {
             }
         }
 
-        const promises = importCaptures.map((capture) => {
+        importCaptures.forEach((capture) => {
             this.processImportCapture(capture, filePath);
         });
-        await Promise.all(promises);
 
         definitionCaptures.forEach((capture) => {
             this.processDefinitionCapture(capture, absolutePath);
@@ -127,6 +137,9 @@ export abstract class BaseParser {
         callCaptures.forEach((capture) => {
             this.processCallCapture(capture, absolutePath);
         });
+
+        // legacy, original typescript was async
+        return Promise.resolve();
     }
 
     protected abstract processImportCapture(

@@ -6,6 +6,7 @@ import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ParseContext } from '../../../../../domain/ast/contracts/Parser';
 import { RubyParser } from './ruby/ruby-parser';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
+import { PhpParser } from './php/php-parser';
 
 export function getParserByFilePath(
     filePath: string,
@@ -33,6 +34,8 @@ export function getParserByFilePath(
             return new PythonParser(importPathResolver, context);
         case SUPPORTED_LANGUAGES.ruby.name:
             return new RubyParser(importPathResolver, context);
+        case SUPPORTED_LANGUAGES.php.name:
+            return new PhpParser(importPathResolver, context);
         default:
             throw new Error(`Language not supported: ${language.name}`);
     }

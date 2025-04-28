@@ -1,4 +1,4 @@
-import { ParserQuery, QueryType } from '../base-parser';
+import { ParserQuery, QueryType } from '../query';
 
 const mainQuery: ParserQuery = {
     type: QueryType.MAIN_QUERY,
@@ -71,6 +71,7 @@ const functionQuery: ParserQuery = {
     )
 )
 `,
+    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
@@ -89,6 +90,7 @@ const functionCallQuery: ParserQuery = {
                 attribute: (identifier) @callName)
 )
 `,
+    captureNames: undefined,
 };
 
 const typeQuery: ParserQuery = {
@@ -102,9 +104,15 @@ const typeQuery: ParserQuery = {
   body: (block) @classBody
 ) @classDecl
 `,
+    captureNames: {
+        class: ['className', 'classHeritage', 'classBody'],
+        interface: [],
+        enum: [],
+        type: [],
+    },
 };
 
-export const pythonQueries: Map<QueryType, ParserQuery> = new Map([
+export const pythonQueries = new Map<QueryType, ParserQuery>([
     [QueryType.MAIN_QUERY, mainQuery],
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],

@@ -292,8 +292,10 @@ export class RubyParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const funcQuery = this.newQueryFromType(QueryType.FUNCTION_QUERY);
-        const callQuery = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
+        const [funcQuery] = this.newQueryFromType(QueryType.FUNCTION_QUERY);
+        const [callQuery] = this.newQueryFromType(
+            QueryType.FUNCTION_CALL_QUERY,
+        );
 
         const funcCaptures = funcQuery.captures(rootNode);
 
@@ -423,7 +425,7 @@ export class RubyParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const typeQuery = this.newQueryFromType(QueryType.TYPE_QUERY);
+        const [typeQuery] = this.newQueryFromType(QueryType.TYPE_QUERY);
         const matches = typeQuery.matches(rootNode);
 
         matches.forEach((match) => this.processTypeMatch(match, absolutePath));

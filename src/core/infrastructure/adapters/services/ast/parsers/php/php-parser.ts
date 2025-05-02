@@ -1,4 +1,10 @@
-import { Language, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
+import {
+    Language,
+    Query,
+    QueryCapture,
+    QueryMatch,
+    SyntaxNode,
+} from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
@@ -11,7 +17,23 @@ import {
 import { Call, TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
 import { QueryType } from '../query';
 
+type ClassMethod = {
+    name: string;
+    params: {
+        name: string;
+        type: string | null;
+    }[];
+    returnType: string | null;
+};
+
+type ClassProperty = {
+    name: string;
+    type: string | null;
+};
+
 export class PhpParser extends BaseParser {
+    protected constructorName: string = '__construct';
+
     protected setupLanguage(): void {
         this.language = PhpLang as Language;
     }
@@ -24,170 +46,381 @@ export class PhpParser extends BaseParser {
         capture: QueryCapture,
         filePath: string,
     ): void {
-        const parentNode = capture.node;
-        if (!parentNode) {
+        throw new Error('Method not implemented.');
+    }
+
+    public collectAllInOnePass(
+        rootNode: SyntaxNode,
+        filePath: string,
+        absolutePath: string,
+    ): Promise<void> {
+        this.collectImports(rootNode, filePath);
+        this.collectDeclarations(rootNode, absolutePath);
+
+        // legacy, original typescript was async
+        return Promise.resolve();
+    }
+
+    private matchCapturesToRecord<
+        T extends Record<string, SyntaxNode | SyntaxNode[]>,
+    >(match: QueryMatch): T {
+        const result = {} as T;
+
+        for (const capture of match.captures) {
+            const name = capture.name;
+            const node = capture.node;
+
+            if (!name) continue;
+
+            const key = name as keyof T;
+            const current = result[key];
+
+            if (Array.isArray(current)) {
+                // If it's already an array, just push
+                current.push(node);
+            } else if (current !== undefined) {
+                // If already exists and not an array, convert to array
+                result[key] = [current, node] as T[typeof key];
+            } else {
+                // First time assigning
+                result[key] = node as T[typeof key];
+            }
+        }
+        return result;
+    }
+
+    public collectImports(rootNode: SyntaxNode, filePath: string): void {
+        const [query, auxQuery] = this.newQueryFromType(QueryType.IMPORT_QUERY);
+        const matches = query.matches(rootNode);
+        if (matches.length === 0) return;
+
+        for (const match of matches) {
+            const captures = match.captures;
+            // captures come in order so we can safely assume the first one is the origin
+            const origin = captures[0];
+            if (!origin) continue;
+
+            const originName = this.getOriginName(origin, auxQuery);
+            if (!originName) continue;
+
+            const imported = this.parseImportedSymbols(captures);
+            const resolvedImport = this.resolveImportWithCache(
+                originName,
+                filePath,
+            );
+            if (!resolvedImport) continue;
+
+            const normalizedPath = resolvedImport.normalizedPath || originName;
+            this.context.fileImports.add(normalizedPath);
+
+            this.registerImportedSymbols(imported, normalizedPath);
+        }
+    }
+
+    private getOriginName(
+        origin: QueryCapture,
+        auxQuery: Query,
+    ): string | null {
+        switch (origin.name) {
+            case 'auxiliary':
+                return this.processImportAuxiliary(origin.node, auxQuery);
+            case 'origin':
+                return origin.node.text;
+            default:
+                return null;
+        }
+    }
+
+    private parseImportedSymbols(
+        captures: QueryCapture[],
+    ): { symbol: string; alias: string | null }[] {
+        const imported: { symbol: string; alias: string | null }[] = [];
+
+        for (const capture of captures) {
+            const captureName = capture.name;
+            const nodeText = capture.node.text;
+
+            if (captureName === 'symbol') {
+                imported.push({ symbol: nodeText, alias: null });
+            }
+
+            if (captureName === 'alias' && imported.length > 0) {
+                imported[imported.length - 1].alias = nodeText;
+            }
+        }
+
+        if (imported.length === 0) {
+            imported.push({ symbol: '*', alias: null });
+        }
+
+        return imported;
+    }
+
+    private registerImportedSymbols(
+        imported: { symbol: string; alias: string | null }[],
+        normalizedPath: string,
+    ): void {
+        for (const { symbol: name, alias } of imported) {
+            this.context.importedMapping.set(name, normalizedPath);
+            if (alias) {
+                this.context.importedMapping.set(alias, name);
+            }
+        }
+    }
+
+    protected processImportAuxiliary(
+        aux: SyntaxNode,
+        query: Query,
+    ): string | null {
+        const matches = query.matches(aux);
+        if (matches.length === 0) return null;
+
+        // queries are ordered by priority, so we can take the first one
+        // even if there are multiple matches
+        const captures = matches[0].captures;
+        if (captures.length === 0) return null;
+
+        const origin = captures.find((capture) => capture.name === 'origin');
+        const isBinaryExpr = captures.find(
+            (capture) => capture.name === 'fname' || capture.name === 'dir',
+        );
+
+        if (!origin) return null;
+        const path = isBinaryExpr
+            ? origin.node.text.slice(1) // remove leading slash
+            : origin.node.text;
+
+        return path;
+    }
+
+    public collectDeclarations(
+        rootNode: SyntaxNode,
+        absolutePath: string,
+    ): void {
+        const [query] = this.newQueryFromType(QueryType.CLASS_QUERY);
+        const matches = query.matches(rootNode);
+        if (matches.length === 0) return;
+
+        for (const match of matches) {
+            const classAnalysis = this.processClassMatch(match, absolutePath);
+
+            const key = `${absolutePath}:${classAnalysis.name}`;
+            const existingClass = this.context.types.get(key);
+            if (existingClass) {
+                // Merge existing class with new one
+                existingClass.extends = [
+                    ...(existingClass.extends || []),
+                    ...(classAnalysis.extends || []),
+                ];
+                existingClass.implements = [
+                    ...(existingClass.implements || []),
+                    ...(classAnalysis.implements || []),
+                ];
+                existingClass.fields = {
+                    ...existingClass.fields,
+                    ...classAnalysis.fields,
+                };
+            }
+
+            this.context.types.set(key, classAnalysis);
+            this.context.fileClassNames.add(classAnalysis.name);
+            this.context.fileDefines.add(classAnalysis.name);
+        }
+
+        return;
+    }
+
+    private processClassMatch(
+        match: QueryMatch,
+        absolutePath: string,
+    ): TypeAnalysis {
+        const classAnalysis: TypeAnalysis = {
+            name: '',
+            extends: [],
+            implements: [],
+            fields: {},
+            file: absolutePath,
+            type: 'class',
+        };
+
+        const methods: ClassMethod[] = [];
+        const properties: ClassProperty[] = [];
+
+        for (const capture of match.captures) {
+            this.processClassCapture(
+                capture,
+                classAnalysis,
+                methods,
+                properties,
+            );
+        }
+
+        this.addMethodsToType(classAnalysis, methods);
+        this.addPropertiesToType(classAnalysis, properties);
+        this.processConstructorParameters(methods);
+
+        return classAnalysis;
+    }
+
+    private processClassCapture(
+        capture: QueryCapture,
+        classAnalysis: TypeAnalysis,
+        methods: ClassMethod[],
+        properties: ClassProperty[],
+    ): void {
+        const text = capture.node?.text;
+        if (!text) {
             return;
         }
 
-        const imported: {
-            name: string;
-            alias: string | null;
-            imports: {
-                name: string;
-                alias: string | null;
-            }[];
-        }[] = [];
+        switch (capture.name) {
+            case 'className':
+                classAnalysis.name = text;
+                break;
+            case 'classExtends':
+                classAnalysis.extends = [text];
+                break;
+            case 'classImplements':
+                this.addClassImplementation(classAnalysis, text);
+                break;
+            case 'classMethod':
+                this.addNewMethod(methods, text);
+                break;
+            case 'classMethodParamName':
+                this.addMethodParameter(methods, text, null);
+                break;
+            case 'classMethodParamType':
+                this.addMethodParameter(methods, null, text);
+                break;
+            case 'classMethodReturnType':
+                this.setMethodReturnType(methods, text);
+                break;
+            case 'classProperty':
+                this.addClassProperty(properties, text, null);
+                break;
+            case 'classPropertyType':
+                this.addClassProperty(properties, null, text);
+                break;
+        }
+    }
 
-        for (const node of parentNode.namedChildren) {
-            const newImport = {
-                name: '',
-                alias: null,
-                imports: [],
-            };
+    private addClassImplementation(
+        classAnalysis: TypeAnalysis,
+        implementation: string,
+    ): void {
+        if (!classAnalysis.implements) {
+            classAnalysis.implements = [];
+        }
+        classAnalysis.implements.push(implementation);
+    }
 
-            switch (node.type) {
-                case 'namespace_use_clause': {
-                    const qualifiedName = findNamedChildByType(
-                        node,
-                        'qualified_name',
-                    );
-                    if (!qualifiedName) {
-                        return;
-                    }
+    private addNewMethod(methods: ClassMethod[], methodName: string): void {
+        methods.push({
+            name: methodName,
+            params: [],
+            returnType: null,
+        });
+    }
 
-                    const namespaceName = findNamedChildByType(
-                        qualifiedName,
-                        'namespace_name',
-                    );
+    private addMethodParameter(
+        methods: ClassMethod[],
+        paramName: string | null,
+        paramType: string | null,
+    ): void {
+        if (methods.length === 0) return;
 
-                    newImport.name = namespaceName ? namespaceName.text : '';
-
-                    const imports = findNamedChildByType(qualifiedName, 'name');
-                    if (!imports) {
-                        return null;
-                    }
-
-                    const importName = imports.text;
-
-                    const aliasingClause = findNamedChildByType(node, 'name');
-                    const alias = aliasingClause ? aliasingClause.text : null;
-
-                    newImport.imports.push({
-                        name: importName,
-                        alias,
-                    });
-
-                    break;
-                }
-                case 'namespace_use_group': {
-                    const namespaceName = findNamedChildByType(
-                        parentNode,
-                        'namespace_name',
-                    );
-                    if (!namespaceName) {
-                        return;
-                    }
-
-                    newImport.name = namespaceName.text;
-
-                    const namespaceClauses = findNamedChildrenByType(
-                        node,
-                        'namespace_use_clause',
-                    );
-                    if (namespaceClauses.length === 0) {
-                        return;
-                    }
-
-                    for (const clause of namespaceClauses) {
-                        const imports = findNamedChildrenByType(clause, 'name');
-                        if (imports.length === 0) {
-                            return null;
-                        }
-
-                        const importName = imports[0].text;
-                        const alias = imports[1] ? imports[1].text : null;
-
-                        newImport.imports.push({
-                            name: importName,
-                            alias,
-                        });
-                    }
-                    break;
-                }
-                case 'require_expression':
-                case 'require_once_expression':
-                case 'include_expression':
-                case 'include_once_expression': {
-                    let parent = node;
-                    let trailingSlash = false;
-                    const binaryExpression = findNamedChildByType(
-                        parent,
-                        'binary_expression',
-                    );
-                    if (binaryExpression) {
-                        parent = binaryExpression;
-
-                        const left = binaryExpression.childForFieldName('left');
-                        if (
-                            left &&
-                            (left.text === '__DIR__' ||
-                                left.text === 'dirname(__FILE__)')
-                        ) {
-                            trailingSlash = true;
-                        }
-                    }
-
-                    const path = findNamedChildByType(parent, 'string');
-                    if (path) {
-                        const importPath = path.text
-                            .replace(/['"]/g, '')
-                            .replace(/\\/g, '/');
-                        newImport.name = trailingSlash
-                            ? importPath.slice(1) // Remove the leading '/' when concatenating with __DIR__ or dirname(__FILE__)
-                            : importPath;
-                        newImport.imports.push({
-                            name: '*',
-                            alias: null,
-                        });
-                    }
-                    break;
-                }
-                default:
-                    continue;
+        const currentMethod = methods[methods.length - 1];
+        const lastParam = currentMethod.params[currentMethod.params.length - 1];
+        if (lastParam) {
+            if (paramName && !lastParam.name) {
+                lastParam.name = paramName;
             }
+            if (paramType && !lastParam.type) {
+                lastParam.type = paramType;
+            }
+        } else {
+            currentMethod.params.push({
+                name: paramName,
+                type: paramType,
+            });
+        }
+    }
 
-            imported.push(newImport);
+    private setMethodReturnType(
+        methods: ClassMethod[],
+        returnType: string,
+    ): void {
+        if (methods.length === 0) return;
+
+        const currentMethod = methods[methods.length - 1];
+        currentMethod.returnType = returnType;
+    }
+
+    private addClassProperty(
+        properties: ClassProperty[],
+        name: string | null,
+        type: string | null,
+    ): void {
+        const lastProperty = properties[properties.length - 1];
+
+        if (name !== null) {
+            if (lastProperty && !lastProperty.name) {
+                lastProperty.name = name;
+            } else {
+                properties.push({ name, type: null });
+            }
+        } else if (type !== null) {
+            if (lastProperty && !lastProperty.type) {
+                lastProperty.type = type;
+            } else {
+                properties.push({ name: null, type });
+            }
+        }
+    }
+
+    private addMethodsToType(
+        classAnalysis: TypeAnalysis,
+        methods: ClassMethod[],
+    ): void {
+        if (!classAnalysis.fields) {
+            classAnalysis.fields = {};
         }
 
-        for (const importedItem of imported) {
-            const resolvedImport = this.resolveImportWithCache(
-                importedItem.name,
-                filePath,
-            );
+        for (const method of methods) {
+            const filteredParams = method.params.filter((param) => param.name);
+            const params = `(${filteredParams
+                .map((param) => param.name)
+                .join(', ')})`;
+            const methodSignature = `${params}:${method.returnType || 'unknown'}`;
+            classAnalysis.fields[method.name] = methodSignature;
+        }
+    }
 
-            const normalizedPath =
-                resolvedImport?.normalizedPath || importedItem.name;
-            this.context.fileImports.add(normalizedPath);
+    private addPropertiesToType(
+        classAnalysis: TypeAnalysis,
+        properties: ClassProperty[],
+    ): void {
+        if (!classAnalysis.fields) {
+            classAnalysis.fields = {};
+        }
 
-            if (importedItem.alias) {
-                this.context.importedMapping.set(
-                    importedItem.alias,
-                    normalizedPath,
-                );
+        for (const property of properties) {
+            if (!property.name) continue;
+            classAnalysis.fields[property.name] = property.type || 'unknown';
+        }
+    }
+
+    private processConstructorParameters(methods: ClassMethod[]): void {
+        const constructor = methods.find(
+            (method) => method.name === this.constructorName,
+        );
+        if (!constructor) return;
+
+        for (const param of constructor.params) {
+            if (param.name && param.type) {
+                this.context.instanceMapping.set(param.name, param.type);
+                this.context.instanceMapping.set(param.type, param.name);
             }
-
-            importedItem.imports.forEach((importDetail) => {
-                this.context.importedMapping.set(
-                    importDetail.name,
-                    normalizedPath,
-                );
-                if (importDetail.alias) {
-                    this.context.importedMapping.set(
-                        importDetail.alias,
-                        importDetail.name,
-                    );
-                }
-            });
         }
     }
 
@@ -250,17 +483,17 @@ export class PhpParser extends BaseParser {
             }
         }
 
-        const implementsClause = findNamedChildByType(
-            node,
-            'class_interface_clause',
-        );
-        if (implementsClause) {
-            this.addImplementedToType(
-                classAnalysis,
-                implementsClause,
-                absolutePath,
-            );
-        }
+        // const implementsClause = findNamedChildByType(
+        //     node,
+        //     'class_interface_clause',
+        // );
+        // if (implementsClause) {
+        //     this.addImplementedToType(
+        //         classAnalysis,
+        //         implementsClause,
+        //         absolutePath,
+        //     );
+        // }
 
         const classBody = node.childForFieldName('body');
         if (classBody) {
@@ -423,8 +656,10 @@ export class PhpParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const funcQuery = this.newQueryFromType(QueryType.FUNCTION_QUERY);
-        const callQuery = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
+        const [funcQuery] = this.newQueryFromType(QueryType.FUNCTION_QUERY);
+        const [callQuery] = this.newQueryFromType(
+            QueryType.FUNCTION_CALL_QUERY,
+        );
 
         const funcCaptures = funcQuery.captures(rootNode);
 
@@ -577,7 +812,7 @@ export class PhpParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const query = this.newQueryFromType(QueryType.TYPE_QUERY);
+        const [query] = this.newQueryFromType(QueryType.TYPE_QUERY);
         const matches = query.matches(rootNode);
 
         matches.forEach((match) => this.processTypeMatch(match, absolutePath));
@@ -628,7 +863,7 @@ export class PhpParser extends BaseParser {
         };
 
         this.addExtendedToType(classObj, classExtends, absolutePath);
-        this.addImplementedToType(classObj, classImplements, absolutePath);
+        // this.addImplementedToType(classObj, classImplements, absolutePath);
         this.addFieldsToType(classObj, classBody);
 
         this.context.types.set(key, classObj);
@@ -681,7 +916,7 @@ export class PhpParser extends BaseParser {
             fields: {},
         };
 
-        this.addImplementedToType(enumObj, enumImplements, absolutePath);
+        // this.addImplementedToType(enumObj, enumImplements, absolutePath);
         this.addFieldsToType(enumObj, enumBody);
 
         this.context.types.set(key, enumObj);
@@ -689,73 +924,52 @@ export class PhpParser extends BaseParser {
 
     private addExtendedToType(
         classObj: TypeAnalysis,
-        baseClause: SyntaxNode,
+        node: SyntaxNode,
         absolutePath: string,
     ): void {
-        if (!baseClause) {
+        if (!node) {
             return;
         }
 
-        const baseClass = this.getExtendedClass(baseClause);
+        const baseClass = node.text;
 
-        if (baseClass) {
-            let key = `${absolutePath}:${baseClass}`;
-            const mapped = this.context.importedMapping.get(baseClass);
-            if (mapped) {
-                key = `${mapped}:${baseClass}`;
-            }
-
-            const existingExtends = new Set(classObj.extends || []);
-            existingExtends.add(key);
-            classObj.extends = Array.from(existingExtends);
+        let key = `${absolutePath}:${baseClass}`;
+        const mapped = this.context.importedMapping.get(baseClass);
+        if (mapped) {
+            key = `${mapped}:${baseClass}`;
         }
-    }
 
-    private getExtendedClass(baseClause: SyntaxNode): string | null {
-        const baseClassNameNode = findNamedChildByType(baseClause, 'name');
-        if (baseClassNameNode) {
-            return baseClassNameNode.text;
-        }
-        return null;
+        const existingExtends = new Set(classObj.extends || []);
+        existingExtends.add(key);
+        classObj.extends = Array.from(existingExtends);
     }
 
     private addImplementedToType(
         classObj: TypeAnalysis,
-        implementsClause: SyntaxNode,
+        nodes: SyntaxNode[],
         absolutePath: string,
     ): void {
-        if (!implementsClause) {
+        if (!nodes || nodes.length === 0) {
             return;
         }
 
-        const interfacesNames = this.getImplementsInterfaces(implementsClause);
-        if (interfacesNames.length > 0) {
-            const keys = interfacesNames.map((interfaceName) => {
-                let key = `${absolutePath}:${interfaceName}`;
-                const mapped = this.context.importedMapping.get(interfaceName);
-                if (mapped) {
-                    key = `${mapped}:${interfaceName}`;
-                }
-                return key;
-            });
+        const keys = nodes.map((node) => {
+            const interfaceName = node.text;
 
-            const existingImplements = new Set(classObj.implements || []);
-            keys.forEach((key) => {
-                existingImplements.add(key);
-            });
+            let key = `${absolutePath}:${interfaceName}`;
+            const mapped = this.context.importedMapping.get(interfaceName);
+            if (mapped) {
+                key = `${mapped}:${interfaceName}`;
+            }
 
-            classObj.implements = Array.from(existingImplements);
-        }
-    }
+            return key;
+        });
 
-    private getImplementsInterfaces(implementsClause: SyntaxNode): string[] {
-        const interfacesNames = findNamedChildrenByType(
-            implementsClause,
-            'name',
-        );
-        return interfacesNames.map(
-            (interfaceNameNode) => interfaceNameNode.text,
-        );
+        const existingImplements = new Set(classObj.implements || []);
+        keys.forEach((key) => {
+            existingImplements.add(key);
+        });
+        classObj.implements = Array.from(existingImplements);
     }
 
     private addFieldsToType(typeObj: TypeAnalysis, bodyNode: SyntaxNode): void {

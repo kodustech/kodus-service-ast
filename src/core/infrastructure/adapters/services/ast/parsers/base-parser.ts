@@ -1,5 +1,5 @@
 import * as Parser from 'tree-sitter';
-import { QueryCapture, SyntaxNode } from 'tree-sitter';
+import { Query, QueryCapture, SyntaxNode } from 'tree-sitter';
 import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
@@ -18,6 +18,7 @@ export abstract class BaseParser {
     protected parser: Parser;
     protected language: Language;
     protected queries: Map<QueryType, ParserQuery>;
+    protected constructorName: string;
 
     protected context: ParseContext;
 
@@ -78,19 +79,25 @@ export abstract class BaseParser {
 
     protected newQueryFromType<T extends QueryType>(
         queryType: T,
-    ): EnhancedQuery<T> {
+    ): [EnhancedQuery<T>, Query | null] {
         const parserQuery = this.getQuery(queryType);
         return this.newQuery(parserQuery);
     }
 
     protected newQuery<T extends QueryType>(
         query: Extract<ParserQuery, { type: T }>,
-    ): EnhancedQuery<T> {
-        return new EnhancedQuery(
+    ): [EnhancedQuery<T>, Query | null] {
+        const mainQuery = new EnhancedQuery(
             this.language,
             query.query,
             query.captureNames as CaptureNamesForType<T>,
         );
+
+        const auxiliaryQuery = query.auxiliaryQuery
+            ? new Query(this.language, query.auxiliaryQuery)
+            : null;
+
+        return [mainQuery, auxiliaryQuery];
     }
 
     public collectAllInOnePass(
@@ -98,12 +105,7 @@ export abstract class BaseParser {
         filePath: string,
         absolutePath: string,
     ): Promise<void> {
-        const parserQuery = this.getQuery(QueryType.MAIN_QUERY);
-        if (!parserQuery || !parserQuery.query || !parserQuery.captureNames) {
-            throw new Error('Main query not found');
-        }
-
-        const query = this.newQuery(parserQuery);
+        const [query] = this.newQueryFromType(QueryType.MAIN_QUERY);
         const captures = query.captures(rootNode);
 
         const importCaptures: QueryCapture[] = [];
@@ -115,13 +117,11 @@ export abstract class BaseParser {
                 continue;
             }
 
-            if (parserQuery.captureNames.import.includes(capture.name)) {
+            if (query.captureNames.import.includes(capture.name)) {
                 importCaptures.push(capture);
-            } else if (
-                parserQuery.captureNames.definition.includes(capture.name)
-            ) {
+            } else if (query.captureNames.definition.includes(capture.name)) {
                 definitionCaptures.push(capture);
-            } else if (parserQuery.captureNames.call.includes(capture.name)) {
+            } else if (query.captureNames.call.includes(capture.name)) {
                 callCaptures.push(capture);
             }
         }

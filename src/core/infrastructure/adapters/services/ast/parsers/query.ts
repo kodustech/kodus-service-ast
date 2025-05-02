@@ -5,6 +5,11 @@ export enum QueryType {
     FUNCTION_QUERY,
     FUNCTION_CALL_QUERY,
     TYPE_QUERY,
+
+    IMPORT_QUERY,
+    CLASS_QUERY,
+    INTERFACE_QUERY,
+    ENUM_QUERY,
 }
 
 export type MainQueryCaptureNames = {
@@ -23,13 +28,14 @@ export type TypeQueryCaptureNames = {
 export type BaseParserQuery<T extends QueryType> = {
     type: T;
     query: string;
+    auxiliaryQuery?: string;
 };
 
 export type ParserQueryWithCaptures<
     T extends QueryType,
     C,
 > = BaseParserQuery<T> & {
-    captureNames: C;
+    captureNames?: C;
 };
 
 export type MainParserQuery = ParserQueryWithCaptures<
@@ -43,7 +49,7 @@ export type TypeParserQuery = ParserQueryWithCaptures<
 >;
 
 export type GenericParserQuery = ParserQueryWithCaptures<
-    QueryType.FUNCTION_QUERY | QueryType.FUNCTION_CALL_QUERY,
+    Exclude<QueryType, QueryType.MAIN_QUERY | QueryType.TYPE_QUERY>,
     undefined
 >;
 
@@ -53,7 +59,7 @@ export type ParserQuery =
     | TypeParserQuery;
 
 export type CaptureNamesForType<T extends QueryType> =
-    Extract<ParserQuery, { type: T }> extends { captureNames: infer C }
+    Extract<ParserQuery, { type: T }> extends { captureNames?: infer C }
         ? C
         : undefined;
 

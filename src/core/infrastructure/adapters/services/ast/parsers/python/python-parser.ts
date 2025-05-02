@@ -269,8 +269,10 @@ export class PythonParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const funcQuery = this.newQueryFromType(QueryType.FUNCTION_QUERY);
-        const callQuery = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
+        const [funcQuery] = this.newQueryFromType(QueryType.FUNCTION_QUERY);
+        const [callQuery] = this.newQueryFromType(
+            QueryType.FUNCTION_CALL_QUERY,
+        );
 
         const funcCaptures = funcQuery.captures(rootNode);
 
@@ -401,7 +403,7 @@ export class PythonParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const query = this.newQueryFromType(QueryType.TYPE_QUERY);
+        const [query] = this.newQueryFromType(QueryType.TYPE_QUERY);
         const matches = query.matches(rootNode);
 
         matches.forEach((match) => this.processTypeMatch(match, absolutePath));

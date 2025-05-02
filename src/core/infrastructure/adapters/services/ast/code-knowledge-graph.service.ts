@@ -102,7 +102,7 @@ export class CodeKnowledgeGraphService {
             // 'example.rb',
             // 'src/ee/codeBase/ast/resolvers',
             // 'src/core/application/use-cases/codeBase/php_project',
-            'relation.php',
+            'UserController.php',
         ];
         const filteredFiles =
             filterCriteria.length > 0

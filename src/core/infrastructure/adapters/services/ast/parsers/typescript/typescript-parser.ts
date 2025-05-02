@@ -20,7 +20,7 @@ export class TypeScriptParser extends BaseParser {
         filePath: string,
         absolutePath: string,
     ): Promise<void> {
-        const query = this.newQueryFromType(QueryType.MAIN_QUERY);
+        const [query] = this.newQueryFromType(QueryType.MAIN_QUERY);
         const matches = query.matches(rootNode);
 
         const importNodes: SyntaxNode[] = [];
@@ -465,8 +465,10 @@ export class TypeScriptParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const funcQuery = this.newQueryFromType(QueryType.FUNCTION_QUERY);
-        const callQuery = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
+        const [funcQuery] = this.newQueryFromType(QueryType.FUNCTION_QUERY);
+        const [callQuery] = this.newQueryFromType(
+            QueryType.FUNCTION_CALL_QUERY,
+        );
 
         const funcCaptures = funcQuery.captures(rootNode);
 
@@ -601,7 +603,7 @@ export class TypeScriptParser extends BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const query = this.newQueryFromType(QueryType.TYPE_QUERY);
+        const [query] = this.newQueryFromType(QueryType.TYPE_QUERY);
         const matches = query.matches(rootNode);
 
         for (const match of matches) {

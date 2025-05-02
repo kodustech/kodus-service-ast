@@ -1,42 +1,146 @@
+/* eslint-disable no-useless-escape */
 import { ParserQuery, QueryType } from '../query';
 
-const mainQuery: ParserQuery = {
-    type: QueryType.MAIN_QUERY,
+const importQuery: ParserQuery = {
+    type: QueryType.IMPORT_QUERY,
     query: `
-(namespace_use_declaration) @import
-(expression_statement
-    [
-        (require_expression)
-        (include_expression)
-        (require_once_expression)
-        (include_once_expression)
-    ]
-) @import
-
-
-(class_declaration) @definition.class
-(interface_declaration) @definition.interface
-(enum_declaration) @definition.enum
-(function_definition) @definition.function
-(expression_statement
-	(assignment_expression
-    	right: (arrow_function)
+;; use foo\bar;
+;; use foo\bar as baz;
+;; use foo\bar, biz\baz as buz, qux\qox;
+(namespace_use_declaration
+    (namespace_use_clause
+        (qualified_name
+            (namespace_name) @origin
+            (name) @symbol
+        )
+        (name)? @alias
     )
-) @definition.function
-(method_declaration) @definition.method
-(member_call_expression object: (member_access_expression)) @buildCall
+)
+
+;; use foo\bar\ {
+;;  baz\buz,
+;;  qux\qox as buz
+;; }
+(namespace_use_declaration
+	(namespace_name) @origin
+	(namespace_use_group
+        (
+    	    (namespace_use_clause
+                (name) @symbol
+                (name)? @alias
+            )
+            ","?
+        )+
+    )
+)
+
+;; require 'foo.php';
+;; include __DIR__ . '/foo.php';
+(expression_statement
+	[
+    (require_expression)
+    (require_once_expression)
+    (include_expression)
+    (include_once_expression)
+    ] @auxiliary
+)
 `,
-    captureNames: {
-        import: ['import'],
-        definition: [
-            'definition.class',
-            'definition.interface',
-            'definition.enum',
-            'definition.function',
-            'definition.method',
-        ],
-        call: ['buildCall'],
-    },
+    auxiliaryQuery: `
+;; dirname(__FILE__) . '/foo.php';
+(binary_expression
+    left: (function_call_expression
+    	function: (name) @fname
+        arguments: (arguments
+        	(argument
+            	(name) @farg
+            )
+        )
+    )
+    operator: "."
+    right: (string (string_content) @origin)
+    (#eq? @fname "dirname")
+    (#match? @farg "(__FILE__)|(__DIR__)")
+)
+
+;; __DIR__ . '/foo.php';
+(binary_expression
+	left: (name) @dir
+    operator: "."
+    right: (string (string_content) @origin)
+    (#eq? @dir "__DIR__")
+)
+
+;; 'foo.php';
+(string (string_content) @origin)
+`,
+};
+
+const classQuery: ParserQuery = {
+    type: QueryType.CLASS_QUERY,
+    query: `
+(class_declaration
+    name: (name) @className
+    (base_clause
+        (name) @classExtends
+    )?
+    (class_interface_clause
+        (
+            (name) @classImplements
+            ","?
+        )+
+    )?
+    body: (declaration_list
+    	(
+        [
+		(method_declaration
+			name: (name) @classMethod
+			parameters: (formal_parameters
+            	(
+                [
+					(property_promotion_parameter
+                    	type: (_)? @classMethodParamType
+                		name: (_) @classMethodParamName
+                	)
+                    (simple_parameter
+                    	type: (_)? @classMethodParamType
+                		name: (_) @classMethodParamName
+                	)
+					(variadic_parameter
+                    	type: (_)? @classMethodParamType
+                		name: (_) @classMethodParamName
+                	)
+                ]
+                ","?
+                )*
+			)?
+            return_type: (_)? @classMethodReturnType
+    	)
+        (property_declaration
+        	type: (_)? @classPropertyType
+        	(property_element
+            	(variable_name) @classProperty
+            )
+        )
+        (const_declaration
+        	type: (_)? @classPropertyType
+        	(const_element
+            	(name) @classProperty
+            )
+        )
+        ]
+        _*
+        )*
+    )
+) @classDecl
+`,
+};
+
+const interfaceQuery: ParserQuery = {
+    type: QueryType.INTERFACE_QUERY,
+    query: `
+(interface_declaration) @interfaceDecl
+(class_declaration) @classDecl
+`,
 };
 
 const functionQuery: ParserQuery = {
@@ -50,7 +154,6 @@ const functionQuery: ParserQuery = {
 ) @arrow
 (method_declaration) @method
 `,
-    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
@@ -60,7 +163,6 @@ const functionCallQuery: ParserQuery = {
 
 (member_call_expression) @call
 `,
-    captureNames: undefined,
 };
 
 const typeQuery: ParserQuery = {
@@ -111,8 +213,11 @@ const typeQuery: ParserQuery = {
 };
 
 export const phpQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.MAIN_QUERY, mainQuery],
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.TYPE_QUERY, typeQuery],
+
+    [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.CLASS_QUERY, classQuery],
+    [QueryType.INTERFACE_QUERY, interfaceQuery],
 ] as const);

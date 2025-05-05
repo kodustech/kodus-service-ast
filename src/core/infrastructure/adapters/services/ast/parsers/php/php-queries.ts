@@ -56,6 +56,7 @@ const importQuery: ParserQuery = {
 ;; use foo\bar;
 ;; use foo\bar as baz;
 ;; use foo\bar, biz\baz as buz, qux\qox;
+
 (namespace_use_declaration
     (namespace_use_clause
         (qualified_name
@@ -70,6 +71,7 @@ const importQuery: ParserQuery = {
 ;;  baz\buz,
 ;;  qux\qox as buz
 ;; }
+
 (namespace_use_declaration
 	(namespace_name) @origin
 	(namespace_use_group
@@ -85,6 +87,7 @@ const importQuery: ParserQuery = {
 
 ;; require 'foo.php';
 ;; include __DIR__ . '/foo.php';
+
 (expression_statement
 	[
     (require_expression)
@@ -100,6 +103,7 @@ const importAuxiliaryQuery: ParserQuery = {
     type: QueryType.IMPORT_AUXILIARY_QUERY,
     query: `
 ;; dirname(__FILE__) . '/foo.php';
+
 (binary_expression
     left: (function_call_expression
     	function: (name) @fname
@@ -116,6 +120,7 @@ const importAuxiliaryQuery: ParserQuery = {
 )
 
 ;; __DIR__ . '/foo.php';
+
 (binary_expression
 	left: (name) @dir
     operator: "."
@@ -124,6 +129,7 @@ const importAuxiliaryQuery: ParserQuery = {
 )
 
 ;; 'foo.php';
+
 (string (string_content) @origin)
 `,
 };
@@ -233,10 +239,10 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(member_call_expression) @1
-(scoped_call_expression) @2
-(function_call_expression) @3
-(nullsafe_member_call_expression) @4
+(member_call_expression) @call
+(scoped_call_expression) @call
+(function_call_expression) @call
+(nullsafe_member_call_expression) @call
 `,
 };
 

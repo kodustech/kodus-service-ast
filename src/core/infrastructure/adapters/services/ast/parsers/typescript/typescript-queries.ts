@@ -1,7 +1,7 @@
 import { QueryType, ParserQuery } from '../query';
 
 const mainQuery: ParserQuery = {
-    type: QueryType.MAIN_QUERY,
+    type: QueryType.CLASS_QUERY,
     query: `
 ;; Captura imports
 (import_statement) @import
@@ -56,18 +56,6 @@ const mainQuery: ParserQuery = {
     arguments: (_)
 ) @buildCall
 `,
-    captureNames: {
-        import: ['import'],
-        definition: [
-            'definition.class',
-            'definition.interface',
-            'definition.enum',
-            'definition.type',
-            'definition.function',
-            'definition.method',
-        ],
-        call: ['buildCall'],
-    },
 };
 
 const functionQuery: ParserQuery = {
@@ -93,7 +81,6 @@ const functionQuery: ParserQuery = {
               body: (_) @body)
 )
 `,
-    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
@@ -109,11 +96,10 @@ call_expression
                 property: (property_identifier) @callName)
 )
 `,
-    captureNames: undefined,
 };
 
 const typeQuery: ParserQuery = {
-    type: QueryType.TYPE_QUERY,
+    type: QueryType.CLASS_QUERY,
     query: `
 ;; Interface
 (interface_declaration
@@ -142,17 +128,9 @@ name: (identifier) @enumName
 body: (enum_body)? @enumBody
 ) @enumDecl
 `,
-    captureNames: {
-        class: ['className', 'classHeritage', 'classBody'],
-        interface: ['ifaceName', 'ifaceBody', 'ifaceExt'],
-        enum: ['enumName', 'enumBody'],
-        type: ['typeName', 'aliasType'],
-    },
 };
 
 export const typeScriptQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.MAIN_QUERY, mainQuery],
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.TYPE_QUERY, typeQuery],
 ] as const);

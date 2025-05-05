@@ -1,7 +1,7 @@
 import { ParserQuery, QueryType } from '../query';
 
 const mainQuery: ParserQuery = {
-    type: QueryType.MAIN_QUERY,
+    type: QueryType.CLASS_QUERY,
     query: `
 ;; imports
 (call
@@ -42,15 +42,6 @@ const mainQuery: ParserQuery = {
     arguments: (argument_list)
 ) @buildCall
 `,
-    captureNames: {
-        import: ['import'],
-        definition: [
-            'definition.class',
-            'definition.module',
-            'definition.function',
-        ],
-        call: ['buildCall'],
-    },
 };
 
 const functionQuery: ParserQuery = {
@@ -82,7 +73,6 @@ const functionQuery: ParserQuery = {
               parameters: (block_parameters) @params*)
 )
 `,
-    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
@@ -93,11 +83,10 @@ const functionCallQuery: ParserQuery = {
     method: (identifier) @callName
 )
 `,
-    captureNames: undefined,
 };
 
 const typeQuery: ParserQuery = {
-    type: QueryType.TYPE_QUERY,
+    type: QueryType.CLASS_QUERY,
     query: `
 ;; class
 (class
@@ -110,17 +99,9 @@ const typeQuery: ParserQuery = {
     name: (constant) @moduleName
 ) @moduleDecl
 `,
-    captureNames: {
-        class: ['className', 'classHeritage'],
-        interface: [],
-        enum: [],
-        type: [],
-    },
 };
 
 export const rubyQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.MAIN_QUERY, mainQuery],
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.TYPE_QUERY, typeQuery],
 ] as const);

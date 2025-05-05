@@ -7,6 +7,9 @@ import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 import { QueryType } from '../query';
 
 export class RubyParser extends BaseParser {
+    protected constructorName: string = 'initialize';
+    protected selfAccessReference: string = '@self';
+
     protected setupLanguage(): void {
         this.language = RubyLang as Language;
     }

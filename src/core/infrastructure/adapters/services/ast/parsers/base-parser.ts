@@ -1,15 +1,10 @@
 import * as Parser from 'tree-sitter';
-import { QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
+import { Query, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-import {
-    CaptureNamesForType,
-    EnhancedQuery,
-    ParserQuery,
-    QueryType,
-} from './query';
+import { ParserQuery, QueryType } from './query';
 import {
     Call,
     Scope,
@@ -45,13 +40,13 @@ type ObjectProperty = {
 export abstract class BaseParser {
     private importCache: Map<string, ResolvedImport> = new Map();
     private importPathResolver: ImportPathResolverService;
+    private parser: Parser;
+    private context: ParseContext;
 
-    protected parser: Parser;
     protected language: Language;
     protected queries: Map<QueryType, ParserQuery>;
     protected constructorName: string;
-
-    protected context: ParseContext;
+    protected selfAccessReference: string;
 
     constructor(
         importPathResolver: ImportPathResolverService,
@@ -66,6 +61,9 @@ export abstract class BaseParser {
 
     protected abstract setupLanguage(): void;
     protected abstract setupQueries(): void;
+
+    protected abstract getMemberChain(node: SyntaxNode): string[];
+    protected abstract getScopeChain(node: SyntaxNode): Scope[];
 
     private setupParser(): void {
         if (this.parser) {
@@ -95,9 +93,7 @@ export abstract class BaseParser {
         return this.language;
     }
 
-    public getQuery<T extends QueryType>(
-        type: T,
-    ): Extract<ParserQuery, { type: T }> {
+    public getQuery(type: QueryType): ParserQuery | null {
         if (!this.queries) {
             throw new Error('Queries not set up');
         }
@@ -105,12 +101,10 @@ export abstract class BaseParser {
         if (!query) {
             return null;
         }
-        return query as Extract<ParserQuery, { type: T }>;
+        return query;
     }
 
-    protected newQueryFromType<T extends QueryType>(
-        queryType: T,
-    ): EnhancedQuery<T> | null {
+    protected newQueryFromType(queryType: QueryType): Query | null {
         const parserQuery = this.getQuery(queryType);
         if (!parserQuery) {
             return null;
@@ -118,14 +112,8 @@ export abstract class BaseParser {
         return this.newQuery(parserQuery);
     }
 
-    protected newQuery<T extends QueryType>(
-        query: Extract<ParserQuery, { type: T }>,
-    ): EnhancedQuery<T> {
-        const mainQuery = new EnhancedQuery(
-            this.language,
-            query.query,
-            query.captureNames as CaptureNamesForType<T>,
-        );
+    protected newQuery(query: ParserQuery): Query {
+        const mainQuery = new Query(this.language, query.query);
 
         return mainQuery;
     }
@@ -684,7 +672,10 @@ export abstract class BaseParser {
                 let instanceName: string | undefined;
                 let targetFile = absolutePath;
 
-                if (chain.length >= 3 && chain[0] === '$this') {
+                if (
+                    chain.length >= 3 &&
+                    chain[0] === this.selfAccessReference
+                ) {
                     instanceName = chain[1];
                 } else if (chain.length >= 2) {
                     instanceName = chain[0];
@@ -717,78 +708,8 @@ export abstract class BaseParser {
         return calls;
     }
 
-    private getMemberChain(node: SyntaxNode): string[] {
-        const chain: string[] = [];
-        let currentNode: SyntaxNode | null = node;
-
-        const nodeTypes = [
-            'member_call_expression',
-            'function_call_expression',
-            'member_access_expression',
-        ];
-
-        while (currentNode) {
-            if (nodeTypes.includes(currentNode.type)) {
-                const memberNameNode = currentNode.childForFieldName('name');
-                if (memberNameNode) {
-                    chain.unshift(memberNameNode.text);
-                }
-            }
-            if (
-                currentNode.type === 'variable_name' &&
-                currentNode.text === '$this'
-            ) {
-                chain.unshift('$this');
-            }
-            currentNode = currentNode.childForFieldName('object');
-        }
-
-        return chain;
-    }
-
     private scopeToString(scope: Scope[]): string {
         return scope.map((s) => s.name).join('::');
-    }
-
-    private getScopeChain(node: SyntaxNode): Scope[] {
-        const chain: Scope[] = [];
-        let currentNode: SyntaxNode | null = node;
-
-        const scopes = new Map<string, ScopeType>([
-            ['class_declaration', ScopeType.CLASS],
-            ['interface_declaration', ScopeType.INTERFACE],
-            ['enum_declaration', ScopeType.ENUM],
-
-            ['function_declaration', ScopeType.FUNCTION],
-            ['method_declaration', ScopeType.METHOD],
-            ['assignment_expression', ScopeType.FUNCTION],
-        ] as const);
-
-        while (currentNode && currentNode.type !== 'program') {
-            const scopeType = scopes.get(currentNode.type);
-            if (scopeType) {
-                const nameNode = currentNode.childForFieldName('name');
-                if (nameNode) {
-                    const name = nameNode.text;
-                    chain.unshift({
-                        type: scopeType,
-                        name: name,
-                    });
-                } else {
-                    const assignment = currentNode.childForFieldName('left');
-                    if (assignment) {
-                        const name = assignment.text;
-                        chain.unshift({
-                            type: scopeType,
-                            name: name,
-                        });
-                    }
-                }
-            }
-            currentNode = currentNode.parent;
-        }
-
-        return chain;
     }
 
     public resolveImportWithCache(

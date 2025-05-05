@@ -6,10 +6,14 @@ export enum QueryType {
     FUNCTION_CALL_QUERY,
     TYPE_QUERY,
 
+    PARENT_CHAIN_QUERY,
     IMPORT_QUERY,
+    IMPORT_AUXILIARY_QUERY,
     CLASS_QUERY,
     INTERFACE_QUERY,
     ENUM_QUERY,
+    DECLARATION_QUERY,
+    BODY_QUERY,
 }
 
 export type MainQueryCaptureNames = {
@@ -28,7 +32,6 @@ export type TypeQueryCaptureNames = {
 export type BaseParserQuery<T extends QueryType> = {
     type: T;
     query: string;
-    auxiliaryQuery?: string;
 };
 
 export type ParserQueryWithCaptures<

@@ -228,7 +228,22 @@ export interface TypeAnalysis {
     implementedBy?: string[];
     extends?: string[];
     extendedBy?: string[];
+    scope?: Scope[];
 }
+
+export enum ScopeType {
+    FILE = 'file',
+    CLASS = 'class',
+    INTERFACE = 'interface',
+    ENUM = 'enum',
+    FUNCTION = 'function',
+    METHOD = 'method',
+}
+
+export type Scope = {
+    type: ScopeType;
+    name: string;
+};
 
 /**
  * Complete code graph

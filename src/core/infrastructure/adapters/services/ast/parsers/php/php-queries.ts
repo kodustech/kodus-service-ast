@@ -1,6 +1,55 @@
 /* eslint-disable no-useless-escape */
 import { ParserQuery, QueryType } from '../query';
 
+const parametersQuery = () => `
+(formal_parameters
+    (
+        [
+            (property_promotion_parameter
+                type: (_)? @funcParamType
+                name: (_) @funcParamName
+            )
+            (simple_parameter
+                type: (_)? @funcParamType
+                name: (_) @funcParamName
+            )
+            (variadic_parameter
+                type: (_)? @funcParamType
+                name: (_) @funcParamName
+            )
+        ]
+        ","?
+    )*
+)?
+`;
+
+const declarationListQuery = () => `
+    (declaration_list
+    	(
+        [
+		(method_declaration
+			name: (name) @objMethod
+			parameters: ${parametersQuery()}
+            return_type: (_)? @objMethodReturnType
+    	)
+        (property_declaration
+        	type: (_)? @objPropertyType
+        	(property_element
+            	(variable_name) @objProperty
+            )
+        )
+        (const_declaration
+        	type: (_)? @objPropertyType
+        	(const_element
+            	(name) @objProperty
+            )
+        )
+        ]
+        _*
+        )*
+    )
+`;
+
 const importQuery: ParserQuery = {
     type: QueryType.IMPORT_QUERY,
     query: `
@@ -45,7 +94,11 @@ const importQuery: ParserQuery = {
     ] @auxiliary
 )
 `,
-    auxiliaryQuery: `
+};
+
+const importAuxiliaryQuery: ParserQuery = {
+    type: QueryType.IMPORT_AUXILIARY_QUERY,
+    query: `
 ;; dirname(__FILE__) . '/foo.php';
 (binary_expression
     left: (function_call_expression
@@ -79,145 +132,122 @@ const classQuery: ParserQuery = {
     type: QueryType.CLASS_QUERY,
     query: `
 (class_declaration
-    name: (name) @className
+    name: (name) @objName
     (base_clause
-        (name) @classExtends
+        (name) @objExtends
     )?
     (class_interface_clause
         (
-            (name) @classImplements
+            (name) @objImplements
             ","?
         )+
     )?
-    body: (declaration_list
-    	(
-        [
-		(method_declaration
-			name: (name) @classMethod
-			parameters: (formal_parameters
-            	(
-                [
-					(property_promotion_parameter
-                    	type: (_)? @classMethodParamType
-                		name: (_) @classMethodParamName
-                	)
-                    (simple_parameter
-                    	type: (_)? @classMethodParamType
-                		name: (_) @classMethodParamName
-                	)
-					(variadic_parameter
-                    	type: (_)? @classMethodParamType
-                		name: (_) @classMethodParamName
-                	)
-                ]
-                ","?
-                )*
-			)?
-            return_type: (_)? @classMethodReturnType
-    	)
-        (property_declaration
-        	type: (_)? @classPropertyType
-        	(property_element
-            	(variable_name) @classProperty
-            )
-        )
-        (const_declaration
-        	type: (_)? @classPropertyType
-        	(const_element
-            	(name) @classProperty
-            )
-        )
-        ]
-        _*
-        )*
-    )
-) @classDecl
+    body: ${declarationListQuery()}
+)
 `,
 };
 
 const interfaceQuery: ParserQuery = {
     type: QueryType.INTERFACE_QUERY,
     query: `
-(interface_declaration) @interfaceDecl
-(class_declaration) @classDecl
+(interface_declaration
+    name: (name) @objName
+    (base_clause
+        (name) @objExtends
+    )?
+    (class_interface_clause
+        (
+            (name) @objImplements
+            ","?
+        )+
+    )?
+    body: ${declarationListQuery()}
+)
+`,
+};
+
+const enumQuery: ParserQuery = {
+    type: QueryType.ENUM_QUERY,
+    query: `
+(enum_declaration
+    name: (name) @objName
+    (primitive_type)? @enumType
+    (base_clause
+        (name) @objExtends
+    )?
+    (class_interface_clause
+        (
+            (name) @objImplements
+            ","?
+        )+
+    )?
+    body: (enum_declaration_list
+    	(
+        [
+		(method_declaration
+			name: (name) @objMethod
+			parameters: ${parametersQuery()}
+            return_type: (_)? @objMethodReturnType
+    	)
+        (enum_case
+        	name: (name) @objProperty
+            value: (_)? @objPropertyValue
+        )
+        ]
+        _*
+        )*
+    )
+)
 `,
 };
 
 const functionQuery: ParserQuery = {
     type: QueryType.FUNCTION_QUERY,
     query: `
-(function_definition) @function
+(function_definition
+	name: (name) @funcName
+    parameters: ${parametersQuery()}
+	return_type: (_)? @funcReturnType
+    body: (_) @funcBody
+)
+
+(method_declaration
+    name: (name) @funcName
+    parameters: ${parametersQuery()}
+    return_type: (_)? @funcReturnType
+    body: (_) @funcBody
+)
+
 (expression_statement
 	(assignment_expression
-    	right: (arrow_function)
+    	left: (variable_name) @funcName
+        right: (arrow_function
+       		parameters: ${parametersQuery()}
+			return_type: (_)? @funcReturnType
+            body: (_) @funcBody
+        )
     )
-) @arrow
-(method_declaration) @method
-`,
+)`,
 };
 
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(function_call_expression) @call
-
-(member_call_expression) @call
+(member_call_expression) @1
+(scoped_call_expression) @2
+(function_call_expression) @3
+(nullsafe_member_call_expression) @4
 `,
-};
-
-const typeQuery: ParserQuery = {
-    type: QueryType.TYPE_QUERY,
-    query: `
-(class_declaration
-    name: (name) @className
-    (base_clause)? @classExtends
-    (class_interface_clause)? @classImplements
-    body: (declaration_list) @classBody
-) @classDecl
-
-(interface_declaration
-    name: (name) @interfaceName
-    (base_clause)? @interfaceExtends
-    body: (declaration_list) @interfaceBody
-) @interfaceDecl
-
-(enum_declaration
-    name: (name) @enumName
-    (class_interface_clause)? @enumImplements
-    body: (enum_declaration_list) @enumBody
-) @enumDecl
-`,
-    captureNames: {
-        class: [
-            'classDecl',
-            'className',
-            'classExtends',
-            'classImplements',
-            'classBody',
-        ],
-        interface: [
-            'interfaceDecl',
-            'interfaceName',
-            'interfaceExtends',
-            'interfaceBody',
-        ],
-        enum: [
-            'enumDecl',
-            'enumName',
-            'enumBody',
-            'enumImplements',
-            'enumPrimitive',
-        ],
-        type: [],
-    },
 };
 
 export const phpQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.FUNCTION_QUERY, functionQuery],
-    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.TYPE_QUERY, typeQuery],
-
     [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.IMPORT_AUXILIARY_QUERY, importAuxiliaryQuery],
+
     [QueryType.CLASS_QUERY, classQuery],
     [QueryType.INTERFACE_QUERY, interfaceQuery],
+    [QueryType.ENUM_QUERY, enumQuery],
+
+    [QueryType.FUNCTION_QUERY, functionQuery],
+    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
 ] as const);

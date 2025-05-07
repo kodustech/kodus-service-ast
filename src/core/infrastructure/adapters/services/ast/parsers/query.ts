@@ -1,14 +1,19 @@
 export enum QueryType {
-    IMPORT_QUERY,
-    IMPORT_AUXILIARY_QUERY,
+    IMPORT_QUERY = 'import',
 
-    CLASS_QUERY,
-    INTERFACE_QUERY,
-    ENUM_QUERY,
+    CLASS_QUERY = 'class',
+    INTERFACE_QUERY = 'interface',
+    ENUM_QUERY = 'enum',
 
-    FUNCTION_QUERY,
-    FUNCTION_CALL_QUERY,
+    FUNCTION_QUERY = 'function',
+    FUNCTION_CALL_QUERY = 'function_call',
 }
+
+export const objTypes = [
+    QueryType.CLASS_QUERY,
+    QueryType.INTERFACE_QUERY,
+    QueryType.ENUM_QUERY,
+] as const;
 
 export type ParserQuery = {
     type: QueryType;

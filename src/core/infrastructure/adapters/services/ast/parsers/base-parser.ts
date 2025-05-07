@@ -4,7 +4,7 @@ import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-import { ParserQuery, QueryType } from './query';
+import { objTypes, ParserQuery, QueryType } from './query';
 import {
     Call,
     Scope,
@@ -125,12 +125,6 @@ export abstract class BaseParser {
     ): Promise<void> {
         this.collectImports(rootNode, filePath);
 
-        const objTypes = [
-            QueryType.CLASS_QUERY,
-            QueryType.INTERFACE_QUERY,
-            QueryType.ENUM_QUERY,
-        ] as const;
-
         objTypes.forEach((type) =>
             this.collectObjDeclarations(rootNode, absolutePath, type),
         );
@@ -150,12 +144,13 @@ export abstract class BaseParser {
 
         for (const match of matches) {
             const captures = match.captures;
-            // captures come in order so we can safely assume the first one is the origin
-            const origin = captures[0];
+
+            const origin = captures.find(
+                (capture) => capture.name === 'origin',
+            );
             if (!origin) continue;
 
-            const originName = this.getOriginName(origin);
-            if (!originName) continue;
+            const originName = origin.node.text;
 
             const imported = this.parseImportedSymbols(captures);
             const resolvedImport = this.resolveImportWithCache(
@@ -168,17 +163,6 @@ export abstract class BaseParser {
             this.context.fileImports.add(normalizedPath);
 
             this.registerImportedSymbols(imported, normalizedPath);
-        }
-    }
-
-    private getOriginName(origin: QueryCapture): string | null {
-        switch (origin.name) {
-            case 'auxiliary':
-                return this.processImportAuxiliary(origin.node);
-            case 'origin':
-                return origin.node.text;
-            default:
-                return null;
         }
     }
 
@@ -219,42 +203,6 @@ export abstract class BaseParser {
         }
     }
 
-    protected processImportAuxiliary(aux: SyntaxNode): string | null {
-        const query = this.newQueryFromType(QueryType.IMPORT_AUXILIARY_QUERY);
-        const matches = query.matches(aux);
-        if (matches.length === 0) return null;
-
-        // queries are ordered by priority, so we can take the first one
-        // even if there are multiple matches
-        const captures = matches[0].captures;
-        if (captures.length === 0) return null;
-
-        const origin = captures.find((capture) => capture.name === 'origin');
-        const isBinaryExpr = captures.find(
-            (capture) => capture.name === 'fname' || capture.name === 'dir',
-        );
-
-        if (!origin) return null;
-        const path = isBinaryExpr
-            ? origin.node.text.slice(1) // remove leading slash
-            : origin.node.text;
-
-        return path;
-    }
-
-    private getObjTypeFromQueryType(type: QueryType): string | null {
-        switch (type) {
-            case QueryType.CLASS_QUERY:
-                return 'class';
-            case QueryType.INTERFACE_QUERY:
-                return 'interface';
-            case QueryType.ENUM_QUERY:
-                return 'enum';
-            default:
-                return null;
-        }
-    }
-
     public collectObjDeclarations(
         rootNode: SyntaxNode,
         absolutePath: string,
@@ -266,15 +214,8 @@ export abstract class BaseParser {
         const matches = query.matches(rootNode);
         if (matches.length === 0) return;
 
-        const objType = this.getObjTypeFromQueryType(type);
-        if (!objType) return;
-
         for (const match of matches) {
-            const objAnalysis = this.processObjMatch(
-                match,
-                absolutePath,
-                objType,
-            );
+            const objAnalysis = this.processObjMatch(match, absolutePath, type);
             this.storeObjectAnalysis(objAnalysis, absolutePath);
         }
     }

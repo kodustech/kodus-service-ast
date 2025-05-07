@@ -50,6 +50,34 @@ const declarationListQuery = () => `
     )
 `;
 
+const importAuxiliaryQuery = () => `
+[
+    (binary_expression
+        left: (function_call_expression
+            function: (name) @fname
+            arguments: (arguments
+                (argument
+                    (name) @farg
+                )
+            )
+        )
+        operator: "."
+        right: (string (string_content) @origin)
+        (#eq? @fname "dirname")
+        (#match? @farg "__FILE__|__DIR__")
+        (#strip! @origin "^\/" "")
+    )
+    (binary_expression
+        left: (name) @dir
+        operator: "."
+        right: (string (string_content) @origin)
+        (#eq? @dir "__DIR__")
+        (#strip! @origin "^\/" "")
+    )
+    (string (string_content) @origin)
+]
+`;
+
 const importQuery: ParserQuery = {
     type: QueryType.IMPORT_QUERY,
     query: `
@@ -90,47 +118,20 @@ const importQuery: ParserQuery = {
 
 (expression_statement
 	[
-    (require_expression)
-    (require_once_expression)
-    (include_expression)
-    (include_once_expression)
-    ] @auxiliary
-)
-`,
-};
-
-const importAuxiliaryQuery: ParserQuery = {
-    type: QueryType.IMPORT_AUXILIARY_QUERY,
-    query: `
-;; dirname(__FILE__) . '/foo.php';
-
-(binary_expression
-    left: (function_call_expression
-    	function: (name) @fname
-        arguments: (arguments
-        	(argument
-            	(name) @farg
-            )
+        (require_expression
+            ${importAuxiliaryQuery()}
         )
-    )
-    operator: "."
-    right: (string (string_content) @origin)
-    (#eq? @fname "dirname")
-    (#match? @farg "(__FILE__)|(__DIR__)")
+        (require_once_expression
+            ${importAuxiliaryQuery()}
+        )
+        (include_expression
+            ${importAuxiliaryQuery()}
+        )
+        (include_once_expression
+            ${importAuxiliaryQuery()}
+        )
+    ]
 )
-
-;; __DIR__ . '/foo.php';
-
-(binary_expression
-	left: (name) @dir
-    operator: "."
-    right: (string (string_content) @origin)
-    (#eq? @dir "__DIR__")
-)
-
-;; 'foo.php';
-
-(string (string_content) @origin)
 `,
 };
 
@@ -248,7 +249,6 @@ const functionCallQuery: ParserQuery = {
 
 export const phpQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
-    [QueryType.IMPORT_AUXILIARY_QUERY, importAuxiliaryQuery],
 
     [QueryType.CLASS_QUERY, classQuery],
     [QueryType.INTERFACE_QUERY, interfaceQuery],

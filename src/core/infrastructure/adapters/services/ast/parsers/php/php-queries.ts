@@ -65,14 +65,14 @@ const importAuxiliaryQuery = () => `
         right: (string (string_content) @origin)
         (#eq? @fname "dirname")
         (#match? @farg "__FILE__|__DIR__")
-        (#strip! @origin "^\/" "")
+        (#set! leadingSlash "true") ;; it would be better to use a #strip! here but it is not supported https://github.com/tree-sitter/node-tree-sitter/issues/179
     )
     (binary_expression
         left: (name) @dir
         operator: "."
         right: (string (string_content) @origin)
         (#eq? @dir "__DIR__")
-        (#strip! @origin "^\/" "")
+        (#set! leadingSlash "true") ;; it would be better to use a #strip! here but it is not supported https://github.com/tree-sitter/node-tree-sitter/issues/179
     )
     (string (string_content) @origin)
 ]

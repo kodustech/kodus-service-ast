@@ -56,7 +56,10 @@ export abstract class BaseParser {
     ) {
         this.setupLanguage();
         this.setupParser();
+
         this.setupQueries();
+        this.setupScopes();
+
         this.importPathResolver = importPathResolver;
         this.context = context;
     }
@@ -85,17 +88,11 @@ export abstract class BaseParser {
         if (!this.parser) {
             throw new Error('Parser not set up');
         }
+
         return this.parser;
     }
 
-    public getLanguage(): Language {
-        if (!this.language) {
-            throw new Error('Language not set up');
-        }
-        return this.language;
-    }
-
-    public getQuery(type: QueryType): ParserQuery | null {
+    protected getQuery(type: QueryType): ParserQuery | null {
         if (!this.queries) {
             throw new Error('Queries not set up');
         }
@@ -124,20 +121,19 @@ export abstract class BaseParser {
         rootNode: SyntaxNode,
         filePath: string,
         absolutePath: string,
-    ): Promise<void> {
+    ): void {
         this.collectImports(rootNode, filePath);
+
+        this.collectTypeAliases(rootNode, absolutePath);
 
         objTypes.forEach((type) =>
             this.collectObjDeclarations(rootNode, absolutePath, type),
         );
 
         this.collectFunctionDetails(rootNode, absolutePath);
-
-        // legacy, original typescript was async
-        return Promise.resolve();
     }
 
-    public collectImports(rootNode: SyntaxNode, filePath: string): void {
+    protected collectImports(rootNode: SyntaxNode, filePath: string): void {
         const query = this.newQueryFromType(QueryType.IMPORT_QUERY);
         if (!query) return;
 
@@ -152,7 +148,19 @@ export abstract class BaseParser {
             );
             if (!origin) continue;
 
-            const originName = origin.node.text;
+            let originName = origin.node.text;
+            if (match['properties']) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                const properties = match['properties'];
+                if (
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                    properties['leadingSlash'] &&
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                    properties['leadingSlash'] === 'true'
+                ) {
+                    originName = originName.replace(/^\//, '');
+                }
+            }
 
             const imported = this.parseImportedSymbols(captures);
             const resolvedImport = this.resolveImportWithCache(
@@ -168,7 +176,7 @@ export abstract class BaseParser {
         }
     }
 
-    private parseImportedSymbols(
+    protected parseImportedSymbols(
         captures: QueryCapture[],
     ): { symbol: string; alias: string | null }[] {
         const imported: { symbol: string; alias: string | null }[] = [];
@@ -200,7 +208,7 @@ export abstract class BaseParser {
         return imported;
     }
 
-    private registerImportedSymbols(
+    protected registerImportedSymbols(
         imported: { symbol: string; alias: string | null }[],
         normalizedPath: string,
     ): void {
@@ -212,7 +220,7 @@ export abstract class BaseParser {
         }
     }
 
-    public collectObjDeclarations(
+    protected collectObjDeclarations(
         rootNode: SyntaxNode,
         absolutePath: string,
         type: QueryType,
@@ -229,7 +237,7 @@ export abstract class BaseParser {
         }
     }
 
-    private storeObjectAnalysis(
+    protected storeObjectAnalysis(
         objAnalysis: TypeAnalysis,
         absolutePath: string,
     ): void {
@@ -246,7 +254,7 @@ export abstract class BaseParser {
         this.context.fileDefines.add(objAnalysis.name);
     }
 
-    private mergeObjectAnalyses(
+    protected mergeObjectAnalyses(
         target: TypeAnalysis,
         source: TypeAnalysis,
     ): void {
@@ -258,7 +266,7 @@ export abstract class BaseParser {
         target.fields = { ...target.fields, ...source.fields };
     }
 
-    private processObjMatch(
+    protected processObjMatch(
         match: QueryMatch,
         absolutePath: string,
         type: string,
@@ -289,7 +297,7 @@ export abstract class BaseParser {
         return objAnalysis;
     }
 
-    private processObjCapture(
+    protected processObjCapture(
         capture: QueryCapture,
         objAnalysis: TypeAnalysis,
         methods: Method[],
@@ -362,7 +370,7 @@ export abstract class BaseParser {
         }
     }
 
-    private addObjExtension(
+    protected addObjExtension(
         objAnalysis: TypeAnalysis,
         extension: string,
     ): void {
@@ -372,7 +380,7 @@ export abstract class BaseParser {
         objAnalysis.extends.push(extension);
     }
 
-    private addObjImplementation(
+    protected addObjImplementation(
         objAnalysis: TypeAnalysis,
         implementation: string,
     ): void {
@@ -382,7 +390,7 @@ export abstract class BaseParser {
         objAnalysis.implements.push(implementation);
     }
 
-    private addNewMethod(methods: Method[], methodName: string): void {
+    protected addNewMethod(methods: Method[], methodName: string): void {
         methods.push({
             name: methodName,
             params: [],
@@ -392,7 +400,7 @@ export abstract class BaseParser {
         });
     }
 
-    private addMethodParameter(
+    protected addMethodParameter(
         method: Method,
         newMethod: Partial<MethodParameter>,
     ): void {
@@ -414,12 +422,12 @@ export abstract class BaseParser {
         }
     }
 
-    private setMethodReturnType(method: Method, returnType: string): void {
+    protected setMethodReturnType(method: Method, returnType: string): void {
         if (!method) return;
         method.returnType = returnType;
     }
 
-    private addObjProperty(
+    protected addObjProperty(
         properties: ObjectProperty[],
         newProperty: Partial<ObjectProperty>,
     ): void {
@@ -444,7 +452,10 @@ export abstract class BaseParser {
         }
     }
 
-    private processMethods(objAnalysis: TypeAnalysis, methods: Method[]): void {
+    protected processMethods(
+        objAnalysis: TypeAnalysis,
+        methods: Method[],
+    ): void {
         if (!objAnalysis.fields) {
             objAnalysis.fields = {};
         }
@@ -460,7 +471,7 @@ export abstract class BaseParser {
         }
     }
 
-    private processProperties(
+    protected processProperties(
         objAnalysis: TypeAnalysis,
         objProps: ObjectProperties,
     ): void {
@@ -475,7 +486,7 @@ export abstract class BaseParser {
         }
     }
 
-    private processConstructor(
+    protected processConstructor(
         objAnalysis: TypeAnalysis,
         methods: Method[],
     ): void {
@@ -495,7 +506,7 @@ export abstract class BaseParser {
         }
     }
 
-    public collectFunctionDetails(
+    protected collectFunctionDetails(
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
@@ -561,7 +572,7 @@ export abstract class BaseParser {
         }
     }
 
-    private processFunctionCapture(
+    protected processFunctionCapture(
         capture: QueryCapture,
         method: Method,
     ): void {
@@ -598,7 +609,7 @@ export abstract class BaseParser {
         }
     }
 
-    private collectFunctionCalls(
+    protected collectFunctionCalls(
         rootNode: SyntaxNode,
         absolutePath: string,
     ): Call[] {
@@ -658,7 +669,74 @@ export abstract class BaseParser {
         return calls;
     }
 
-    private getScopeChain(node: SyntaxNode): Scope[] {
+    protected collectTypeAliases(
+        rootNode: SyntaxNode,
+        absolutePath: string,
+    ): void {
+        const query = this.newQueryFromType(QueryType.TYPE_ALIAS_QUERY);
+        if (!query) return;
+
+        const matches = query.matches(rootNode);
+        if (matches.length === 0) return;
+
+        for (const match of matches) {
+            const captures = match.captures;
+            if (captures.length === 0) continue;
+
+            const typeAnalysis: TypeAnalysis = {
+                name: '',
+                extends: [],
+                implements: [],
+                fields: {},
+                file: absolutePath,
+                type: QueryType.TYPE_ALIAS_QUERY,
+            };
+
+            for (const capture of captures) {
+                const node = capture.node;
+                if (!node) continue;
+
+                const typeFields = [] as string[];
+
+                switch (capture.name) {
+                    case 'typeName': {
+                        const scopeChain = this.getScopeChain(node);
+                        typeAnalysis.name = node.text;
+                        typeAnalysis.scope = scopeChain;
+                        break;
+                    }
+                    case 'typeField': {
+                        typeFields.push(node.text);
+                        break;
+                    }
+                    case 'typeValue': {
+                        const typeName = node.text;
+                        if (typeFields.length > 0) {
+                            typeAnalysis.fields[typeFields.pop() || ''] =
+                                typeName;
+                        } else {
+                            typeAnalysis.fields[typeName] = typeName;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            const key = `${absolutePath}::${this.scopeToString(
+                typeAnalysis.scope,
+            )}`;
+
+            const existingType = this.context.types.get(key);
+            if (existingType) {
+                this.mergeObjectAnalyses(existingType, typeAnalysis);
+            }
+
+            this.context.types.set(key, typeAnalysis);
+            this.context.fileDefines.add(typeAnalysis.name);
+        }
+    }
+
+    protected getScopeChain(node: SyntaxNode): Scope[] {
         const chain: Scope[] = [];
         let currentNode: SyntaxNode | null = node;
 
@@ -689,7 +767,7 @@ export abstract class BaseParser {
         return chain;
     }
 
-    private scopeToString(scope: Scope[]): string {
+    protected scopeToString(scope: Scope[]): string {
         return scope.map((s) => s.name).join('::');
     }
 

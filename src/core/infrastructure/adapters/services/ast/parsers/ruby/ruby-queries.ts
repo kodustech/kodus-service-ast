@@ -74,13 +74,13 @@ const classQuery: ParserQuery = {
     type: QueryType.CLASS_QUERY,
     query: `
 (class
-    name: (constant) @className
-    superclass: (superclass (constant) @classExtends)?
+    name: (constant) @objName
+    superclass: (superclass (constant) @objExtends)?
     ${classBodyQuery()}
 )
 
 (module
-    name: (constant) @className
+    name: (constant) @objName
     ${classBodyQuery()}
 )
 `,

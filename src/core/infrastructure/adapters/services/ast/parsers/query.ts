@@ -5,6 +5,8 @@ export enum QueryType {
     INTERFACE_QUERY = 'interface',
     ENUM_QUERY = 'enum',
 
+    TYPE_ALIAS_QUERY = 'type',
+
     FUNCTION_QUERY = 'function',
     FUNCTION_CALL_QUERY = 'function_call',
 }

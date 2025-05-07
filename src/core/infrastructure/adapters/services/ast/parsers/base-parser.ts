@@ -47,6 +47,8 @@ export abstract class BaseParser {
     protected queries: Map<QueryType, ParserQuery>;
     protected constructorName: string;
     protected selfAccessReference: string;
+    protected scopes: Map<string, ScopeType>;
+    protected rootNodeType: string;
 
     constructor(
         importPathResolver: ImportPathResolverService,
@@ -61,9 +63,9 @@ export abstract class BaseParser {
 
     protected abstract setupLanguage(): void;
     protected abstract setupQueries(): void;
+    protected abstract setupScopes(): void;
 
     protected abstract getMemberChain(node: SyntaxNode): string[];
-    protected abstract getScopeChain(node: SyntaxNode): Scope[];
 
     private setupParser(): void {
         if (this.parser) {
@@ -185,7 +187,14 @@ export abstract class BaseParser {
         }
 
         if (imported.length === 0) {
-            imported.push({ symbol: '*', alias: null });
+            let alias: string | null = null;
+            const aliasCapture = captures.find(
+                (capture) => capture.name === 'alias',
+            );
+            if (aliasCapture) {
+                alias = aliasCapture.node.text;
+            }
+            imported.push({ symbol: '*', alias });
         }
 
         return imported;
@@ -647,6 +656,37 @@ export abstract class BaseParser {
         }
 
         return calls;
+    }
+
+    private getScopeChain(node: SyntaxNode): Scope[] {
+        const chain: Scope[] = [];
+        let currentNode: SyntaxNode | null = node;
+
+        while (currentNode && currentNode.type !== this.rootNodeType) {
+            const scopeType = this.scopes.get(currentNode.type);
+            if (scopeType) {
+                const nameNode = currentNode.childForFieldName('name');
+                if (nameNode) {
+                    const name = nameNode.text;
+                    chain.unshift({
+                        type: scopeType,
+                        name: name,
+                    });
+                } else {
+                    const assignment = currentNode.childForFieldName('left');
+                    if (assignment) {
+                        const name = assignment.text;
+                        chain.unshift({
+                            type: scopeType,
+                            name: name,
+                        });
+                    }
+                }
+            }
+            currentNode = currentNode.parent;
+        }
+
+        return chain;
     }
 
     private scopeToString(scope: Scope[]): string {

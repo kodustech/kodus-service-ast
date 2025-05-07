@@ -2,11 +2,12 @@ import { BaseParser } from '../base-parser';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
 import { Language, SyntaxNode } from 'tree-sitter';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class RubyParser extends BaseParser {
     protected constructorName: string = 'initialize';
     protected selfAccessReference: string = '@self';
+    protected rootNodeType: string = 'program';
 
     protected setupLanguage(): void {
         this.language = RubyLang as Language;
@@ -16,11 +17,8 @@ export class RubyParser extends BaseParser {
         this.queries = rubyQueries;
     }
 
-    protected getScopeChain(node: SyntaxNode): Scope[] {
-        const chain: Scope[] = [];
-        let currentNode: SyntaxNode | null = node;
-
-        const scopes = new Map<string, ScopeType>([
+    protected setupScopes(): void {
+        this.scopes = new Map<string, ScopeType>([
             ['class', ScopeType.CLASS],
             ['module', ScopeType.CLASS],
 
@@ -29,32 +27,6 @@ export class RubyParser extends BaseParser {
             ['singleton_method', ScopeType.METHOD],
             ['assignment', ScopeType.FUNCTION],
         ] as const);
-
-        while (currentNode && currentNode.type !== 'program') {
-            const scopeType = scopes.get(currentNode.type);
-            if (scopeType) {
-                const nameNode = currentNode.childForFieldName('name');
-                if (nameNode) {
-                    const name = nameNode.text;
-                    chain.unshift({
-                        type: scopeType,
-                        name: name,
-                    });
-                } else {
-                    const assignment = currentNode.childForFieldName('left');
-                    if (assignment) {
-                        const name = assignment.text;
-                        chain.unshift({
-                            type: scopeType,
-                            name: name,
-                        });
-                    }
-                }
-            }
-            currentNode = currentNode.parent;
-        }
-
-        return chain;
     }
 
     protected getMemberChain(node: SyntaxNode): string[] {

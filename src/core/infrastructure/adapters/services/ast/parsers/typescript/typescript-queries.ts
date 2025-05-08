@@ -69,7 +69,6 @@ const functionAxuliaryQuery = () => `
     parameters: ${parametersQuery()}
     return_type: (type_annotation (_) @funcReturnType)?
     body: (_) @funcBody
-)
 `;
 
 const importQuery: ParserQuery = {
@@ -223,7 +222,6 @@ const functionQuery: ParserQuery = {
     ${functionAxuliaryQuery()}
 )
 
-
 (method_definition
 	name: (property_identifier) @funcName
     ${functionAxuliaryQuery()}
@@ -234,13 +232,16 @@ const functionQuery: ParserQuery = {
     value: (arrow_function
         ${functionAxuliaryQuery()}
     )
-)`,
+)
+`,
 };
 
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(call_expression) @call
+(call_expression
+    function: (member_expression) @call
+)
 `,
 };
 

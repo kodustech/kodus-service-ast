@@ -44,11 +44,19 @@ export abstract class BaseParser {
     private context: ParseContext;
 
     protected language: Language;
-    protected queries: Map<QueryType, ParserQuery>;
-    protected constructorName: string;
-    protected selfAccessReference: string;
-    protected scopes: Map<string, ScopeType>;
-    protected rootNodeType: string;
+    protected abstract queries: Map<QueryType, ParserQuery>;
+
+    protected abstract constructorName: string;
+    protected abstract selfAccessReference: string;
+    protected abstract scopes: Map<string, ScopeType>;
+    protected abstract rootNodeType: string;
+
+    protected abstract memberChainNodeTypes: {
+        mainNodes: string[];
+        functionNameType: string;
+        instanceNameTypes: string[];
+        functionNodeType: string;
+    };
 
     constructor(
         importPathResolver: ImportPathResolverService,
@@ -57,18 +65,11 @@ export abstract class BaseParser {
         this.setupLanguage();
         this.setupParser();
 
-        this.setupQueries();
-        this.setupScopes();
-
         this.importPathResolver = importPathResolver;
         this.context = context;
     }
 
     protected abstract setupLanguage(): void;
-    protected abstract setupQueries(): void;
-    protected abstract setupScopes(): void;
-
-    protected abstract getMemberChain(node: SyntaxNode): string[];
 
     private setupParser(): void {
         if (this.parser) {
@@ -402,24 +403,18 @@ export abstract class BaseParser {
 
     protected addMethodParameter(
         method: Method,
-        newMethod: Partial<MethodParameter>,
+        newInfo: Partial<MethodParameter>,
     ): void {
         if (!method) return;
 
-        const lastParam = method.params[method.params.length - 1];
-        if (lastParam && !lastParam.name) {
-            if (newMethod.name) {
-                lastParam.name = newMethod.name;
-            }
-            if (newMethod.type && !lastParam.type) {
-                lastParam.type = newMethod.type;
-            }
-        } else {
-            method.params.push({
-                name: newMethod.name || null,
-                type: newMethod.type || null,
-            });
+        let current = method.params[method.params.length - 1];
+        if (!current || (current.name && current.type)) {
+            current = { name: null, type: null };
+            method.params.push(current);
         }
+
+        if (newInfo.name !== undefined) current.name = newInfo.name;
+        if (newInfo.type !== undefined) current.type = newInfo.type;
     }
 
     protected setMethodReturnType(method: Method, returnType: string): void {
@@ -429,27 +424,17 @@ export abstract class BaseParser {
 
     protected addObjProperty(
         properties: ObjectProperty[],
-        newProperty: Partial<ObjectProperty>,
+        newInfo: Partial<ObjectProperty>,
     ): void {
-        const lastProperty = properties[properties.length - 1];
-
-        if (lastProperty && !lastProperty.name) {
-            if (newProperty.name) {
-                lastProperty.name = newProperty.name;
-            }
-            if (newProperty.type && !lastProperty.type) {
-                lastProperty.type = newProperty.type;
-            }
-            if (newProperty.value && !lastProperty.value) {
-                lastProperty.value = newProperty.value;
-            }
-        } else {
-            properties.push({
-                name: newProperty.name || null,
-                type: newProperty.type || null,
-                value: newProperty.value || null,
-            });
+        let current = properties[properties.length - 1];
+        if (!current || (current.name && current.type && current.value)) {
+            current = { name: null, type: null, value: null };
+            properties.push(current);
         }
+
+        if (newInfo.name !== undefined) current.name = newInfo.name;
+        if (newInfo.type !== undefined) current.type = newInfo.type;
+        if (newInfo.value !== undefined) current.value = newInfo.value;
     }
 
     protected processMethods(
@@ -762,6 +747,35 @@ export abstract class BaseParser {
                 }
             }
             currentNode = currentNode.parent;
+        }
+
+        return chain;
+    }
+
+    protected getMemberChain(node: SyntaxNode): string[] {
+        const chain: string[] = [];
+        let currentNode: SyntaxNode | null = node;
+
+        const {
+            mainNodes,
+            functionNameType,
+            instanceNameTypes,
+            functionNodeType,
+        } = this.memberChainNodeTypes;
+
+        while (currentNode) {
+            if (mainNodes.includes(currentNode.type)) {
+                const memberNameNode =
+                    currentNode.childForFieldName(functionNameType);
+                if (memberNameNode) {
+                    chain.unshift(memberNameNode.text);
+                }
+            } else if (instanceNameTypes.includes(currentNode.type)) {
+                chain.unshift(currentNode.text);
+            } else if (currentNode.text === this.selfAccessReference) {
+                chain.unshift(this.selfAccessReference);
+            }
+            currentNode = currentNode.childForFieldName(functionNodeType);
         }
 
         return chain;

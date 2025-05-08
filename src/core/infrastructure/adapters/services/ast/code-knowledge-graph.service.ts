@@ -101,8 +101,8 @@ export class CodeKnowledgeGraphService {
             // 'user.py',
             // 'example.rb',
             // 'src/ee/codeBase/ast/resolvers',
-            // 'src/core/application/use-cases/codeBase/php_project',
-            'User.php',
+            // 'src/core/application/use-cases/codeBase',
+            // 'Order.php',
         ];
         const filteredFiles =
             filterCriteria.length > 0

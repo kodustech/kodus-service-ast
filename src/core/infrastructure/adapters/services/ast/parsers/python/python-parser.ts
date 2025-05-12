@@ -6,7 +6,6 @@ import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { QueryType, ParserQuery } from '../query';
 
 export class PythonParser extends BaseParser {
-    protected language: Language = PythonLang as Language;
     protected queries: Map<QueryType, ParserQuery> = pythonQueries;
     protected scopes: Map<string, ScopeType> = new Map<string, ScopeType>([
         ['class_definition', ScopeType.CLASS],
@@ -18,10 +17,11 @@ export class PythonParser extends BaseParser {
     protected selfAccessReference: string = 'self';
     protected rootNodeType: string = 'module';
     protected memberChainNodeTypes = {
-        mainNodes: ['call'],
-        functionNameType: 'attribute',
+        callNodeTypes: ['call', 'attribute'],
+        memberNodeTypes: [],
+        functionNameFields: ['attribute'],
         instanceNameTypes: ['identifier', 'self'],
-        functionNodeType: 'object',
+        functionChildFields: ['object'],
     };
 
     protected setupLanguage(): void {

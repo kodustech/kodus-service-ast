@@ -240,10 +240,20 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(member_call_expression) @call
-(scoped_call_expression) @call
+(compound_statement
+  (_
+    [
+      (member_call_expression)
+      (scoped_call_expression)
+      (nullsafe_member_call_expression)
+
+      (member_access_expression)
+      (nullsafe_member_access_expression)
+    ] @call
+  )
+)
+
 (function_call_expression) @call
-(nullsafe_member_call_expression) @call
 `,
 };
 

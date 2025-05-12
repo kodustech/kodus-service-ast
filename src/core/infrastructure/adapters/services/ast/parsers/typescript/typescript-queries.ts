@@ -239,8 +239,24 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(call_expression
-    function: (member_expression) @call
+(statement_block
+  (_
+    [
+    	(call_expression)
+        (member_expression)
+    ] @call
+  )
+)
+
+(statement_block
+  (_
+  	(await_expression
+      [
+          (call_expression)
+          (member_expression)
+      ] @call
+    )
+  )
 )
 `,
 };

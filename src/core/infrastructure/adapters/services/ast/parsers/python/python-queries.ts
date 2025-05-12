@@ -107,7 +107,9 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(call) @call
+(call
+    function: (_) @call
+)
 `,
 };
 

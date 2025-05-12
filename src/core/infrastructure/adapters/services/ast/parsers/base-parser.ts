@@ -4,7 +4,7 @@ import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-import { objTypes, ParserQuery, QueryType } from './query';
+import { objQueries, ParserQuery, QueryType } from './query';
 import {
     Call,
     Scope,
@@ -13,7 +13,7 @@ import {
 } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 
-type Method = {
+export type Method = {
     name: string;
     params: MethodParameter[];
     returnType: string | null;
@@ -21,17 +21,17 @@ type Method = {
     scope: Scope[];
 };
 
-type MethodParameter = {
+export type MethodParameter = {
     name: string;
     type: string | null;
 };
 
-type ObjectProperties = {
+export type ObjectProperties = {
     properties: ObjectProperty[];
     type: string | null;
 };
 
-type ObjectProperty = {
+export type ObjectProperty = {
     name: string;
     type: string | null;
     value: string | null;
@@ -52,10 +52,11 @@ export abstract class BaseParser {
     protected abstract rootNodeType: string;
 
     protected abstract memberChainNodeTypes: {
-        mainNodes: string[];
-        functionNameType: string;
+        callNodeTypes: string[];
+        memberNodeTypes: string[];
+        functionNameFields: string[];
         instanceNameTypes: string[];
-        functionNodeType: string;
+        functionChildFields: string[];
     };
 
     constructor(
@@ -127,7 +128,7 @@ export abstract class BaseParser {
 
         this.collectTypeAliases(rootNode, absolutePath);
 
-        objTypes.forEach((type) =>
+        objQueries.forEach((type) =>
             this.collectObjDeclarations(rootNode, absolutePath, type),
         );
 
@@ -368,8 +369,31 @@ export abstract class BaseParser {
                 objProps.type = text;
                 break;
             }
+            default: {
+                this.processExtraObjCapture(
+                    capture,
+                    objAnalysis,
+                    methods,
+                    objProps,
+                );
+                break;
+            }
         }
     }
+
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    /**
+     * override this method to process extra captures that are not handled by the default implementation.
+     */
+    protected processExtraObjCapture(
+        capture: QueryCapture,
+        objAnalysis: TypeAnalysis,
+        methods: Method[],
+        objProps: ObjectProperties,
+    ): void {
+        return; // No extra processing needed generally
+    }
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     protected addObjExtension(
         objAnalysis: TypeAnalysis,
@@ -405,13 +429,18 @@ export abstract class BaseParser {
         method: Method,
         newInfo: Partial<MethodParameter>,
     ): void {
-        if (!method) return;
+        const last = method.params[method.params.length - 1];
 
-        let current = method.params[method.params.length - 1];
-        if (!current || (current.name && current.type)) {
-            current = { name: null, type: null };
-            method.params.push(current);
+        const needsNew =
+            !last || // no params yet
+            (newInfo.name && last.name !== null) || // a new name seen
+            (newInfo.type && last.type !== null); // a new type seen
+
+        if (needsNew) {
+            method.params.push({ name: null, type: null });
         }
+
+        const current = method.params[method.params.length - 1];
 
         if (newInfo.name !== undefined) current.name = newInfo.name;
         if (newInfo.type !== undefined) current.type = newInfo.type;
@@ -426,11 +455,19 @@ export abstract class BaseParser {
         properties: ObjectProperty[],
         newInfo: Partial<ObjectProperty>,
     ): void {
-        let current = properties[properties.length - 1];
-        if (!current || (current.name && current.type && current.value)) {
-            current = { name: null, type: null, value: null };
-            properties.push(current);
+        const last = properties[properties.length - 1];
+
+        const needsNew =
+            !last || // no properties yet
+            (newInfo.name && last.name !== null) || // a new name seen
+            (newInfo.type && last.type !== null) || // a new type seen
+            (newInfo.value && last.value !== null); // a new value seen
+
+        if (needsNew) {
+            properties.push({ name: null, type: null, value: null });
         }
+
+        const current = properties[properties.length - 1];
 
         if (newInfo.name !== undefined) current.name = newInfo.name;
         if (newInfo.type !== undefined) current.type = newInfo.type;
@@ -537,8 +574,17 @@ export abstract class BaseParser {
                   1
                 : 0;
             const className =
-                method.scope.find((scope) => scope.type === ScopeType.CLASS)
-                    ?.name || '';
+                method.scope
+                    .reverse()
+                    .find((scope) => scope.type === ScopeType.CLASS)?.name ||
+                method.scope
+                    .reverse()
+                    .find((scope) =>
+                        [ScopeType.ENUM, ScopeType.INTERFACE].includes(
+                            scope.type,
+                        ),
+                    )?.name ||
+                '';
 
             this.context.functions.set(key, {
                 file: absolutePath,
@@ -599,10 +645,10 @@ export abstract class BaseParser {
         absolutePath: string,
     ): Call[] {
         const query = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
-        if (!query) return;
+        if (!query) return [];
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) return [];
 
         const calls: Call[] = [];
 
@@ -612,42 +658,36 @@ export abstract class BaseParser {
 
             for (const capture of captures) {
                 const node = capture.node;
-                if (!node) return;
+                if (!node) break;
 
                 const chain = this.getMemberChain(node);
-                let instanceName: string | undefined;
+                if (!chain || chain.length === 0) continue;
+
+                let currentCaller = chain[0].name;
                 let targetFile = absolutePath;
 
-                if (
-                    chain.length >= 3 &&
-                    chain[0] === this.selfAccessReference
-                ) {
-                    instanceName = chain[1];
-                } else if (chain.length >= 2) {
-                    instanceName = chain[0];
-                } else if (chain.length === 1) {
-                    instanceName = chain[0];
+                if (currentCaller !== this.selfAccessReference) {
+                    targetFile = this.resolveTargetFile(
+                        currentCaller,
+                        absolutePath,
+                    );
                 }
 
-                if (instanceName) {
-                    let typeName =
-                        this.context.instanceMapping.get(instanceName);
-                    if (!typeName) {
-                        typeName = instanceName;
+                for (const { name, type } of chain) {
+                    if (type === 'function') {
+                        calls.push({
+                            function: name,
+                            file: targetFile,
+                            caller: currentCaller,
+                        });
                     }
 
-                    const importedFile =
-                        this.context.importedMapping.get(typeName);
-                    if (importedFile) {
-                        targetFile = importedFile;
-                    }
+                    currentCaller = name;
+                    targetFile = this.resolveTargetFile(
+                        currentCaller,
+                        absolutePath,
+                    );
                 }
-
-                calls.push({
-                    function: chain.pop() || '',
-                    file: targetFile,
-                    caller: instanceName || '',
-                });
             }
         }
 
@@ -752,33 +792,89 @@ export abstract class BaseParser {
         return chain;
     }
 
-    protected getMemberChain(node: SyntaxNode): string[] {
-        const chain: string[] = [];
+    protected getMemberChain(node: SyntaxNode): {
+        name: string;
+        type: 'member' | 'function';
+    }[] {
+        const chain = [] as {
+            name: string;
+            type: 'member' | 'function';
+        }[];
+
         let currentNode: SyntaxNode | null = node;
 
         const {
-            mainNodes,
-            functionNameType,
+            callNodeTypes,
+            memberNodeTypes,
+            functionNameFields,
             instanceNameTypes,
-            functionNodeType,
+            functionChildFields,
         } = this.memberChainNodeTypes;
 
         while (currentNode) {
-            if (mainNodes.includes(currentNode.type)) {
-                const memberNameNode =
-                    currentNode.childForFieldName(functionNameType);
-                if (memberNameNode) {
-                    chain.unshift(memberNameNode.text);
+            if (callNodeTypes.includes(currentNode.type)) {
+                for (const functionNameField of functionNameFields) {
+                    const memberNameNode =
+                        currentNode.childForFieldName(functionNameField);
+                    if (memberNameNode) {
+                        chain.unshift({
+                            name: memberNameNode.text,
+                            type: 'function',
+                        });
+                        break;
+                    }
                 }
-            } else if (instanceNameTypes.includes(currentNode.type)) {
-                chain.unshift(currentNode.text);
-            } else if (currentNode.text === this.selfAccessReference) {
-                chain.unshift(this.selfAccessReference);
             }
-            currentNode = currentNode.childForFieldName(functionNodeType);
+            if (memberNodeTypes.includes(currentNode.type)) {
+                for (const functionNameField of functionNameFields) {
+                    const memberNameNode =
+                        currentNode.childForFieldName(functionNameField);
+                    if (memberNameNode) {
+                        chain.unshift({
+                            name: memberNameNode.text,
+                            type: 'member',
+                        });
+                        break;
+                    }
+                }
+            }
+            if (instanceNameTypes.includes(currentNode.type)) {
+                chain.unshift({
+                    name: currentNode.text,
+                    type: 'member',
+                });
+            }
+            if (currentNode.text === this.selfAccessReference) {
+                chain.unshift({
+                    name: this.selfAccessReference,
+                    type: 'member',
+                });
+            }
+            let childNodeFound = false;
+            for (const functionChildField of functionChildFields) {
+                const childNode =
+                    currentNode.childForFieldName(functionChildField);
+                if (childNode) {
+                    currentNode = childNode;
+                    childNodeFound = true;
+                    break;
+                }
+            }
+            if (!childNodeFound) {
+                break; // Exit the loop if no child node is found
+            }
         }
 
         return chain;
+    }
+
+    protected resolveTargetFile(
+        instanceName: string,
+        absolutePath: string,
+    ): string {
+        const typeName =
+            this.context.instanceMapping.get(instanceName) || instanceName;
+        return this.context.importedMapping.get(typeName) || absolutePath;
     }
 
     protected scopeToString(scope: Scope[]): string {

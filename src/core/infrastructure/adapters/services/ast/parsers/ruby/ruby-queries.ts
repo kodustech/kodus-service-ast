@@ -1,50 +1,34 @@
 import { ParserQuery, QueryType } from '../query';
 
 const classBodyQuery = () => `
-(
-    [
-    (call
-        method: (identifier) @call.type
-        arguments: (argument_list
-            (
-                (_) @classExtends
-                ","?
-            )*
-        )
-        (#any-of? @call.type
-            "include"
-            "extends"
-        )
-    )
-    (call
-        method: (identifier) @call.type
-        arguments: (argument_list
-            (
-                (_) @objProperty
-                ","?
-            )*
-        )
-        (#any-of? @call.type
-        "attr"
-        "attr_reader"
-        "attr_writer"
-        "attr_accessor"
-        )
-    )
-    (instance_variable) @objProperty
-    (class_variable) @objProperty
-    (method
-        name: (identifier) @objMethod
-        parameters: (method_parameters
-            (
-                (identifier) @funcParamName
-                ","?
-            )*
-        )
-    )
-    ]
-    _*
-)*
+(_
+    (
+        [
+            (call) @objCall
+            (instance_variable) @objProperty
+            (class_variable) @objProperty
+            (method
+                name: (identifier) @objMethod
+                parameters: (method_parameters
+                    (
+                        (identifier) @funcParamName
+                        ","?
+                    )*
+                )?
+            )
+            (singleton_method
+                name: (identifier) @objMethod
+                parameters: (method_parameters
+                    (
+                        (identifier) @funcParamName
+                        ","?
+                    )*
+                )?
+            )
+        ]
+        _*
+    )*
+)
 `;
 
 const importQuery: ParserQuery = {
@@ -96,7 +80,8 @@ const functionQuery: ParserQuery = {
     		(identifier) @funcParamName
     		","?
     	)*
-    )
+    )?
+    body: (_) @funcBody
 )
 
 (singleton_method
@@ -106,7 +91,8 @@ const functionQuery: ParserQuery = {
     		(identifier) @funcParamName
     		","?
     	)*
-    )
+    )?
+    body: (_) @funcBody
 )
 
 (assignment
@@ -118,8 +104,10 @@ const functionQuery: ParserQuery = {
                 ","?
             )*
         )?
+        body: (_) @funcBody
     )
-)`,
+)
+`,
 };
 
 const functionCallQuery: ParserQuery = {

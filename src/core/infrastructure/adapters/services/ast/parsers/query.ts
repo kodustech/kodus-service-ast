@@ -11,7 +11,7 @@ export enum QueryType {
     FUNCTION_CALL_QUERY = 'function_call',
 }
 
-export const objTypes = [
+export const objQueries = [
     QueryType.CLASS_QUERY,
     QueryType.INTERFACE_QUERY,
     QueryType.ENUM_QUERY,

@@ -1,9 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { CodeGraph } from '@/core/domain/ast/contracts/CodeGraph';
+import { CodeGraph, FileAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
 import { Injectable } from '@nestjs/common';
 import { SyntaxNode } from 'tree-sitter';
 import { PinoLoggerService } from '../logger/pino.service';
@@ -14,14 +9,6 @@ export enum NodeType {
     FUNCTION = 'FUNCTION',
     INTERFACE = 'INTERFACE',
 }
-
-interface FunctionData {
-    className?: string;
-    name?: string;
-    calls?: { function: string; file: string }[];
-    file: string;
-}
-
 interface EnrichGraphNode {
     id: string;
     type: NodeType;
@@ -145,18 +132,12 @@ export class CodeAnalyzerService {
         this.addedNodes = {};
         this.relationshipKeys = {};
 
-        const dataAsObjects = {
-            types: Object.fromEntries(data.types),
-            functions: Object.fromEntries(data.functions),
-            files: Object.fromEntries(data.files),
-        };
+        this.processTypes(data);
+        this.processFunctions(data);
+        this.processImports(data);
 
-        this.processTypes(dataAsObjects);
-        this.processFunctions(dataAsObjects);
-        this.processImports(dataAsObjects);
-
-        this.processFunctionCalls(dataAsObjects);
-        this.processInheritance(dataAsObjects);
+        this.processFunctionCalls(data);
+        this.processInheritance(data);
 
         return {
             nodes: this.nodes,
@@ -172,7 +153,7 @@ export class CodeAnalyzerService {
         this.extractPathCache.clear();
     }
 
-    private processTypes(data: { types?: Record<string, any> }) {
+    private processTypes(data: CodeGraph) {
         const normalizedTypes = new Map<
             string,
             {
@@ -185,7 +166,7 @@ export class CodeAnalyzerService {
             }
         >();
 
-        Object.entries(data.types || {}).forEach(([key, type]) => {
+        data.types.forEach((type, key) => {
             if (
                 typeof type === 'object' &&
                 type.name &&
@@ -206,7 +187,7 @@ export class CodeAnalyzerService {
 
                 if (type.type === 'class') {
                     type.implements?.forEach((iface: string) => {
-                        const { identifier } =
+                        const { filePath, identifier } =
                             this.extractFilePathAndIdentifier(iface);
                         if (identifier && this.addedNodes[identifier]) {
                             this.addRelationship(
@@ -214,13 +195,13 @@ export class CodeAnalyzerService {
                                 identifier,
                                 RelationshipType.IMPLEMENTS,
                                 type.file,
-                                iface,
+                                filePath,
                             );
                         }
                     });
 
                     type.extends?.forEach((baseClass: string) => {
-                        const { identifier } =
+                        const { filePath, identifier } =
                             this.extractFilePathAndIdentifier(baseClass);
                         if (identifier && this.addedNodes[identifier]) {
                             this.addRelationship(
@@ -228,7 +209,7 @@ export class CodeAnalyzerService {
                                 identifier,
                                 RelationshipType.EXTENDS,
                                 type.file,
-                                baseClass,
+                                filePath,
                             );
                         }
                     });
@@ -251,61 +232,63 @@ export class CodeAnalyzerService {
         });
     }
 
-    private processFunctions(data: any) {
-        Object.entries(data.functions || {}).forEach(
-            ([funcKey, func]: [string, any]) => {
-                let className = func.className;
-                let functionName = func.name;
-                const filePath = func.file;
+    private processFunctions(data: CodeGraph) {
+        data.functions.forEach((func, funcKey) => {
+            let className = func.className;
+            let functionName = func.name;
+            const filePath = func.file;
+
+            if (!className) {
+                className = this.inferClassName(filePath, data);
 
                 if (!className) {
-                    className = this.inferClassName(filePath, data);
-
-                    if (!className) {
-                        return;
-                    }
-                }
-
-                if (!functionName) {
-                    const { identifier: methodName } =
-                        this.extractFilePathAndIdentifier(funcKey);
-
-                    functionName = methodName;
-
                     return;
                 }
+            }
 
-                const methodId = `${className}.${functionName}`;
+            if (!functionName) {
+                const { identifier: methodName } =
+                    this.extractFilePathAndIdentifier(funcKey);
 
-                if (!this.addedNodes[methodId]) {
-                    this.addNode(
-                        methodId,
-                        NodeType.METHOD,
-                        filePath.split('/').pop() || '',
-                        filePath,
-                    );
-                }
+                functionName = methodName;
 
-                if (this.addedNodes[methodId]) {
-                    this.addRelationship(
-                        className,
-                        methodId,
-                        RelationshipType.HAS_METHOD,
-                        filePath,
-                        filePath,
-                    );
-                }
-            },
-        );
+                return;
+            }
+
+            const methodId = `${className}.${functionName}`;
+
+            if (!this.addedNodes[methodId]) {
+                this.addNode(
+                    methodId,
+                    NodeType.METHOD,
+                    filePath.split('/').pop() || '',
+                    filePath,
+                );
+            }
+
+            if (this.addedNodes[methodId]) {
+                this.addRelationship(
+                    className,
+                    methodId,
+                    RelationshipType.HAS_METHOD,
+                    filePath,
+                    filePath,
+                );
+            }
+        });
     }
 
-    private processImports(data: any) {
-        for (const [filePath, fileData] of Object.entries(data.files || {})) {
+    private processImports(data: CodeGraph) {
+        for (const [filePath, fileData] of data.files) {
             this.processFileImports(filePath, fileData, data);
         }
     }
 
-    private processFileImports(filePath: string, fileData: any, data: any) {
+    private processFileImports(
+        filePath: string,
+        fileData: FileAnalysis,
+        data: CodeGraph,
+    ) {
         if (!fileData.imports || !fileData.imports.length) {
             return;
         }
@@ -313,48 +296,31 @@ export class CodeAnalyzerService {
         const normalizedFrom = this.normalizePath(filePath);
         const className = fileData.className?.[0];
 
-        if (data.files instanceof Map) {
-            const importedFileData = data.files.get(normalizedFrom);
-            if (importedFileData && importedFileData.className) {
-                const importedClassName = importedFileData.className[0];
+        const importedFileData = data.files.get(normalizedFrom);
+        if (importedFileData && importedFileData.className) {
+            const importedClassName = importedFileData.className[0];
 
-                this.addRelationship(
-                    className,
-                    importedClassName,
-                    RelationshipType.IMPORTS,
-                    normalizedFrom,
-                    normalizedFrom,
-                );
-            }
-        } else {
-            const importedFileData = data.files?.[normalizedFrom];
-            if (importedFileData && importedFileData.className) {
-                const importedClassName = importedFileData.className[0];
-
-                this.addRelationship(
-                    className,
-                    importedClassName,
-                    RelationshipType.IMPORTS,
-                    normalizedFrom,
-                    normalizedFrom,
-                );
-            }
+            this.addRelationship(
+                className,
+                importedClassName,
+                RelationshipType.IMPORTS,
+                normalizedFrom,
+                normalizedFrom,
+            );
         }
     }
 
-    private processFunctionCalls(data: any) {
-        for (const [funcKey, func] of Object.entries(data.functions || {})) {
-            const typedFunc = func as FunctionData;
+    private processFunctionCalls(data: CodeGraph) {
+        for (const [key, func] of data.functions.entries()) {
+            const { filePath } = this.extractFilePathAndIdentifier(key);
 
-            const { filePath } = this.extractFilePathAndIdentifier(funcKey);
-
-            if (!typedFunc.className || !typedFunc.name) {
+            if (!func.className || !func.name) {
                 continue;
             }
 
-            const methodId = `${typedFunc.className}.${typedFunc.name}`;
+            const methodId = `${func.className}.${func.name}`;
 
-            for (const call of typedFunc.calls || []) {
+            for (const call of func.calls || []) {
                 if (!call.function || !call.file) {
                     continue;
                 }
@@ -396,30 +362,28 @@ export class CodeAnalyzerService {
         }
     }
 
-    private processInheritance(data: any) {
-        Object.entries(data.types || {}).forEach(
-            ([key, type]: [string, any]) => {
-                if (
-                    (type.type === 'class' && type.extends) ||
-                    (type.type === 'interface' && type.extends)
-                ) {
-                    type.extends.forEach((baseClass: string) => {
-                        if (this.addedNodes[type.name]) {
-                            const { filePath, identifier } =
-                                this.extractFilePathAndIdentifier(baseClass);
+    private processInheritance(data: CodeGraph) {
+        data.types.forEach((type) => {
+            if (
+                (type.type === 'class' && type.extends) ||
+                (type.type === 'interface' && type.extends)
+            ) {
+                type.extends.forEach((baseClass: string) => {
+                    if (this.addedNodes[type.name]) {
+                        const { filePath, identifier } =
+                            this.extractFilePathAndIdentifier(baseClass);
 
-                            this.addRelationship(
-                                type.name,
-                                identifier,
-                                RelationshipType.EXTENDS,
-                                type.file,
-                                identifier,
-                            );
-                        }
-                    });
-                }
-            },
-        );
+                        this.addRelationship(
+                            type.name,
+                            identifier,
+                            RelationshipType.EXTENDS,
+                            type.file,
+                            filePath,
+                        );
+                    }
+                });
+            }
+        });
     }
 
     private normalizePath(path: string): string {
@@ -456,7 +420,7 @@ export class CodeAnalyzerService {
             return this.extractPathCache.get(fullPath);
         }
 
-        const match = fullPath.match(/^(.+\.[a-zA-Z0-9]+):(.+)$/);
+        const match = fullPath.match(/^(.+\.[a-zA-Z0-9]+)::(.+)$/);
 
         const result = match
             ? { filePath: match[1], identifier: match[2] }
@@ -485,14 +449,13 @@ export class CodeAnalyzerService {
         }
     }
 
-    private inferClassName(filePath: string, data: any): string | null {
+    private inferClassName(filePath: string, data: CodeGraph): string | null {
         if (data.files instanceof Map) {
             return this.inferClassNameFromMap(filePath, data);
         }
 
-        const foundClass = Object.values(data.types || {}).find(
-            (type: any) =>
-                type && type.file === filePath && type.type === 'class',
+        const foundClass = Array.from(data.types.values()).find(
+            (type) => type && type.file === filePath && type.type === 'class',
         ) as { name?: string } | undefined;
 
         return foundClass?.name || null;
@@ -515,9 +478,9 @@ export class CodeAnalyzerService {
     private findMethodId(
         filePath: string,
         functionName: string,
-        data: any,
+        data: CodeGraph,
     ): string | null {
-        const fileData = data.files?.[filePath];
+        const fileData = data.files.get(filePath);
         if (!fileData) return null;
 
         const className = fileData.className?.[0] || 'undefined';
@@ -528,10 +491,10 @@ export class CodeAnalyzerService {
     private findImplementation(
         interfacePath: string,
         methodName: string,
-        data: any,
+        data: CodeGraph,
     ): { id: string; filePath: string } | null {
-        const matchingClasses = Object.entries(data.types || {}).filter(
-            ([, type]: [string, any]) =>
+        const matchingClasses = Array.from(data.types.entries()).filter(
+            ([, type]) =>
                 type.type === 'class' &&
                 Array.isArray(type.implements) &&
                 type.implements.some((impl: string) =>
@@ -543,17 +506,14 @@ export class CodeAnalyzerService {
             return null;
         }
 
-        const [implClassPath, implClass] = matchingClasses[0] as [
-            string,
-            { name: string },
-        ];
+        const [, implClass] = matchingClasses[0] as [string, { name: string }];
 
         if (!implClass.name) {
             return null;
         }
 
-        const implMethodEntry = Object.entries(data.functions || {}).find(
-            ([, func]: [string, any]) =>
+        const implMethodEntry = Array.from(data.functions.entries()).find(
+            ([, func]) =>
                 func.className === implClass.name && func.name === methodName,
         );
 

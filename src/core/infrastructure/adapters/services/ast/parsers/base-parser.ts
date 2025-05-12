@@ -12,6 +12,7 @@ import {
     TypeAnalysis,
 } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
+import { findLastIndexOf } from '@/shared/utils/arrays';
 
 export type Method = {
     name: string;
@@ -402,7 +403,15 @@ export abstract class BaseParser {
         if (!objAnalysis.extends) {
             objAnalysis.extends = [];
         }
-        objAnalysis.extends.push(extension);
+        const mapped = this.context.importedMapping.get(extension);
+        let key: string;
+        if (mapped) {
+            key = `${mapped}::${extension}`;
+        } else {
+            key = `${objAnalysis.file}::${extension}`;
+        }
+
+        objAnalysis.extends.push(key);
     }
 
     protected addObjImplementation(
@@ -412,7 +421,15 @@ export abstract class BaseParser {
         if (!objAnalysis.implements) {
             objAnalysis.implements = [];
         }
-        objAnalysis.implements.push(implementation);
+        const mapped = this.context.importedMapping.get(implementation);
+        let key: string;
+        if (mapped) {
+            key = `${mapped}::${implementation}`;
+        } else {
+            key = `${objAnalysis.file}::${implementation}`;
+        }
+
+        objAnalysis.implements.push(key);
     }
 
     protected addNewMethod(methods: Method[], methodName: string): void {
@@ -490,6 +507,8 @@ export abstract class BaseParser {
                 .join(', ')})`;
             const methodSignature = `${params}:${method.returnType || 'unknown'}`;
             objAnalysis.fields[method.name] = methodSignature;
+
+            this.context.fileDefines.add(method.name);
         }
     }
 
@@ -561,7 +580,10 @@ export abstract class BaseParser {
                 calls = this.collectFunctionCalls(
                     method.bodyNode,
                     absolutePath,
+                    method.scope,
                 );
+
+                this.context.fileCalls.push(...calls);
             }
 
             const params = method.params.map((param) => param.name);
@@ -643,6 +665,7 @@ export abstract class BaseParser {
     protected collectFunctionCalls(
         rootNode: SyntaxNode,
         absolutePath: string,
+        scope: Scope[],
     ): Call[] {
         const query = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
         if (!query) return [];
@@ -663,30 +686,48 @@ export abstract class BaseParser {
                 const chain = this.getMemberChain(node);
                 if (!chain || chain.length === 0) continue;
 
-                let currentCaller = chain[0].name;
-                let targetFile = absolutePath;
+                let currentCaller = chain.find((c) => c.type === 'member');
 
-                if (currentCaller !== this.selfAccessReference) {
-                    targetFile = this.resolveTargetFile(
-                        currentCaller,
-                        absolutePath,
-                    );
-                }
-
-                for (const { name, type } of chain) {
-                    if (type === 'function') {
+                if (!currentCaller) {
+                    for (const { name } of chain) {
+                        const targetFile = this.resolveTargetFile(
+                            name,
+                            absolutePath,
+                            scope,
+                        );
                         calls.push({
                             function: name,
                             file: targetFile,
-                            caller: currentCaller,
+                            caller: this.selfAccessReference,
                         });
                     }
+                } else {
+                    let targetFile = absolutePath;
 
-                    currentCaller = name;
-                    targetFile = this.resolveTargetFile(
-                        currentCaller,
-                        absolutePath,
-                    );
+                    if (currentCaller.name !== this.selfAccessReference) {
+                        targetFile = this.resolveTargetFile(
+                            currentCaller.name,
+                            absolutePath,
+                            scope,
+                        );
+                    }
+
+                    for (const { name, type } of chain) {
+                        if (type === 'function') {
+                            calls.push({
+                                function: name,
+                                file: targetFile,
+                                caller: currentCaller.name,
+                            });
+                        }
+
+                        currentCaller = { name, type };
+                        targetFile = this.resolveTargetFile(
+                            currentCaller.name,
+                            absolutePath,
+                            scope,
+                        );
+                    }
                 }
             }
         }
@@ -871,9 +912,26 @@ export abstract class BaseParser {
     protected resolveTargetFile(
         instanceName: string,
         absolutePath: string,
+        scope: Scope[],
     ): string {
-        const typeName =
-            this.context.instanceMapping.get(instanceName) || instanceName;
+        const noMethodScopeIdx = findLastIndexOf(
+            scope,
+            (s) => s.type === ScopeType.METHOD,
+        );
+        if (noMethodScopeIdx !== -1) {
+            scope = scope.slice(0, scope.length - noMethodScopeIdx);
+        }
+
+        let typeName = this.context.instanceMapping.get(
+            `${this.scopeToString(scope)}::${instanceName}`,
+        );
+
+        if (typeName) {
+            typeName = typeName.split('::').pop() || instanceName;
+        } else {
+            typeName = instanceName;
+        }
+
         return this.context.importedMapping.get(typeName) || absolutePath;
     }
 

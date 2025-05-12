@@ -14,7 +14,7 @@ export class TypeScriptParser extends BaseParser {
         ['enum_declaration', ScopeType.ENUM],
 
         ['function_declaration', ScopeType.FUNCTION],
-        ['method_declaration', ScopeType.METHOD],
+        ['method_definition', ScopeType.METHOD],
         ['variable_declarator', ScopeType.FUNCTION],
     ] as const);
     protected constructorName: string = 'constructor';

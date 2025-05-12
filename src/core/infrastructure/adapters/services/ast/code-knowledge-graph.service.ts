@@ -76,13 +76,13 @@ export class CodeKnowledgeGraphService {
             );
         }
 
-        const result: CodeGraph & {
-            failedFiles: string[];
-        } = {
+        const result = {
             files: new Map<string, FileAnalysis>(),
             functions: new Map<string, FunctionAnalysis>(),
             types: new Map<string, TypeAnalysis>(),
             failedFiles: [],
+        } as CodeGraph & {
+            failedFiles: string[];
         };
 
         const sourceFiles = await this.getAllSourceFiles(rootDir);

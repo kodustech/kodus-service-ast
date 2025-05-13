@@ -9,21 +9,11 @@ const classBodyQuery = () => `
             (class_variable) @objProperty
             (method
                 name: (identifier) @objMethod
-                parameters: (method_parameters
-                    (
-                        (identifier) @funcParamName
-                        ","?
-                    )*
-                )?
+                parameters: (_)? @objMethodParams
             )
             (singleton_method
                 name: (identifier) @objMethod
-                parameters: (method_parameters
-                    (
-                        (identifier) @funcParamName
-                        ","?
-                    )*
-                )?
+                parameters: (_)? @objMethodParams
             )
         ]
         _*
@@ -75,35 +65,20 @@ const functionQuery: ParserQuery = {
     query: `
 (method
     name: (identifier) @funcName
-    parameters: (method_parameters
-    	(
-    		(identifier) @funcParamName
-    		","?
-    	)*
-    )?
+    parameters: (_)? @funcParams
     body: (_) @funcBody
 )
 
 (singleton_method
     name: (identifier) @funcName
-    parameters: (method_parameters
-    	(
-    		(identifier) @funcParamName
-    		","?
-    	)*
-    )?
+    parameters: (_)? @funcParams
     body: (_) @funcBody
 )
 
 (assignment
     left: (identifier) @funcName
     right: (lambda
-    	parameters: (lambda_parameters
-        	(
-        		(identifier) @funcParamName
-                ","?
-            )*
-        )?
+    	parameters: (_)? @funcParams
         body: (_) @funcBody
     )
 )
@@ -131,9 +106,24 @@ const functionCallQuery: ParserQuery = {
 `,
 };
 
+const functionParametersQuery: ParserQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    query: `
+(_
+    (
+        (identifier) @funcParamName
+        _*
+    )*
+)
+`,
+};
+
 export const rubyQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
+
     [QueryType.CLASS_QUERY, classQuery],
+
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
 ] as const);

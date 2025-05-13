@@ -332,16 +332,8 @@ export abstract class BaseParser {
                 this.addNewMethod(methods, text);
                 break;
             }
-            case 'funcParamName': {
-                this.addMethodParameter(lastMethod, {
-                    name: text,
-                });
-                break;
-            }
-            case 'funcParamType': {
-                this.addMethodParameter(lastMethod, {
-                    type: text,
-                });
+            case 'objMethodParams': {
+                this.processMethodParameters(lastMethod, capture.node);
                 break;
             }
             case 'objMethodReturnType': {
@@ -440,6 +432,35 @@ export abstract class BaseParser {
             bodyNode: null,
             scope: [],
         });
+    }
+
+    protected processMethodParameters(method: Method, node: SyntaxNode) {
+        const query = this.newQueryFromType(
+            QueryType.FUNCTION_PARAMETERS_QUERY,
+        );
+        if (!query) return;
+
+        const matches = query.matches(node);
+        if (matches.length === 0) return;
+
+        for (const match of matches) {
+            for (const capture of match.captures) {
+                switch (capture.name) {
+                    case 'funcParamName': {
+                        this.addMethodParameter(method, {
+                            name: capture.node.text,
+                        });
+                        break;
+                    }
+                    case 'funcParamType': {
+                        this.addMethodParameter(method, {
+                            type: capture.node.text,
+                        });
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     protected addMethodParameter(
@@ -639,16 +660,8 @@ export abstract class BaseParser {
                 method.scope = scopeChain;
                 break;
             }
-            case 'funcParamName': {
-                this.addMethodParameter(method, {
-                    name: node.text,
-                });
-                break;
-            }
-            case 'funcParamType': {
-                this.addMethodParameter(method, {
-                    type: node.text,
-                });
+            case 'funcParams': {
+                this.processMethodParameters(method, node);
                 break;
             }
             case 'funcReturnType': {
@@ -686,48 +699,24 @@ export abstract class BaseParser {
                 const chain = this.getMemberChain(node);
                 if (!chain || chain.length === 0) continue;
 
-                let currentCaller = chain.find((c) => c.type === 'member');
+                let caller = this.selfAccessReference;
+                let targetFile = absolutePath;
 
-                if (!currentCaller) {
-                    for (const { name } of chain) {
-                        const targetFile = this.resolveTargetFile(
-                            name,
-                            absolutePath,
-                            scope,
-                        );
+                for (const { name, type } of chain) {
+                    if (type === 'function') {
                         calls.push({
                             function: name,
                             file: targetFile,
-                            caller: this.selfAccessReference,
+                            caller,
                         });
                     }
-                } else {
-                    let targetFile = absolutePath;
 
-                    if (currentCaller.name !== this.selfAccessReference) {
-                        targetFile = this.resolveTargetFile(
-                            currentCaller.name,
-                            absolutePath,
-                            scope,
-                        );
-                    }
-
-                    for (const { name, type } of chain) {
-                        if (type === 'function') {
-                            calls.push({
-                                function: name,
-                                file: targetFile,
-                                caller: currentCaller.name,
-                            });
-                        }
-
-                        currentCaller = { name, type };
-                        targetFile = this.resolveTargetFile(
-                            currentCaller.name,
-                            absolutePath,
-                            scope,
-                        );
-                    }
+                    caller = name;
+                    targetFile = this.resolveTargetFile(
+                        caller,
+                        absolutePath,
+                        scope,
+                    );
                 }
             }
         }

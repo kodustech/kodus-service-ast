@@ -1,20 +1,5 @@
 import { ParserQuery, QueryType } from '../query';
 
-const parametersQuery = () => `
-(_
-    (
-        [
-        (_
-            (identifier) @funcParamName
-            type: (_)? @funcParamType
-        )
-        (identifier) @funcParamName
-        ]
-        ","?
-    )*
-)
-`;
-
 const importQuery: ParserQuery = {
     type: QueryType.IMPORT_QUERY,
     query: `
@@ -67,7 +52,7 @@ const classQuery: ParserQuery = {
         	[
         	(function_definition
             	name: (identifier) @objMethod
-                parameters: ${parametersQuery()}
+                parameters: (_) @objMethodParams
                 return_type: (_)? @objMethodReturnType
             )
             (expression_statement
@@ -89,7 +74,7 @@ const functionQuery: ParserQuery = {
     query: `
 (function_definition
     name: (identifier) @funcName
-    parameters: ${parametersQuery()}
+    parameters: (_) @funcParams
     return_type: (_)? @funcReturnType
     body: (block) @funcBody
 )
@@ -97,7 +82,7 @@ const functionQuery: ParserQuery = {
 (assignment
     left: (identifier) @funcName
     right: (lambda
-        parameters: ${parametersQuery()}
+        parameters: (_) @funcParams
         body: (_) @funcBody
     )
 )
@@ -113,11 +98,31 @@ const functionCallQuery: ParserQuery = {
 `,
 };
 
+const functionParametersQuery: ParserQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    query: `
+(parameters
+    (
+        [
+        	(parameter
+            	.
+            	(identifier) @funcParamName
+	            type: (_)? @funcParamType
+    	    )
+        	(identifier) @funcParamName
+        ]
+        _*
+    )*
+)
+`,
+};
+
 export const pythonQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
+    [QueryType.CLASS_QUERY, classQuery],
+
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-
-    [QueryType.CLASS_QUERY, classQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
 ] as const);

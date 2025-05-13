@@ -9,6 +9,7 @@ export enum QueryType {
 
     FUNCTION_QUERY = 'function',
     FUNCTION_CALL_QUERY = 'function_call',
+    FUNCTION_PARAMETERS_QUERY = 'function_parameters',
 }
 
 export const objQueries = [

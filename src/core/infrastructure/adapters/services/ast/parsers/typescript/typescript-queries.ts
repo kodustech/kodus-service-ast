@@ -1,19 +1,5 @@
 import { QueryType, ParserQuery } from '../query';
 
-const parametersQuery = () => `
-(formal_parameters
-    (
-        (_
-            pattern: (identifier) @funcParamName
-            type: (type_annotation
-                (_) @funcParamType
-            )?
-        )
-        ","?
-    )*
-)?
-`;
-
 const classAuxiliaryQuery = () => `
 	name: (type_identifier) @objName
     (class_heritage
@@ -41,22 +27,22 @@ const classAuxiliaryQuery = () => `
                 )
                 (method_definition
                 	name: (property_identifier) @objMethod
-                    parameters: ${parametersQuery()}
+                    parameters: (_)? @objMethodParams
                     return_type: (type_annotation (_) @objMethodReturnType)?
                 )
                 (method_definition
                 	name: (property_identifier) @objMethod
-                    parameters: ${parametersQuery()}
+                    parameters: (_)? @objMethodParams
                     return_type: (type_annotation (_) @objMethodReturnType)?
                 )
 				(method_signature
                 	name: (property_identifier) @objMethod
-                    parameters: ${parametersQuery()}
+                    parameters: (_)? @objMethodParams
                     return_type: (type_annotation (_) @objMethodReturnType)?
                 )
                 (abstract_method_signature
                 	name: (property_identifier) @objMethod
-                    parameters: ${parametersQuery()}
+                    parameters: (_)? @objMethodParams
                     return_type: (type_annotation (_) @objMethodReturnType)?
                 )
             ]
@@ -66,7 +52,7 @@ const classAuxiliaryQuery = () => `
 `;
 
 const functionAxuliaryQuery = () => `
-    parameters: ${parametersQuery()}
+    parameters: (_)? @funcParams
     return_type: (type_annotation (_) @funcReturnType)?
     body: (_) @funcBody
 `;
@@ -146,17 +132,7 @@ const interfaceQuery: ParserQuery = {
                 )
                 (method_signature
                 	name: (property_identifier) @objMethod
-                    parameters: (formal_parameters
-                    	(
-                        	(_
-                            	pattern: (identifier) @funcParamName
-                                type: (type_annotation
-                                	(_) @funcParamType
-                                )?
-                            )
-                            ","?
-                        )*
-                    )?
+                    parameters: (_)? @objMethodParams
                     return_type: (type_annotation (_) @objMethodReturnType)?
                 )
             ]
@@ -261,6 +237,23 @@ const functionCallQuery: ParserQuery = {
 `,
 };
 
+const functionParametersQuery: ParserQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    query: `
+(_
+    (
+        (_
+            pattern: (identifier) @funcParamName
+            type: (type_annotation
+                (_) @funcParamType
+            )?
+        )
+        _*
+    )*
+)?
+`,
+};
+
 export const typeScriptQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -272,4 +265,5 @@ export const typeScriptQueries = new Map<QueryType, ParserQuery>([
 
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
 ] as const);

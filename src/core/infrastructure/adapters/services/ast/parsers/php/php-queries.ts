@@ -1,53 +1,31 @@
 /* eslint-disable no-useless-escape */
 import { ParserQuery, QueryType } from '../query';
 
-const parametersQuery = () => `
-(formal_parameters
-    (
-        [
-            (property_promotion_parameter
-                type: (_)? @funcParamType
-                name: (_) @funcParamName
-            )
-            (simple_parameter
-                type: (_)? @funcParamType
-                name: (_) @funcParamName
-            )
-            (variadic_parameter
-                type: (_)? @funcParamType
-                name: (_) @funcParamName
-            )
-        ]
-        ","?
-    )*
-)?
-`;
-
 const declarationListQuery = () => `
-    (declaration_list
-    	(
-        [
-		(method_declaration
-			name: (name) @objMethod
-			parameters: ${parametersQuery()}
-            return_type: (_)? @objMethodReturnType
-    	)
-        (property_declaration
-        	type: (_)? @objPropertyType
-        	(property_element
-            	(variable_name) @objProperty
-            )
-        )
-        (const_declaration
-        	type: (_)? @objPropertyType
-        	(const_element
-            	(name) @objProperty
-            )
-        )
-        ]
-        _*
-        )*
+(declaration_list
+    (
+    [
+    (method_declaration
+        name: (name) @objMethod
+        parameters: (_)? @objMethodParams
+        return_type: (_)? @objMethodReturnType
     )
+    (property_declaration
+        type: (_)? @objPropertyType
+        (property_element
+            (variable_name) @objProperty
+        )
+    )
+    (const_declaration
+        type: (_)? @objPropertyType
+        (const_element
+            (name) @objProperty
+        )
+    )
+    ]
+    _*
+    )*
+)
 `;
 
 const importAuxiliaryQuery = () => `
@@ -193,7 +171,7 @@ const enumQuery: ParserQuery = {
         [
 		(method_declaration
 			name: (name) @objMethod
-			parameters: ${parametersQuery()}
+			parameters: (_)? @objMethodParams
             return_type: (_)? @objMethodReturnType
     	)
         (enum_case
@@ -213,14 +191,14 @@ const functionQuery: ParserQuery = {
     query: `
 (function_definition
 	name: (name) @funcName
-    parameters: ${parametersQuery()}
+    parameters: (_)? @funcParams
 	return_type: (_)? @funcReturnType
     body: (_) @funcBody
 )
 
 (method_declaration
     name: (name) @funcName
-    parameters: ${parametersQuery()}
+    parameters: (_)? @funcParams
     return_type: (_)? @funcReturnType
     body: (_) @funcBody
 )
@@ -229,7 +207,7 @@ const functionQuery: ParserQuery = {
 	(assignment_expression
     	left: (variable_name) @funcName
         right: (arrow_function
-       		parameters: ${parametersQuery()}
+       		parameters: (_)? @funcParams
 			return_type: (_)? @funcReturnType
             body: (_) @funcBody
         )
@@ -257,6 +235,31 @@ const functionCallQuery: ParserQuery = {
 `,
 };
 
+const functionParametersQuery: ParserQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    query: `
+(_
+    (
+        [
+            (property_promotion_parameter
+                type: (_)? @funcParamType
+                name: (_) @funcParamName
+            )
+            (simple_parameter
+                type: (_)? @funcParamType
+                name: (_) @funcParamName
+            )
+            (variadic_parameter
+                type: (_)? @funcParamType
+                name: (_) @funcParamName
+            )
+        ]
+        _*
+    )*
+)?
+`,
+};
+
 export const phpQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -266,4 +269,5 @@ export const phpQueries = new Map<QueryType, ParserQuery>([
 
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
 ] as const);

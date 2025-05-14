@@ -6,93 +6,55 @@ import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { QueryType, ParserQuery } from '../query';
 
 export class PythonParser extends BaseParser {
-    protected queries: Map<QueryType, ParserQuery> = pythonQueries;
-    protected scopes: Map<string, ScopeType> = new Map<string, ScopeType>([
+    protected override queries: Map<QueryType, ParserQuery> = pythonQueries;
+    protected override scopes: Map<string, ScopeType> = new Map<
+        string,
+        ScopeType
+    >([
         ['class_definition', ScopeType.CLASS],
 
         ['function_definition', ScopeType.FUNCTION],
         ['assignment', ScopeType.FUNCTION],
     ] as const);
-    protected constructorName: string = '__init__';
-    protected selfAccessReference: string = 'self';
-    protected rootNodeType: string = 'module';
-    protected memberChainNodeTypes = {
-        callNodeTypes: ['call', 'attribute'],
-        memberNodeTypes: [],
-        functionNameFields: ['attribute'],
-        instanceNameTypes: ['identifier', 'self'],
-        functionChildFields: ['object'],
-    };
+    protected override constructorName: string = '__init__';
+    protected override selfAccessReference: string = 'self';
 
-    protected setupLanguage(): void {
+    protected override validMemberTypes: Set<string> = new Set(['identifier']);
+    protected override validFunctionTypes: Set<string> = new Set([
+        'identifier',
+    ]);
+
+    protected override setupLanguage(): void {
         this.language = PythonLang as Language;
     }
 
-    protected override getMemberChain(
+    protected override processChainNode(
         node: SyntaxNode,
-        chains: Map<number, CallChain[]>,
-    ): CallChain[] {
-        if (!node) return [];
+        chain: CallChain[],
+    ): boolean {
+        switch (node.type) {
+            case 'call': {
+                const func = node.childForFieldName('function');
 
-        const chain: CallChain[] = [];
-        let currentNode: SyntaxNode | null = node;
+                if (func?.type === 'identifier') {
+                    this.addToChain(func, ChainType.FUNCTION, chain, node.id);
+                } else if (chain.length > 0) {
+                    chain[chain.length - 1].type = ChainType.FUNCTION;
+                }
 
-        while (currentNode) {
-            // Check if we've already processed this node
-            const cached = chains.get(currentNode.id);
-            if (cached) {
-                chain.push(...cached);
-                break;
+                return true;
             }
+            case 'attribute': {
+                const object = node.childForFieldName('object');
+                const attr = node.childForFieldName('attribute');
 
-            // Handle different node types
-            switch (currentNode.type) {
-                case 'call': {
-                    const functionField =
-                        currentNode.childForFieldName('function');
-                    if (!functionField) break;
+                this.addToChain(object, ChainType.MEMBER, chain, node.id);
+                this.addToChain(attr, ChainType.MEMBER, chain, node.id);
 
-                    if (functionField.type === 'identifier') {
-                        chain.push({
-                            name: functionField.text,
-                            type: ChainType.FUNCTION,
-                            id: currentNode.id,
-                        });
-                    } else if (chain.length > 0) {
-                        chain[chain.length - 1].type = ChainType.FUNCTION;
-                    }
-                    break;
-                }
-                case 'attribute': {
-                    this.processAttribute(currentNode, chain);
-                    break;
-                }
-                default: {
-                    return chain; // Exit for unsupported node types
-                }
+                return true;
             }
-
-            // Cache the current chain
-            chains.set(currentNode.id, [...chain]);
-            currentNode = currentNode.parent;
+            default:
+                return false;
         }
-
-        return chain;
-    }
-
-    private processAttribute(node: SyntaxNode, chain: CallChain[]) {
-        const addIdentifier = (fieldName: string) => {
-            const field = node.childForFieldName(fieldName);
-            if (field?.type === 'identifier') {
-                chain.push({
-                    name: field.text,
-                    type: ChainType.MEMBER,
-                    id: node.id,
-                });
-            }
-        };
-
-        addIdentifier('object');
-        addIdentifier('attribute');
     }
 }

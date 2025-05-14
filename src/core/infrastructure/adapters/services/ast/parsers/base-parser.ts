@@ -38,6 +38,17 @@ export type ObjectProperty = {
     value: string | null;
 };
 
+export type CallChain = {
+    name: string;
+    type: ChainType;
+    id: number;
+};
+
+export enum ChainType {
+    FUNCTION = 'function',
+    MEMBER = 'member',
+}
+
 export abstract class BaseParser {
     private importCache: Map<string, ResolvedImport> = new Map();
     private importPathResolver: ImportPathResolverService;
@@ -50,7 +61,6 @@ export abstract class BaseParser {
     protected abstract constructorName: string;
     protected abstract selfAccessReference: string;
     protected abstract scopes: Map<string, ScopeType>;
-    protected abstract rootNodeType: string;
 
     protected abstract memberChainNodeTypes: {
         callNodeTypes: string[];
@@ -687,6 +697,7 @@ export abstract class BaseParser {
         if (matches.length === 0) return [];
 
         const calls: Call[] = [];
+        const chains = new Map<number, CallChain[]>();
 
         for (const match of matches) {
             const captures = match.captures;
@@ -694,16 +705,20 @@ export abstract class BaseParser {
 
             for (const capture of captures) {
                 const node = capture.node;
-                if (!node) break;
+                if (!node) continue;
 
-                const chain = this.getMemberChain(node);
+                if (chains.has(node.id)) {
+                    continue;
+                }
+
+                const chain = this.getMemberChain(node, chains);
                 if (!chain || chain.length === 0) continue;
 
                 let caller = this.selfAccessReference;
                 let targetFile = absolutePath;
 
                 for (const { name, type } of chain) {
-                    if (type === 'function') {
+                    if (type === ChainType.FUNCTION) {
                         calls.push({
                             function: name,
                             file: targetFile,
@@ -795,7 +810,7 @@ export abstract class BaseParser {
         const chain: Scope[] = [];
         let currentNode: SyntaxNode | null = node;
 
-        while (currentNode && currentNode.type !== this.rootNodeType) {
+        while (currentNode) {
             const scopeType = this.scopes.get(currentNode.type);
             if (scopeType) {
                 const nameNode = currentNode.childForFieldName('name');
@@ -806,6 +821,7 @@ export abstract class BaseParser {
                         name: name,
                     });
                 } else {
+                    // Arrow function ?
                     const assignment = currentNode.childForFieldName('left');
                     if (assignment) {
                         const name = assignment.text;
@@ -822,80 +838,88 @@ export abstract class BaseParser {
         return chain;
     }
 
-    protected getMemberChain(node: SyntaxNode): {
-        name: string;
-        type: 'member' | 'function';
-    }[] {
-        const chain = [] as {
-            name: string;
-            type: 'member' | 'function';
-        }[];
-
-        let currentNode: SyntaxNode | null = node;
-
-        const {
-            callNodeTypes,
-            memberNodeTypes,
-            functionNameFields,
-            instanceNameTypes,
-            functionChildFields,
-        } = this.memberChainNodeTypes;
-
-        while (currentNode) {
-            if (callNodeTypes.includes(currentNode.type)) {
-                for (const functionNameField of functionNameFields) {
-                    const memberNameNode =
-                        currentNode.childForFieldName(functionNameField);
-                    if (memberNameNode) {
-                        chain.unshift({
-                            name: memberNameNode.text,
-                            type: 'function',
-                        });
-                        break;
-                    }
-                }
-            }
-            if (memberNodeTypes.includes(currentNode.type)) {
-                for (const functionNameField of functionNameFields) {
-                    const memberNameNode =
-                        currentNode.childForFieldName(functionNameField);
-                    if (memberNameNode) {
-                        chain.unshift({
-                            name: memberNameNode.text,
-                            type: 'member',
-                        });
-                        break;
-                    }
-                }
-            }
-            if (instanceNameTypes.includes(currentNode.type)) {
-                chain.unshift({
-                    name: currentNode.text,
-                    type: 'member',
-                });
-            }
-            if (currentNode.text === this.selfAccessReference) {
-                chain.unshift({
-                    name: this.selfAccessReference,
-                    type: 'member',
-                });
-            }
-            let childNodeFound = false;
-            for (const functionChildField of functionChildFields) {
-                const childNode =
-                    currentNode.childForFieldName(functionChildField);
-                if (childNode) {
-                    currentNode = childNode;
-                    childNodeFound = true;
-                    break;
-                }
-            }
-            if (!childNodeFound) {
-                break; // Exit the loop if no child node is found
-            }
-        }
-
-        return chain;
+    protected getMemberChain(
+        node: SyntaxNode,
+        chains: Map<number, CallChain[]>,
+    ): CallChain[] {
+        return [];
+        // if (!node) return [];
+        // const chain = chains.get(node.id) ?? [];
+        // if (chain && chain.length > 0) {
+        //     return chain;
+        // }
+        // const {
+        //     callNodeTypes,
+        //     memberNodeTypes,
+        //     functionNameFields,
+        //     instanceNameTypes,
+        //     functionChildFields,
+        // } = this.memberChainNodeTypes;
+        // let currentNode: SyntaxNode | null = node;
+        // while (currentNode) {
+        //     if (callNodeTypes.includes(currentNode.type)) {
+        //         for (const functionNameField of functionNameFields) {
+        //             const memberNameNode =
+        //                 currentNode.childForFieldName(functionNameField);
+        //             if (memberNameNode) {
+        //                 chain.push({
+        //                     name: memberNameNode.text,
+        //                     type: 'function',
+        //                     id: currentNode.id,
+        //                 });
+        //                 const existing = chains.get(currentNode.id);
+        //                 if (existing) {
+        //                     existing.unshift(...chain);
+        //                 }
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     if (memberNodeTypes.includes(currentNode.type)) {
+        //         for (const functionNameField of functionNameFields) {
+        //             const memberNameNode =
+        //                 currentNode.childForFieldName(functionNameField);
+        //             if (memberNameNode) {
+        //                 chain.push({
+        //                     name: memberNameNode.text,
+        //                     type: 'member',
+        //                     id: currentNode.id,
+        //                 });
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     if (instanceNameTypes.includes(currentNode.type)) {
+        //         chain.push({
+        //             name: currentNode.text,
+        //             type: 'member',
+        //             id: currentNode.id,
+        //         });
+        //     }
+        //     if (currentNode.text === this.selfAccessReference) {
+        //         chain.push({
+        //             name: this.selfAccessReference,
+        //             type: 'member',
+        //             id: currentNode.id,
+        //         });
+        //     }
+        //     currentNode = currentNode.parent;
+        //     // let childNodeFound = false;
+        //     // for (const functionChildField of functionChildFields) {
+        //     //     const childNode =
+        //     //         currentNode.childForFieldName(functionChildField);
+        //     //     if (childNode) {
+        //     //         currentNode = childNode;
+        //     //         childNodeFound = true;
+        //     //         break;
+        //     //     }
+        //     // }
+        //     // if (!childNodeFound) {
+        //     //     break; // Exit the loop if no child node is found
+        //     // }
+        // }
+        // chains.set(node.id, chain);
+        // return chain;
     }
 
     protected resolveTargetFile(

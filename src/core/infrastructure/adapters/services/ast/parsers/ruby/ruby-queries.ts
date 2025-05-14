@@ -102,6 +102,13 @@ const functionCallQuery: ParserQuery = {
         "attr_writer"
         "attr_accessor"
     )
+    receiver: [
+        (self)
+        (identifier)
+        (constant)
+        (instance_variable)
+        (class_variable)
+    ]?
 ) @call
 `,
 };

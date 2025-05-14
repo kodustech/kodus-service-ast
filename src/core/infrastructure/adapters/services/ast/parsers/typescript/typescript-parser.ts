@@ -1,4 +1,4 @@
-import { BaseParser } from '../base-parser';
+import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
 import { Language, SyntaxNode } from 'tree-sitter';
@@ -32,74 +32,79 @@ export class TypeScriptParser extends BaseParser {
         this.language = TypeScriptLang as Language;
     }
 
-    protected override getMemberChain(node: SyntaxNode): {
-        name: string;
-        type: 'member' | 'function';
-    }[] {
-        const chain = [] as {
-            name: string;
-            type: 'member' | 'function';
-        }[];
+    protected override getMemberChain(
+        node: SyntaxNode,
+        chains: Map<number, CallChain[]>,
+    ): CallChain[] {
+        if (!node) return [];
 
+        const chain: CallChain[] = [];
         let currentNode: SyntaxNode | null = node;
 
-        const {
-            callNodeTypes,
-            memberNodeTypes,
-            functionNameFields,
-            instanceNameTypes,
-            functionChildFields,
-        } = this.memberChainNodeTypes;
-
         while (currentNode) {
-            if (memberNodeTypes.includes(currentNode.type)) {
-                for (const functionNameField of functionNameFields) {
-                    const memberNameNode =
-                        currentNode.childForFieldName(functionNameField);
-                    if (memberNameNode) {
-                        if (callNodeTypes.includes(currentNode.parent.type)) {
-                            chain.unshift({
-                                name: memberNameNode.text,
-                                type: 'function',
-                            });
-                            break;
-                        }
+            // Check if we've already processed this node
+            const cached = chains.get(currentNode.id);
+            if (cached) {
+                chain.push(...cached);
+                break;
+            }
 
-                        chain.unshift({
-                            name: memberNameNode.text,
-                            type: 'member',
-                        });
-                        break;
-                    }
-                }
-            }
-            if (instanceNameTypes.includes(currentNode.type)) {
-                chain.unshift({
-                    name: currentNode.text,
-                    type: 'member',
-                });
-            }
-            if (currentNode.text === this.selfAccessReference) {
-                chain.unshift({
-                    name: this.selfAccessReference,
-                    type: 'member',
-                });
-            }
-            let childNodeFound = false;
-            for (const functionChildField of functionChildFields) {
-                const childNode =
-                    currentNode.childForFieldName(functionChildField);
-                if (childNode) {
-                    currentNode = childNode;
-                    childNodeFound = true;
-                    break;
-                }
-            }
-            if (!childNodeFound) {
-                break; // Exit the loop if no child node is found
-            }
+            // Handle different node types
+            const processed = this.processNode(currentNode, chain);
+            if (!processed) return chain; // Exit for unsupported node types
+
+            // Cache the current chain
+            chains.set(currentNode.id, [...chain]);
+            currentNode = currentNode.parent;
         }
 
         return chain;
+    }
+
+    private processNode(node: SyntaxNode, chain: CallChain[]): boolean {
+        const isProperty = (n: SyntaxNode | null): boolean =>
+            n?.type === 'identifier' ||
+            n?.type === 'property_identifier' ||
+            n?.type === 'private_property_identifier';
+
+        switch (node.type) {
+            case 'call_expression': {
+                const functionField = node.childForFieldName('function');
+                if (functionField?.type === 'identifier') {
+                    chain.push({
+                        name: functionField.text,
+                        type: ChainType.FUNCTION,
+                        id: node.id,
+                    });
+                } else if (chain.length > 0) {
+                    chain[chain.length - 1].type = ChainType.FUNCTION;
+                }
+                return true;
+            }
+            case 'member_expression': {
+                const objectField = node.childForFieldName('object');
+                const propertyField = node.childForFieldName('property');
+
+                if (objectField?.type === 'identifier') {
+                    chain.push({
+                        name: objectField.text,
+                        type: ChainType.MEMBER,
+                        id: node.id,
+                    });
+                }
+
+                if (isProperty(propertyField)) {
+                    chain.push({
+                        name: propertyField.text,
+                        type: ChainType.MEMBER,
+                        id: node.id,
+                    });
+                }
+                return true;
+            }
+            default: {
+                return false;
+            }
+        }
     }
 }

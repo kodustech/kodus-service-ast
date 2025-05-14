@@ -92,9 +92,13 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
+(attribute
+	attribute: (identifier)
+) @call
+
 (call
-    function: (_) @call
-)
+	function: (identifier)
+) @call
 `,
 };
 

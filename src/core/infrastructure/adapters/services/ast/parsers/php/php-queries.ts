@@ -218,20 +218,61 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(compound_statement
-  (_
-    [
-      (member_call_expression)
-      (scoped_call_expression)
-      (nullsafe_member_call_expression)
+(member_call_expression
+	object: [
+  	    (variable_name)
+        (name)
+    ]
+) @call
 
-      (member_access_expression)
-      (nullsafe_member_access_expression)
-    ] @call
-  )
-)
+(scoped_call_expression
+	scope: [
+  		(variable_name)
+      	(name)
+    ]
+) @call
 
-(function_call_expression) @call
+(scoped_property_access_expression
+	scope: [
+    	(variable_name)
+        (name)
+	]
+) @call
+
+(class_constant_access_expression
+	[
+    	(variable_name)
+    	(name)
+    ]+
+) @call
+
+(nullsafe_member_call_expression
+	object: [
+  	    (variable_name)
+        (name)
+    ]
+) @call
+
+(member_access_expression
+	object: [
+  	    (variable_name)
+        (name)
+    ]
+) @call
+
+(nullsafe_member_access_expression
+	object: [
+  	    (variable_name)
+        (name)
+    ]
+) @call
+
+(function_call_expression
+	function: [
+    	(variable_name)
+        (name)
+    ]
+) @call
 `,
 };
 

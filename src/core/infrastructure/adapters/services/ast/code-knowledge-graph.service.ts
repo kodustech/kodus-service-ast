@@ -102,7 +102,8 @@ export class CodeKnowledgeGraphService {
             // 'example.rb',
             // 'src/ee/codeBase/ast/resolvers',
             // 'src/core/application/use-cases/codeBase',
-            // 'manimlib/mobject/mobject.py',
+            // 'manimlib/utils/tex_file_writing.py',
+            // 'analyze-code.use-case.ts',
         ];
         const filteredFiles =
             filterCriteria.length > 0
@@ -155,19 +156,19 @@ export class CodeKnowledgeGraphService {
 
                             const analysis = await Promise.race<ParserAnalysis>(
                                 [
-                                    this.piscina.run(
-                                        {
-                                            rootDir,
-                                            filePath,
-                                            normalizedPath,
-                                        },
-                                        { name: 'analyze' },
-                                    ),
-                                    // new SourceFileAnalyzer().analyzeSourceFile(
-                                    //     rootDir,
-                                    //     filePath,
-                                    //     normalizedPath,
+                                    // this.piscina.run(
+                                    //     {
+                                    //         rootDir,
+                                    //         filePath,
+                                    //         normalizedPath,
+                                    //     },
+                                    //     { name: 'analyze' },
                                     // ),
+                                    new SourceFileAnalyzer().analyzeSourceFile(
+                                        rootDir,
+                                        filePath,
+                                        normalizedPath,
+                                    ),
                                     timeoutPromise,
                                 ],
                             );

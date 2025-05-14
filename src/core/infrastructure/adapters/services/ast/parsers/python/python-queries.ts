@@ -1,120 +1,132 @@
 import { ParserQuery, QueryType } from '../query';
 
-const mainQuery: ParserQuery = {
-    type: QueryType.MAIN_QUERY,
+const importQuery: ParserQuery = {
+    type: QueryType.IMPORT_QUERY,
     query: `
-;; Imports
-(import_statement) @import
-(import_from_statement) @import
+(import_statement
+	(
+        [
+        (dotted_name) @origin
+        (aliased_import
+            name: (dotted_name) @origin
+            alias: (identifier) @alias
+        )
+        ]+
+        ","?
+    )+
+)
 
-;; Class
-(class_definition
-  name: (identifier) @definition.class.name
-) @definition.class
-
-;; Function
-(function_definition
-  name: (identifier) @definition.function.name
-) @definition.function
-
-;; self.instance.method()
-(
-  call
-  function: (attribute
-    object: (attribute
-      object: (identifier) @self
-      (#match? @self "self")
-      attribute: (identifier) @instance
-    )
-    attribute: (identifier) @method
-  )
-  arguments: (_)
-) @buildCall
+(import_from_statement
+	module_name: [
+    	(dotted_name)
+        (relative_import)
+    ] @origin
+	(
+        [
+        (dotted_name) @symbol
+        (aliased_import
+            name: (dotted_name) @symbol
+            alias: (identifier) @alias
+        )
+        (wildcard_import) @symbol
+        ]+
+        ","?
+    )+
+)
 `,
-    captureNames: {
-        import: ['import'],
-        definition: ['definition.class', 'definition.function'],
-        call: ['buildCall'],
-    },
+};
+
+const classQuery: ParserQuery = {
+    type: QueryType.CLASS_QUERY,
+    query: `
+(class_definition
+	name: (identifier) @objName
+    superclasses: (argument_list
+    	(
+    		(identifier) @objExtends
+        	","?
+        )*
+    )?
+    body: (block
+    	(
+        	[
+        	(function_definition
+            	name: (identifier) @objMethod
+                parameters: (_) @objMethodParams
+                return_type: (_)? @objMethodReturnType
+            )
+            (expression_statement
+            	(assignment
+                	left: (identifier) @objProperty
+                    type: (_)? @objPropertyType
+                )
+            )
+        	]
+            _*
+        )*
+    )
+)
+`,
 };
 
 const functionQuery: ParserQuery = {
     type: QueryType.FUNCTION_QUERY,
     query: `
-;; Function definitions with name, params, and body
-(
-  function_definition
+(function_definition
     name: (identifier) @funcName
-    parameters: (parameters) @params
-    body: (block) @body
+    parameters: (_) @funcParams
+    return_type: (_)? @funcReturnType
+    body: (block) @funcBody
 )
 
-;; Method definitions (functions inside classes)
-(
-  class_definition
-    body: (block
-      (function_definition
-        name: (identifier) @funcName
-        parameters: (parameters) @params
-        body: (block) @body
-      )
-    )
-)
-
-;; Lambda function assignments (similar to arrow functions)
-(
-  assignment
+(assignment
     left: (identifier) @funcName
     right: (lambda
-      parameters: (lambda_parameters) @params
-      body: (_) @body
+        parameters: (_) @funcParams
+        body: (_) @funcBody
     )
 )
 `,
-    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-;; Simple function calls (e.g., func())
-(
-  call
-    function: (identifier) @callName
-)
+(attribute
+	attribute: (identifier)
+) @call
 
-;; Method calls (e.g., obj.method())
-(
-  call
-    function: (attribute
-                attribute: (identifier) @callName)
-)
+(call
+	function: (identifier)
+) @call
 `,
-    captureNames: undefined,
 };
 
-const typeQuery: ParserQuery = {
-    type: QueryType.TYPE_QUERY,
+const functionParametersQuery: ParserQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
     query: `
-;; Class
-(
-  class_definition
-  name: (identifier) @className
-  superclasses: (argument_list)? @classHeritage
-  body: (block) @classBody
-) @classDecl
+(parameters
+    (
+        [
+        	(parameter
+            	.
+            	(identifier) @funcParamName
+	            type: (_)? @funcParamType
+    	    )
+        	(identifier) @funcParamName
+        ]
+        _*
+    )*
+)
 `,
-    captureNames: {
-        class: ['className', 'classHeritage', 'classBody'],
-        interface: [],
-        enum: [],
-        type: [],
-    },
 };
 
 export const pythonQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.MAIN_QUERY, mainQuery],
+    [QueryType.IMPORT_QUERY, importQuery],
+
+    [QueryType.CLASS_QUERY, classQuery],
+
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.TYPE_QUERY, typeQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
 ] as const);

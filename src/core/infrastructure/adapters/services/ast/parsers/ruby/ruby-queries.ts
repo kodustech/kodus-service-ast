@@ -1,126 +1,136 @@
 import { ParserQuery, QueryType } from '../query';
 
-const mainQuery: ParserQuery = {
-    type: QueryType.MAIN_QUERY,
+const classBodyQuery = () => `
+(_
+    (
+        [
+            (call) @objCall
+            (instance_variable) @objProperty
+            (class_variable) @objProperty
+            (method
+                name: (identifier) @objMethod
+                parameters: (_)? @objMethodParams
+            )
+            (singleton_method
+                name: (identifier) @objMethod
+                parameters: (_)? @objMethodParams
+            )
+        ]
+        _*
+    )*
+)
+`;
+
+const importQuery: ParserQuery = {
+    type: QueryType.IMPORT_QUERY,
     query: `
-;; imports
 (call
     method: (identifier) @import.type
-    arguments: (argument_list (string (string_content)))
-    (#match? @import.type "require|require_relative|load|autoload")
-) @import
+    arguments: (argument_list
+    	(
+            ","?
+            (_)* @symbol
+        )*
+        (string (string_content) @origin)
+        .
+    )
+    (#any-of? @import.type
+        "require"
+        "require_relative"
+        "load"
+        "autoload"
+    )
+)
+`,
+};
 
-;; class
+const classQuery: ParserQuery = {
+    type: QueryType.CLASS_QUERY,
+    query: `
 (class
-    name: (constant)
-) @definition.class
-
-;; module
-(module
-    name: (constant)
-) @definition.module
-
-;; function
-(
-    [
-        (method
-            name: (identifier)
-        )
-        (singleton_method
-            name: (identifier)
-        )
-    ] @definition.function
+    name: (constant) @objName
+    superclass: (superclass (constant) @objExtends)?
+    ${classBodyQuery()}
 )
 
-;; self.instance.method()
-(call
-    receiver: (call
-        receiver: (self)
-        method: (identifier) @self
-    )
-    method: (identifier) @instance
-    arguments: (argument_list)
-) @buildCall
+(module
+    name: (constant) @objName
+    ${classBodyQuery()}
+)
 `,
-    captureNames: {
-        import: ['import'],
-        definition: [
-            'definition.class',
-            'definition.module',
-            'definition.function',
-        ],
-        call: ['buildCall'],
-    },
 };
 
 const functionQuery: ParserQuery = {
     type: QueryType.FUNCTION_QUERY,
     query: `
-(
-  method
+(method
     name: (identifier) @funcName
-    parameters: (method_parameters) @params*
+    parameters: (_)? @funcParams
+    body: (_) @funcBody
 )
 
-(
-  singleton_method
+(singleton_method
     name: (identifier) @funcName
-    parameters: (method_parameters) @params*
+    parameters: (_)? @funcParams
+    body: (_) @funcBody
 )
 
-(
-  assignment
+(assignment
     left: (identifier) @funcName
-    right: (block
-              parameters: (block_parameters) @params*)
-)
-
-(
-  assignment
-    left: (identifier) @funcName
-    right: (do_block
-              parameters: (block_parameters) @params*)
+    right: (lambda
+    	parameters: (_)? @funcParams
+        body: (_) @funcBody
+    )
 )
 `,
-    captureNames: undefined,
 };
 
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(
-  call
-    method: (identifier) @callName
-)
+(call
+    method: (identifier) @call.type
+    (#not-any-of? @call.type
+        "require"
+        "require_relative"
+        "load"
+        "autoload"
+        "include"
+        "extends"
+        "attr"
+        "attr_reader"
+        "attr_writer"
+        "attr_accessor"
+    )
+    receiver: [
+        (self)
+        (identifier)
+        (constant)
+        (instance_variable)
+        (class_variable)
+    ]?
+) @call
 `,
-    captureNames: undefined,
 };
 
-const typeQuery: ParserQuery = {
-    type: QueryType.TYPE_QUERY,
+const functionParametersQuery: ParserQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
     query: `
-;; class
-(class
-    name: (constant) @className
-    superclass: (constant)? @classHeritage
-) @classDecl
-
-;; module
-(module
-    name: (constant) @moduleName
-) @moduleDecl
+(_
+    (
+        (identifier) @funcParamName
+        _*
+    )*
+)
 `,
-    captureNames: {
-        class: ['className', 'classHeritage'],
-        interface: [],
-        enum: [],
-        type: [],
-    },
 };
 
 export const rubyQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.MAIN_QUERY, mainQuery],
+    [QueryType.IMPORT_QUERY, importQuery],
+
+    [QueryType.CLASS_QUERY, classQuery],
+
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.TYPE_QUERY, typeQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
 ] as const);

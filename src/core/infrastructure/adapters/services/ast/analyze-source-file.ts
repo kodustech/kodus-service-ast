@@ -70,19 +70,9 @@ export class SourceFileAnalyzer {
                 return this.emptyAnalysis();
             }
 
-            await this.languageParser.collectAllInOnePass(
+            this.languageParser.collectAllInOnePass(
                 syntaxTree.rootNode,
                 filePath,
-                absolutePath,
-            );
-
-            this.languageParser.collectFunctionDetailsWithQuery(
-                syntaxTree.rootNode,
-                absolutePath,
-            );
-
-            this.languageParser.collectTypeDetailsUsingQuery(
-                syntaxTree.rootNode,
                 absolutePath,
             );
 

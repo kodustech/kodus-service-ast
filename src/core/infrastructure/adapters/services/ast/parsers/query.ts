@@ -1,68 +1,24 @@
-import { Language, Query } from 'tree-sitter';
-
 export enum QueryType {
-    MAIN_QUERY,
-    FUNCTION_QUERY,
-    FUNCTION_CALL_QUERY,
-    TYPE_QUERY,
+    IMPORT_QUERY = 'import',
+
+    CLASS_QUERY = 'class',
+    INTERFACE_QUERY = 'interface',
+    ENUM_QUERY = 'enum',
+
+    TYPE_ALIAS_QUERY = 'type',
+
+    FUNCTION_QUERY = 'function',
+    FUNCTION_CALL_QUERY = 'function_call',
+    FUNCTION_PARAMETERS_QUERY = 'function_parameters',
 }
 
-export type MainQueryCaptureNames = {
-    import: string[];
-    definition: string[];
-    call: string[];
-};
+export const objQueries = [
+    QueryType.CLASS_QUERY,
+    QueryType.INTERFACE_QUERY,
+    QueryType.ENUM_QUERY,
+] as const;
 
-export type TypeQueryCaptureNames = {
-    class: string[];
-    interface: string[];
-    enum: string[];
-    type: string[];
-};
-
-export type BaseParserQuery<T extends QueryType> = {
-    type: T;
+export type ParserQuery = {
+    type: QueryType;
     query: string;
 };
-
-export type ParserQueryWithCaptures<
-    T extends QueryType,
-    C,
-> = BaseParserQuery<T> & {
-    captureNames: C;
-};
-
-export type MainParserQuery = ParserQueryWithCaptures<
-    QueryType.MAIN_QUERY,
-    MainQueryCaptureNames
->;
-
-export type TypeParserQuery = ParserQueryWithCaptures<
-    QueryType.TYPE_QUERY,
-    TypeQueryCaptureNames
->;
-
-export type GenericParserQuery = ParserQueryWithCaptures<
-    QueryType.FUNCTION_QUERY | QueryType.FUNCTION_CALL_QUERY,
-    undefined
->;
-
-export type ParserQuery =
-    | GenericParserQuery
-    | MainParserQuery
-    | TypeParserQuery;
-
-export type CaptureNamesForType<T extends QueryType> =
-    Extract<ParserQuery, { type: T }> extends { captureNames: infer C }
-        ? C
-        : undefined;
-
-export class EnhancedQuery<T extends QueryType> extends Query {
-    constructor(
-        language: Language,
-        source: string | Buffer,
-        public captureNames?: CaptureNamesForType<T>,
-    ) {
-        super(language, source);
-    }
-}

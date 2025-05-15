@@ -1,12 +1,10 @@
-import { Language, SyntaxNode } from 'tree-sitter';
+import { Language, Query, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
-import { QueryType, ParserQuery } from '../query';
 
 export class PhpParser extends BaseParser {
-    protected override queries: Map<QueryType, ParserQuery> = phpQueries;
     protected override scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
@@ -33,6 +31,13 @@ export class PhpParser extends BaseParser {
 
     protected override setupLanguage(): void {
         this.language = PhpLang as Language;
+    }
+
+    protected override setupQueries(): void {
+        for (const [key, value] of phpQueries.entries()) {
+            const query = new Query(this.language, value.query);
+            this.queries.set(key, query);
+        }
     }
 
     protected override processChainNode(

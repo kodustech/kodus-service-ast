@@ -1,12 +1,10 @@
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
-import { Language, SyntaxNode } from 'tree-sitter';
+import { Language, Query, SyntaxNode } from 'tree-sitter';
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
-import { QueryType, ParserQuery } from '../query';
 
 export class TypeScriptParser extends BaseParser {
-    protected override queries: Map<QueryType, ParserQuery> = typeScriptQueries;
     protected override scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
@@ -36,6 +34,13 @@ export class TypeScriptParser extends BaseParser {
         this.language = TypeScriptLang as Language;
     }
 
+    protected override setupQueries(): void {
+        for (const [key, value] of typeScriptQueries.entries()) {
+            const query = new Query(this.language, value.query);
+            this.queries.set(key, query);
+        }
+    }
+
     protected override processChainNode(
         node: SyntaxNode,
         chain: CallChain[],
@@ -53,16 +58,32 @@ export class TypeScriptParser extends BaseParser {
                 return true;
             }
             case 'member_expression': {
-                const object = node.childForFieldName('object');
-                const property = node.childForFieldName('property');
-
-                this.addToChain(object, ChainType.MEMBER, chain, node.id);
-                this.addToChain(property, ChainType.MEMBER, chain, node.id);
+                this.processMemberExpression(node, chain);
 
                 return true;
             }
             default:
                 return false;
         }
+    }
+
+    private processMemberExpression(
+        node: SyntaxNode,
+        chain: CallChain[],
+        depth: number = 0,
+    ): void {
+        if (depth > 1) {
+            return;
+        }
+
+        const object = node.childForFieldName('object');
+        const property = node.childForFieldName('property');
+
+        if (object?.type === 'member_expression') {
+            this.processMemberExpression(object, chain, depth + 1);
+        }
+
+        this.addToChain(object, ChainType.MEMBER, chain, node.id);
+        this.addToChain(property, ChainType.MEMBER, chain, node.id);
     }
 }

@@ -100,10 +100,10 @@ export class CodeKnowledgeGraphService {
             // 'integrationConfig.service.ts',
             // 'user.py',
             // 'example.rb',
-            // 'src/ee/codeBase/ast/resolvers',
-            // 'src/core/application/use-cases/codeBase',
+            // 'src/core/application/use-cases/codeReviewFeedback',
+            // 'src/core/application/use-cases/codeBase/ruby_project',
             // 'manimlib/utils/tex_file_writing.py',
-            // 'analyze-code.use-case.ts',
+            // 'update_kody_rules.js',
         ];
         const filteredFiles =
             filterCriteria.length > 0

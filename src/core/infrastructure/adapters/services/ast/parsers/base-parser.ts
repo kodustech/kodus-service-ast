@@ -4,7 +4,7 @@ import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-import { objQueries, ParserQuery, QueryType } from './query';
+import { objQueries, QueryType } from './query';
 import {
     Call,
     Scope,
@@ -56,7 +56,7 @@ export abstract class BaseParser {
     private context: ParseContext;
 
     protected language: Language;
-    protected abstract queries: Map<QueryType, ParserQuery>;
+    protected queries: Map<QueryType, Query> = new Map<QueryType, Query>();
 
     protected abstract constructorName: string;
     protected abstract selfAccessReference: string;
@@ -71,12 +71,14 @@ export abstract class BaseParser {
     ) {
         this.setupLanguage();
         this.setupParser();
+        this.setupQueries();
 
         this.importPathResolver = importPathResolver;
         this.context = context;
     }
 
     protected abstract setupLanguage(): void;
+    protected abstract setupQueries(): void;
 
     private setupParser(): void {
         if (this.parser) {
@@ -100,7 +102,7 @@ export abstract class BaseParser {
         return this.parser;
     }
 
-    protected getQuery(type: QueryType): ParserQuery | null {
+    protected getQuery(type: QueryType): Query | null {
         if (!this.queries) {
             throw new Error('Queries not set up');
         }
@@ -111,19 +113,19 @@ export abstract class BaseParser {
         return query;
     }
 
-    protected newQueryFromType(queryType: QueryType): Query | null {
-        const parserQuery = this.getQuery(queryType);
-        if (!parserQuery) {
-            return null;
-        }
-        return this.newQuery(parserQuery);
-    }
+    // protected newQueryFromType(queryType: QueryType): Query | null {
+    //     const parserQuery = this.getQuery(queryType);
+    //     if (!parserQuery) {
+    //         return null;
+    //     }
+    //     return this.newQuery(parserQuery);
+    // }
 
-    protected newQuery(query: ParserQuery): Query {
-        const mainQuery = new Query(this.language, query.query);
+    // protected newQuery(query: ParserQuery): Query {
+    //     const mainQuery = new Query(this.language, query.query);
 
-        return mainQuery;
-    }
+    //     return mainQuery;
+    // }
 
     public collectAllInOnePass(
         rootNode: SyntaxNode,
@@ -142,7 +144,7 @@ export abstract class BaseParser {
     }
 
     protected collectImports(rootNode: SyntaxNode, filePath: string): void {
-        const query = this.newQueryFromType(QueryType.IMPORT_QUERY);
+        const query = this.getQuery(QueryType.IMPORT_QUERY);
         if (!query) return;
 
         const matches = query.matches(rootNode);
@@ -233,7 +235,7 @@ export abstract class BaseParser {
         absolutePath: string,
         type: QueryType,
     ): void {
-        const query = this.newQueryFromType(type);
+        const query = this.getQuery(type);
         if (!query) return;
 
         const matches = query.matches(rootNode);
@@ -440,9 +442,7 @@ export abstract class BaseParser {
     }
 
     protected processMethodParameters(method: Method, node: SyntaxNode) {
-        const query = this.newQueryFromType(
-            QueryType.FUNCTION_PARAMETERS_QUERY,
-        );
+        const query = this.getQuery(QueryType.FUNCTION_PARAMETERS_QUERY);
         if (!query) return;
 
         const matches = query.matches(node);
@@ -577,7 +577,7 @@ export abstract class BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const query = this.newQueryFromType(QueryType.FUNCTION_QUERY);
+        const query = this.getQuery(QueryType.FUNCTION_QUERY);
         if (!query) return;
 
         const matches = query.matches(rootNode);
@@ -685,7 +685,7 @@ export abstract class BaseParser {
         absolutePath: string,
         scope: Scope[],
     ): Call[] {
-        const query = this.newQueryFromType(QueryType.FUNCTION_CALL_QUERY);
+        const query = this.getQuery(QueryType.FUNCTION_CALL_QUERY);
         if (!query) return [];
 
         const matches = query.matches(rootNode);
@@ -738,7 +738,7 @@ export abstract class BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
     ): void {
-        const query = this.newQueryFromType(QueryType.TYPE_ALIAS_QUERY);
+        const query = this.getQuery(QueryType.TYPE_ALIAS_QUERY);
         if (!query) return;
 
         const matches = query.matches(rootNode);

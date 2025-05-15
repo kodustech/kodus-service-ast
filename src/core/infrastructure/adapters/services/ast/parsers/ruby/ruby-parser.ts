@@ -7,12 +7,10 @@ import {
 } from '../base-parser';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
-import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
+import { Language, Query, QueryCapture, SyntaxNode } from 'tree-sitter';
 import { ScopeType, TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
-import { QueryType, ParserQuery } from '../query';
 
 export class RubyParser extends BaseParser {
-    protected override queries: Map<QueryType, ParserQuery> = rubyQueries;
     protected override scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
@@ -41,6 +39,13 @@ export class RubyParser extends BaseParser {
 
     protected override setupLanguage(): void {
         this.language = RubyLang as Language;
+    }
+
+    protected override setupQueries(): void {
+        for (const [key, value] of rubyQueries.entries()) {
+            const query = new Query(this.language, value.query);
+            this.queries.set(key, query);
+        }
     }
 
     protected override processExtraObjCapture(

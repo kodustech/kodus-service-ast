@@ -25,11 +25,13 @@ const classAuxiliaryQuery = () => `
                     	(_) @objPropertyType
                     )?
                 )
-                (method_definition
-                	name: (property_identifier) @objMethod
-                    parameters: (_)? @objMethodParams
-                    return_type: (type_annotation (_) @objMethodReturnType)?
+                (property_signature
+                	name: (property_identifier) @objProperty
+                    type: (type_annotation
+                    	(_) @objPropertyType
+                    )?
                 )
+
                 (method_definition
                 	name: (property_identifier) @objMethod
                     parameters: (_)? @objMethodParams
@@ -215,12 +217,9 @@ const functionQuery: ParserQuery = {
 const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
-(member_expression
-	object: [
-    	(this)
-    	(identifier)
-    ]
-) @call
+(call_expression
+    function: (member_expression) @call
+)
 
 (call_expression
 	function: (identifier)

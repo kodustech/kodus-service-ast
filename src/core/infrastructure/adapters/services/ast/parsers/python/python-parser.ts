@@ -1,12 +1,10 @@
 import { BaseParser, CallChain, ChainType } from '../base-parser';
-import { Language, SyntaxNode } from 'tree-sitter';
+import { Language, Query, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
-import { pythonQueries } from './python-queries';
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
-import { QueryType, ParserQuery } from '../query';
+import { pythonQueries } from './python-queries';
 
 export class PythonParser extends BaseParser {
-    protected override queries: Map<QueryType, ParserQuery> = pythonQueries;
     protected override scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
@@ -26,6 +24,13 @@ export class PythonParser extends BaseParser {
 
     protected override setupLanguage(): void {
         this.language = PythonLang as Language;
+    }
+
+    protected override setupQueries(): void {
+        for (const [key, value] of pythonQueries.entries()) {
+            const query = new Query(this.language, value.query);
+            this.queries.set(key, query);
+        }
     }
 
     protected override processChainNode(

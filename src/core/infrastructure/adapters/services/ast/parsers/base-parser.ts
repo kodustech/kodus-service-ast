@@ -50,20 +50,23 @@ export enum ChainType {
 }
 
 export abstract class BaseParser {
-    private importCache: Map<string, ResolvedImport> = new Map();
-    private importPathResolver: ImportPathResolverService;
+    private readonly importCache: Map<string, ResolvedImport> = new Map();
+    private readonly importPathResolver: ImportPathResolverService;
     private parser: Parser;
-    private context: ParseContext;
+    private readonly context: ParseContext;
 
     protected language: Language;
-    protected queries: Map<QueryType, Query> = new Map<QueryType, Query>();
+    protected readonly queries: Map<QueryType, Query> = new Map<
+        QueryType,
+        Query
+    >();
 
-    protected abstract constructorName: string;
-    protected abstract selfAccessReference: string;
-    protected abstract scopes: Map<string, ScopeType>;
+    protected abstract readonly constructorName: string;
+    protected abstract readonly selfAccessReference: string;
+    protected abstract readonly scopes: Map<string, ScopeType>;
 
-    protected abstract validMemberTypes: Set<string>;
-    protected abstract validFunctionTypes: Set<string>;
+    protected abstract readonly validMemberTypes: Set<string>;
+    protected abstract readonly validFunctionTypes: Set<string>;
 
     constructor(
         importPathResolver: ImportPathResolverService,

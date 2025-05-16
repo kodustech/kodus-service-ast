@@ -142,10 +142,11 @@ export class SourceFileAnalyzer {
 
     private async initializeImportResolver(rootDir: string): Promise<void> {
         const resolver = await this.resolverFactory.getResolver(
-            path.join(
-                rootDir,
-                'src/core/application/use-cases/codeBase/csharp_project',
-            ),
+            rootDir,
+            // path.join(
+            //     rootDir,
+            //     'src/core/application/use-cases/codeBase/csharp_project',
+            // ),
         );
         this.importPathResolver.initialize(rootDir, resolver);
     }

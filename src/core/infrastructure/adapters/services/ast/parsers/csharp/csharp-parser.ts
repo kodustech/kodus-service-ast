@@ -5,9 +5,9 @@ import * as CSharpLang from 'tree-sitter-c-sharp';
 import { cSharpQueries } from './csharp-queries';
 
 export class CSharpParser extends BaseParser {
-    protected override constructorName: string = 'constructor';
-    protected override selfAccessReference: string = 'this';
-    protected override scopes: Map<string, ScopeType> = new Map<
+    protected override readonly constructorName: string = 'constructor';
+    protected override readonly selfAccessReference: string = 'this';
+    protected override readonly scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
     >([
@@ -24,10 +24,12 @@ export class CSharpParser extends BaseParser {
         ['constructor_declaration', ScopeType.METHOD],
         ['variable_declaration', ScopeType.FUNCTION],
     ] as const);
-    protected override validMemberTypes: Set<string> = new Set(['identifier']);
-    protected override validFunctionTypes: Set<string> = new Set([
+    protected override readonly validMemberTypes: Set<string> = new Set([
         'identifier',
-    ]);
+    ] as const);
+    protected override readonly validFunctionTypes: Set<string> = new Set([
+        'identifier',
+    ] as const);
 
     protected override setupLanguage(): void {
         this.language = CSharpLang as Language;

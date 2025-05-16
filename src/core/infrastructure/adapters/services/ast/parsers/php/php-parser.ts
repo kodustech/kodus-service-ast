@@ -5,7 +5,7 @@ import * as PhpLang from 'tree-sitter-php/php';
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class PhpParser extends BaseParser {
-    protected override scopes: Map<string, ScopeType> = new Map<
+    protected override readonly scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
     >([
@@ -17,17 +17,17 @@ export class PhpParser extends BaseParser {
         ['method_declaration', ScopeType.METHOD],
         ['assignment_expression', ScopeType.FUNCTION],
     ] as const);
-    protected override constructorName: string = '__construct';
-    protected override selfAccessReference: string = '$this';
+    protected override readonly constructorName: string = '__construct';
+    protected override readonly selfAccessReference: string = '$this';
 
-    protected override validMemberTypes: Set<string> = new Set([
+    protected override readonly validMemberTypes: Set<string> = new Set([
         'variable_name',
         'name',
-    ]);
-    protected override validFunctionTypes: Set<string> = new Set([
+    ] as const);
+    protected override readonly validFunctionTypes: Set<string> = new Set([
         'variable_name',
         'name',
-    ]);
+    ] as const);
 
     protected override setupLanguage(): void {
         this.language = PhpLang as Language;

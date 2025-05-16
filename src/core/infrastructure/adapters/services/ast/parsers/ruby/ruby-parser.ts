@@ -11,7 +11,7 @@ import { Language, Query, QueryCapture, SyntaxNode } from 'tree-sitter';
 import { ScopeType, TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class RubyParser extends BaseParser {
-    protected override scopes: Map<string, ScopeType> = new Map<
+    protected override readonly scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
     >([
@@ -23,19 +23,19 @@ export class RubyParser extends BaseParser {
         ['singleton_method', ScopeType.METHOD],
         ['assignment', ScopeType.FUNCTION],
     ] as const);
-    protected override constructorName: string = 'initialize';
-    protected override selfAccessReference: string = 'self';
+    protected override readonly constructorName: string = 'initialize';
+    protected override readonly selfAccessReference: string = 'self';
 
-    protected override validMemberTypes: Set<string> = new Set([
+    protected override readonly validMemberTypes: Set<string> = new Set([
         'self',
         'identifier',
         'constant',
         'instance_variable',
         'class_variable',
-    ]);
-    protected override validFunctionTypes: Set<string> = new Set([
+    ] as const);
+    protected override readonly validFunctionTypes: Set<string> = new Set([
         'identifier',
-    ]);
+    ] as const);
 
     protected override setupLanguage(): void {
         this.language = RubyLang as Language;

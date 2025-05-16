@@ -5,10 +5,17 @@ const importQuery: ParserQuery = {
     query: `
 (using_directive
     name: (identifier)? @alias
-    [
-        (identifier)
-        (qualified_name)
-    ] @origin
+	(qualified_name
+    	qualifier: (_) @origin
+    	name: (identifier) @symbol
+    )
+    .
+)
+
+(using_directive
+    name: (identifier)? @alias
+	(identifier) @origin
+    .
 )
 `,
 };
@@ -22,27 +29,30 @@ const classAuxiliaryQuery = `
             )*
         )?
         body: (declaration_list
-            [
-                (field_declaration
-                    (variable_declaration
-                        type: (_)? @objPropertyType
-                        (variable_declarator) @objProperty
+            (
+                [
+                    (field_declaration
+                        (variable_declaration
+                            type: (_)? @objPropertyType
+                            (variable_declarator) @objProperty
+                        )
                     )
-                )
-                (property_declaration
-                    type: (_)? @objPropertyType
-                    name: (_) @objProperty
-                )
-                (constructor_declaration
-                    name: (identifier) @objMethod
-                    parameters: (parameter_list)? @objMethodParams
-                )
-                (method_declaration
-                    returns: (_)? @objMethodReturnType
-                    name: (identifier) @objMethod
-                    parameters: (parameter_list)? @objMethodParams
-                )
-            ]
+                    (property_declaration
+                        type: (_)? @objPropertyType
+                        name: (_) @objProperty
+                    )
+                    (constructor_declaration
+                        name: (identifier) @objMethod
+                        parameters: (parameter_list)? @objMethodParams
+                    )
+                    (method_declaration
+                        returns: (_)? @objMethodReturnType
+                        name: (identifier) @objMethod
+                        parameters: (parameter_list)? @objMethodParams
+                    )
+                ]
+                _*
+            )*
         )
     `;
 
@@ -148,7 +158,7 @@ const functionParametersQuery = {
         ","?
     )*
 )
-    `,
+`,
 };
 
 export const cSharpQueries = new Map<QueryType, ParserQuery>([

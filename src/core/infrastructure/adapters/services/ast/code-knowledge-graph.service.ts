@@ -71,10 +71,11 @@ export class CodeKnowledgeGraphService {
         }
 
         await this.initializeImportResolver(
-            path.join(
-                rootDir,
-                'src/core/application/use-cases/codeBase/csharp_project',
-            ),
+            rootDir,
+            // path.join(
+            //     rootDir,
+            //     'src/core/application/use-cases/codeBase/csharp_project',
+            // ),
         );
         if (!this.importPathResolver) {
             throw new Error(
@@ -106,7 +107,7 @@ export class CodeKnowledgeGraphService {
             // 'user.py',
             // 'example.rb',
             // 'src/core/application/use-cases/codeReviewFeedback',
-            'src/core/application/use-cases/codeBase/csharp_project',
+            // 'src/core/application/use-cases/codeBase/java_project',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',
         ];
@@ -161,19 +162,19 @@ export class CodeKnowledgeGraphService {
 
                             const analysis = await Promise.race<ParserAnalysis>(
                                 [
-                                    // this.piscina.run(
-                                    //     {
-                                    //         rootDir,
-                                    //         filePath,
-                                    //         normalizedPath,
-                                    //     },
-                                    //     { name: 'analyze' },
-                                    // ),
-                                    new SourceFileAnalyzer().analyzeSourceFile(
-                                        rootDir,
-                                        filePath,
-                                        normalizedPath,
+                                    this.piscina.run(
+                                        {
+                                            rootDir,
+                                            filePath,
+                                            normalizedPath,
+                                        },
+                                        { name: 'analyze' },
                                     ),
+                                    // new SourceFileAnalyzer().analyzeSourceFile(
+                                    //     rootDir,
+                                    //     filePath,
+                                    //     normalizedPath,
+                                    // ),
                                     timeoutPromise,
                                 ],
                             );

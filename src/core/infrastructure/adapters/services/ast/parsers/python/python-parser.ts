@@ -5,7 +5,7 @@ import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { pythonQueries } from './python-queries';
 
 export class PythonParser extends BaseParser {
-    protected override scopes: Map<string, ScopeType> = new Map<
+    protected override readonly scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
     >([
@@ -14,13 +14,15 @@ export class PythonParser extends BaseParser {
         ['function_definition', ScopeType.FUNCTION],
         ['assignment', ScopeType.FUNCTION],
     ] as const);
-    protected override constructorName: string = '__init__';
-    protected override selfAccessReference: string = 'self';
+    protected override readonly constructorName: string = '__init__';
+    protected override readonly selfAccessReference: string = 'self';
 
-    protected override validMemberTypes: Set<string> = new Set(['identifier']);
-    protected override validFunctionTypes: Set<string> = new Set([
+    protected override readonly validMemberTypes: Set<string> = new Set([
         'identifier',
-    ]);
+    ] as const);
+    protected override readonly validFunctionTypes: Set<string> = new Set([
+        'identifier',
+    ] as const);
 
     protected override setupLanguage(): void {
         this.language = PythonLang as Language;

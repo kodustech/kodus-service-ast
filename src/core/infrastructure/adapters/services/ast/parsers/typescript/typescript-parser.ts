@@ -5,7 +5,7 @@ import { Language, Query, SyntaxNode } from 'tree-sitter';
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class TypeScriptParser extends BaseParser {
-    protected override scopes: Map<string, ScopeType> = new Map<
+    protected override readonly scopes: Map<string, ScopeType> = new Map<
         string,
         ScopeType
     >([
@@ -18,17 +18,18 @@ export class TypeScriptParser extends BaseParser {
         ['method_definition', ScopeType.METHOD],
         ['variable_declarator', ScopeType.FUNCTION],
     ] as const);
-    protected override constructorName: string = 'constructor';
-    protected override selfAccessReference: string = 'this';
 
-    protected override validMemberTypes: Set<string> = new Set([
+    protected override readonly constructorName: string = 'constructor';
+    protected override readonly selfAccessReference: string = 'this';
+
+    protected override readonly validMemberTypes: Set<string> = new Set([
         'identifier',
         'property_identifier',
         'private_property_identifier',
-    ]);
-    protected override validFunctionTypes: Set<string> = new Set([
+    ] as const);
+    protected override readonly validFunctionTypes: Set<string> = new Set([
         'identifier',
-    ]);
+    ] as const);
 
     protected override setupLanguage(): void {
         this.language = TypeScriptLang as Language;

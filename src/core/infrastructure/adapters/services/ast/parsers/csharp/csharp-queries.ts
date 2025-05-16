@@ -1,0 +1,164 @@
+import { ParserQuery, QueryType } from '../query';
+
+const importQuery: ParserQuery = {
+    type: QueryType.IMPORT_QUERY,
+    query: `
+(using_directive
+    name: (identifier)? @alias
+    [
+        (identifier)
+        (qualified_name)
+    ] @origin
+)
+`,
+};
+
+const classAuxiliaryQuery = `
+        name: (identifier) @objName
+        (base_list
+            (
+                (_) @objExtends
+                _*
+            )*
+        )?
+        body: (declaration_list
+            [
+                (field_declaration
+                    (variable_declaration
+                        type: (_)? @objPropertyType
+                        (variable_declarator) @objProperty
+                    )
+                )
+                (property_declaration
+                    type: (_)? @objPropertyType
+                    name: (_) @objProperty
+                )
+                (constructor_declaration
+                    name: (identifier) @objMethod
+                    parameters: (parameter_list)? @objMethodParams
+                )
+                (method_declaration
+                    returns: (_)? @objMethodReturnType
+                    name: (identifier) @objMethod
+                    parameters: (parameter_list)? @objMethodParams
+                )
+            ]
+        )
+    `;
+
+const classQuery: ParserQuery = {
+    type: QueryType.CLASS_QUERY,
+    query: `
+(class_declaration
+    ${classAuxiliaryQuery}
+)
+
+(record_declaration
+    ${classAuxiliaryQuery}
+)
+
+(struct_declaration
+    ${classAuxiliaryQuery}
+)
+`,
+};
+
+const interfaceQuery: ParserQuery = {
+    type: QueryType.INTERFACE_QUERY,
+    query: `
+(interface_declaration
+    ${classAuxiliaryQuery}
+)
+`,
+};
+
+const enumQuery: ParserQuery = {
+    type: QueryType.ENUM_QUERY,
+    query: `
+(enum_declaration
+        name: (identifier) @objName
+        (base_list
+        	.
+        	(_) @enumType
+            .
+        )?
+        body: (enum_member_declaration_list
+        	(
+            	(enum_member_declaration
+            		name: (identifier) @objProperty
+                    value: (_)? @objPropertyValue
+            	)
+            	_*
+            )*
+        )
+)
+`,
+};
+
+const functionQuery = {
+    type: QueryType.FUNCTION_QUERY,
+    query: `
+(method_declaration
+	returns: (_)? @funcReturnType
+    name: (identifier) @funcName
+    parameters: (parameter_list)? @funcParams
+    body: (_) @funcBody
+)
+
+(constructor_declaration
+    name: (identifier) @funcName
+    parameters: (parameter_list)? @funcParams
+    body: (_) @funcBody
+)
+
+(variable_declaration
+    (variable_declarator
+    	name: (_) @funcName
+        (anonymous_method_expression
+        	parameters: (parameter_list)? @funcParams
+            (block) @funcBody
+        )
+    )
+)
+    `,
+};
+
+const functionCallQuery = {
+    type: QueryType.FUNCTION_CALL_QUERY,
+    query: `
+(invocation_expression
+	function: (member_access_expression) @call
+)
+
+(invocation_expression
+	function: (identifier)
+) @call
+    `,
+};
+
+const functionParametersQuery = {
+    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    query: `
+(parameter_list
+    (
+        (parameter
+          type: (_)? @funcParamType
+          name: (identifier) @funcParamName
+        )
+        ","?
+    )*
+)
+    `,
+};
+
+export const cSharpQueries = new Map<QueryType, ParserQuery>([
+    [QueryType.IMPORT_QUERY, importQuery],
+
+    [QueryType.CLASS_QUERY, classQuery],
+    [QueryType.INTERFACE_QUERY, interfaceQuery],
+    [QueryType.ENUM_QUERY, enumQuery],
+
+    [QueryType.FUNCTION_QUERY, functionQuery],
+    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+] as const);

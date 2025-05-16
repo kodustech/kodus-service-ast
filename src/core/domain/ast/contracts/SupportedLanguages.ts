@@ -5,7 +5,8 @@ export type SupportedLanguage =
     | 'java'
     | 'go'
     | 'ruby'
-    | 'php';
+    | 'php'
+    | 'csharp';
 
 export interface LanguageConfig {
     name: SupportedLanguage;
@@ -48,5 +49,10 @@ export const SUPPORTED_LANGUAGES: Record<SupportedLanguage, LanguageConfig> = {
         name: 'php',
         extensions: ['.php'],
         defaultExtension: '.php',
+    },
+    csharp: {
+        name: 'csharp',
+        extensions: ['.cs'],
+        defaultExtension: '.cs',
     },
 };

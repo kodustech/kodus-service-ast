@@ -5,6 +5,7 @@ import {
     TypeAnalysis,
 } from '@/core/domain/ast/contracts/CodeGraph';
 import * as fs from 'fs';
+import * as path from 'path';
 import { ResolverFactory } from './resolvers/ResolverFactory';
 import { ImportPathResolverService } from './import-path-resolver.service';
 import { getParserByFilePath } from './parsers';
@@ -140,7 +141,12 @@ export class SourceFileAnalyzer {
     }
 
     private async initializeImportResolver(rootDir: string): Promise<void> {
-        const resolver = await this.resolverFactory.getResolver(rootDir);
+        const resolver = await this.resolverFactory.getResolver(
+            path.join(
+                rootDir,
+                'src/core/application/use-cases/codeBase/csharp_project',
+            ),
+        );
         this.importPathResolver.initialize(rootDir, resolver);
     }
 }

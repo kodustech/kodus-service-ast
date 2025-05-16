@@ -7,6 +7,7 @@ import { ParseContext } from '../../../../../domain/ast/contracts/Parser';
 import { RubyParser } from './ruby/ruby-parser';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
 import { PhpParser } from './php/php-parser';
+import { CSharpParser } from './csharp/csharp-parser';
 
 export function getParserByFilePath(
     filePath: string,
@@ -36,6 +37,8 @@ export function getParserByFilePath(
             return new RubyParser(importPathResolver, context);
         case SUPPORTED_LANGUAGES.php.name:
             return new PhpParser(importPathResolver, context);
+        case SUPPORTED_LANGUAGES.csharp.name:
+            return new CSharpParser(importPathResolver, context);
         default:
             throw new Error(`Language not supported: ${language.name}`);
     }

@@ -1,4 +1,4 @@
-import { Language, Query, SyntaxNode } from 'tree-sitter';
+import { Language, Query, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
@@ -38,6 +38,29 @@ export class PhpParser extends BaseParser {
             const query = new Query(this.language, value.query);
             this.queries.set(key, query);
         }
+    }
+
+    protected override getImportOriginName(match: QueryMatch): string | null {
+        const originCapture = match.captures.find(
+            (capture) => capture.name === 'origin',
+        );
+        if (!originCapture) return null;
+
+        let originName = originCapture.node.text;
+        if (match['properties']) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const properties = match['properties'];
+            if (
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                properties['leadingSlash'] &&
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                properties['leadingSlash'] === 'true'
+            ) {
+                originName = originName.replace(/^\//, '');
+            }
+        }
+
+        return originName;
     }
 
     protected override processChainNode(

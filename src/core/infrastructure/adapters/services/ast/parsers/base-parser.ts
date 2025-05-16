@@ -103,7 +103,7 @@ export abstract class BaseParser {
     }
 
     protected getQuery(type: QueryType): Query | null {
-        if (!this.queries) {
+        if (!this.queries || this.queries.size === 0) {
             throw new Error('Queries not set up');
         }
         const query = this.queries.get(type);
@@ -112,20 +112,6 @@ export abstract class BaseParser {
         }
         return query;
     }
-
-    // protected newQueryFromType(queryType: QueryType): Query | null {
-    //     const parserQuery = this.getQuery(queryType);
-    //     if (!parserQuery) {
-    //         return null;
-    //     }
-    //     return this.newQuery(parserQuery);
-    // }
-
-    // protected newQuery(query: ParserQuery): Query {
-    //     const mainQuery = new Query(this.language, query.query);
-
-    //     return mainQuery;
-    // }
 
     public collectAllInOnePass(
         rootNode: SyntaxNode,
@@ -153,24 +139,8 @@ export abstract class BaseParser {
         for (const match of matches) {
             const captures = match.captures;
 
-            const origin = captures.find(
-                (capture) => capture.name === 'origin',
-            );
-            if (!origin) continue;
-
-            let originName = origin.node.text;
-            if (match['properties']) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                const properties = match['properties'];
-                if (
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                    properties['leadingSlash'] &&
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                    properties['leadingSlash'] === 'true'
-                ) {
-                    originName = originName.replace(/^\//, '');
-                }
-            }
+            const originName = this.getImportOriginName(match);
+            if (!originName) continue;
 
             const imported = this.parseImportedSymbols(captures);
             const resolvedImport = this.resolveImportWithCache(
@@ -184,6 +154,15 @@ export abstract class BaseParser {
 
             this.registerImportedSymbols(imported, normalizedPath);
         }
+    }
+
+    protected getImportOriginName(match: QueryMatch): string | null {
+        const originCapture = match.captures.find(
+            (capture) => capture.name === 'origin',
+        );
+        if (!originCapture) return null;
+
+        return originCapture.node.text;
     }
 
     protected parseImportedSymbols(

@@ -6,6 +6,7 @@ import { PhpResolver } from './PhpResolver';
 import { RubyResolver } from './RubyResolver';
 import { Injectable } from '@nestjs/common';
 import { CSharpResolver } from './CSharpResolver';
+import { JavaResolver } from './JavaResolver';
 
 @Injectable()
 export class ResolverFactory {
@@ -20,6 +21,7 @@ export class ResolverFactory {
             new PhpResolver(),
             new RubyResolver(),
             new CSharpResolver(),
+            new JavaResolver(),
         ].sort((a, b) => b.getPriority() - a.getPriority()); // Sort by priority
     }
 

@@ -107,7 +107,7 @@ export class CodeKnowledgeGraphService {
             // 'user.py',
             // 'example.rb',
             // 'src/core/application/use-cases/codeReviewFeedback',
-            'src/core/application/use-cases/codeBase/rust_project',
+            // 'src/core/application/use-cases/codeBase/rust_project',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',
         ];
@@ -162,19 +162,19 @@ export class CodeKnowledgeGraphService {
 
                             const analysis = await Promise.race<ParserAnalysis>(
                                 [
-                                    // this.piscina.run(
-                                    //     {
-                                    //         rootDir,
-                                    //         filePath,
-                                    //         normalizedPath,
-                                    //     },
-                                    //     { name: 'analyze' },
-                                    // ),
-                                    new SourceFileAnalyzer().analyzeSourceFile(
-                                        rootDir,
-                                        filePath,
-                                        normalizedPath,
+                                    this.piscina.run(
+                                        {
+                                            rootDir,
+                                            filePath,
+                                            normalizedPath,
+                                        },
+                                        { name: 'analyze' },
                                     ),
+                                    // new SourceFileAnalyzer().analyzeSourceFile(
+                                    //     rootDir,
+                                    //     filePath,
+                                    //     normalizedPath,
+                                    // ),
                                     timeoutPromise,
                                 ],
                             );

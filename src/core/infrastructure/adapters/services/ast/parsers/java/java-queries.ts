@@ -220,7 +220,7 @@ const scopeQuery: ParserQuery = {
 )
 
 (variable_declarator
-	name: (identifier) @funcName
+	name: (identifier) @scope
     value: (lambda_expression)
     (#set! scope "function")
 )

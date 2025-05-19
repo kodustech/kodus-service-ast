@@ -263,7 +263,7 @@ const scopeQuery: ParserQuery = {
 )
 
 (enum_declaration
-    name: (type_identifier) @scope
+    name: (identifier) @scope
     (#set! scope "enum")
 )
 

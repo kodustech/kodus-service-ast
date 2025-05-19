@@ -138,11 +138,6 @@ const scopeQuery: ParserQuery = {
     (#set! scope "class")
 )
 
-(function
-    name: (identifier) @scope
-    (#set! scope "function")
-)
-
 (method
     name: (identifier) @scope
     (#set! scope "method")

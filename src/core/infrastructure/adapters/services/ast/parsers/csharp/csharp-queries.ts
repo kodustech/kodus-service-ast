@@ -105,7 +105,7 @@ const enumQuery: ParserQuery = {
 `,
 };
 
-const functionQuery = {
+const functionQuery: ParserQuery = {
     type: QueryType.FUNCTION_QUERY,
     query: `
 (method_declaration
@@ -133,7 +133,7 @@ const functionQuery = {
     `,
 };
 
-const functionCallQuery = {
+const functionCallQuery: ParserQuery = {
     type: QueryType.FUNCTION_CALL_QUERY,
     query: `
 (invocation_expression
@@ -161,6 +161,54 @@ const functionParametersQuery = {
 `,
 };
 
+const scopeQuery: ParserQuery = {
+    type: QueryType.SCOPE_QUERY,
+    query: `
+(class_declaration
+    name: (identifier) @scope
+    (#set! scope "class")
+)
+
+(record_declaration
+    name: (identifier) @scope
+    (#set! scope "class")
+)
+
+(struct_declaration
+    name: (identifier) @scope
+    (#set! scope "class")
+)
+
+(interface_declaration
+    name: (identifier) @scope
+    (#set! scope "interface")
+)
+
+(enum_declaration
+    name: (identifier) @scope
+    (#set! scope "enum")
+)
+
+(constructor_declaration
+    name: (identifier) @scope
+    (#set! scope "method")
+)
+
+(method_declaration
+    name: (identifier) @scope
+    (#set! scope "method")
+)
+
+(variable_declaration
+    (variable_declarator
+    	name: (_) @scope
+        (anonymous_method_expression)
+    )
+    (#set! scope "function")
+)
+`,
+};
+
 export const cSharpQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -171,4 +219,6 @@ export const cSharpQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+
+    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

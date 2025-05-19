@@ -2,23 +2,8 @@ import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
 import { Language, SyntaxNode } from 'tree-sitter';
-import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class TypeScriptParser extends BaseParser {
-    protected override readonly scopes: Map<string, ScopeType> = new Map<
-        string,
-        ScopeType
-    >([
-        ['class_declaration', ScopeType.CLASS],
-        ['abstract_class_declaration', ScopeType.CLASS],
-        ['interface_declaration', ScopeType.INTERFACE],
-        ['enum_declaration', ScopeType.ENUM],
-
-        ['function_declaration', ScopeType.FUNCTION],
-        ['method_definition', ScopeType.METHOD],
-        ['variable_declarator', ScopeType.FUNCTION],
-    ] as const);
-
     protected override readonly constructorName: string = 'constructor';
     protected override readonly selfAccessReference: string = 'this';
 

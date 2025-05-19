@@ -121,6 +121,27 @@ const functionParametersQuery: ParserQuery = {
 `,
 };
 
+const scopeQuery: ParserQuery = {
+    type: QueryType.SCOPE_QUERY,
+    query: `
+(class_definition
+    name: (identifier) @scope
+    (#set! scope "class")
+)
+
+(function_definition
+    name: (identifier) @scope
+    (#set! scope "function")
+)
+
+(assignment
+    left: (identifier) @scope
+    right: (lambda)
+    (#set! scope "function")
+)
+`,
+};
+
 export const pythonQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -129,4 +150,6 @@ export const pythonQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+
+    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

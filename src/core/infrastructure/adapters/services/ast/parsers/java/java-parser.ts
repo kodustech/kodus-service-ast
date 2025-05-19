@@ -1,22 +1,10 @@
-import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { javaQueries } from './java-queries';
 import * as JavaLang from 'tree-sitter-java';
 export class JavaParser extends BaseParser {
-    protected override readonly constructorName: string = 'constructor';
+    protected override readonly constructorName: string = '';
     protected override readonly selfAccessReference: string = 'this';
-    protected override readonly scopes: Map<string, ScopeType> = new Map<
-        string,
-        ScopeType
-    >([
-        ['class_declaration', ScopeType.CLASS],
-        ['interface_declaration', ScopeType.INTERFACE],
-        ['enum_declaration', ScopeType.ENUM],
-        ['method_declaration', ScopeType.METHOD],
-        ['constructor_declaration', ScopeType.METHOD],
-        ['variable_declarator', ScopeType.FUNCTION],
-    ] as const);
 
     protected override readonly validMemberTypes: Set<string> = new Set([
         'identifier',

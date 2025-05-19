@@ -1,4 +1,3 @@
-import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain } from '../base-parser';
 import * as GoLang from 'tree-sitter-go';
@@ -7,11 +6,6 @@ import { goQueries } from './go-queries';
 export class GoParser extends BaseParser {
     protected override readonly constructorName: string = '';
     protected override readonly selfAccessReference: string = '';
-
-    protected override readonly scopes: Map<string, ScopeType> = new Map<
-        string,
-        ScopeType
-    >([] as const);
 
     protected override readonly validMemberTypes: Set<string> = new Set(
         [] as const,

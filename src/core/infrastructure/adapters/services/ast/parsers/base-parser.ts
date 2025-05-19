@@ -65,7 +65,6 @@ export abstract class BaseParser {
 
     protected abstract readonly constructorName: string;
     protected abstract readonly selfAccessReference: string;
-    protected abstract readonly scopes: Map<string, ScopeType>;
 
     protected abstract readonly validMemberTypes: Set<string>;
     protected abstract readonly validFunctionTypes: Set<string>;

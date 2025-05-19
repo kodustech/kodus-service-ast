@@ -2,21 +2,8 @@ import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
-import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class PhpParser extends BaseParser {
-    protected override readonly scopes: Map<string, ScopeType> = new Map<
-        string,
-        ScopeType
-    >([
-        ['class_declaration', ScopeType.CLASS],
-        ['interface_declaration', ScopeType.INTERFACE],
-        ['enum_declaration', ScopeType.ENUM],
-
-        ['function_definition', ScopeType.FUNCTION],
-        ['method_declaration', ScopeType.METHOD],
-        ['assignment_expression', ScopeType.FUNCTION],
-    ] as const);
     protected override readonly constructorName: string = '__construct';
     protected override readonly selfAccessReference: string = '$this';
 

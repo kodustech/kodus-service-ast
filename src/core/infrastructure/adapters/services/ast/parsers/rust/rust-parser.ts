@@ -1,4 +1,3 @@
-import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as RustLang from 'tree-sitter-rust';
@@ -7,16 +6,6 @@ import { rustQueries } from './rust-queries';
 export class RustParser extends BaseParser {
     protected override readonly constructorName: string = '';
     protected override readonly selfAccessReference: string = 'self';
-    protected override readonly scopes: Map<string, ScopeType> = new Map<
-        string,
-        ScopeType
-    >([
-        ['struct_item', ScopeType.CLASS],
-        ['impl_item', ScopeType.CLASS],
-        ['trait_item', ScopeType.INTERFACE],
-        ['function_item', ScopeType.FUNCTION],
-        ['macro_invocation', ScopeType.FUNCTION],
-    ] as const);
 
     protected override readonly validMemberTypes: Set<string> = new Set([
         'identifier',

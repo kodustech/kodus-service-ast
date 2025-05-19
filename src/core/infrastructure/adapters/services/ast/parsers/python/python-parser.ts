@@ -1,19 +1,9 @@
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { Language, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
-import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { pythonQueries } from './python-queries';
 
 export class PythonParser extends BaseParser {
-    protected override readonly scopes: Map<string, ScopeType> = new Map<
-        string,
-        ScopeType
-    >([
-        ['class_definition', ScopeType.CLASS],
-
-        ['function_definition', ScopeType.FUNCTION],
-        ['assignment', ScopeType.FUNCTION],
-    ] as const);
     protected override readonly constructorName: string = '__init__';
     protected override readonly selfAccessReference: string = 'self';
 

@@ -1,4 +1,4 @@
-import { Language, Query, QueryMatch, SyntaxNode } from 'tree-sitter';
+import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
@@ -34,10 +34,8 @@ export class PhpParser extends BaseParser {
     }
 
     protected override setupQueries(): void {
-        for (const [key, value] of phpQueries.entries()) {
-            const query = new Query(this.language, value.query);
-            this.queries.set(key, query);
-        }
+        this.rawQueries = phpQueries;
+        super.setupQueries();
     }
 
     protected override getImportOriginName(match: QueryMatch): string | null {

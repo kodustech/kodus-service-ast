@@ -1,7 +1,7 @@
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
-import { Language, Query, SyntaxNode } from 'tree-sitter';
+import { Language, SyntaxNode } from 'tree-sitter';
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 
 export class TypeScriptParser extends BaseParser {
@@ -36,10 +36,8 @@ export class TypeScriptParser extends BaseParser {
     }
 
     protected override setupQueries(): void {
-        for (const [key, value] of typeScriptQueries.entries()) {
-            const query = new Query(this.language, value.query);
-            this.queries.set(key, query);
-        }
+        this.rawQueries = typeScriptQueries;
+        super.setupQueries();
     }
 
     protected override processChainNode(

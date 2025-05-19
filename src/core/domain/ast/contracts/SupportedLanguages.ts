@@ -6,7 +6,8 @@ export type SupportedLanguage =
     | 'go'
     | 'ruby'
     | 'php'
-    | 'csharp';
+    | 'csharp'
+    | 'rust';
 
 export interface LanguageConfig {
     name: SupportedLanguage;
@@ -54,5 +55,10 @@ export const SUPPORTED_LANGUAGES: Record<SupportedLanguage, LanguageConfig> = {
         name: 'csharp',
         extensions: ['.cs'],
         defaultExtension: '.cs',
+    },
+    rust: {
+        name: 'rust',
+        extensions: ['.rs'],
+        defaultExtension: '.rs',
     },
 };

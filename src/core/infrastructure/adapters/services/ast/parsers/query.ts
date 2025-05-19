@@ -10,6 +10,8 @@ export enum QueryType {
     FUNCTION_QUERY = 'function',
     FUNCTION_CALL_QUERY = 'function_call',
     FUNCTION_PARAMETERS_QUERY = 'function_parameters',
+
+    SCOPE_QUERY = 'scope',
 }
 
 export const objQueries = [

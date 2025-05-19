@@ -245,6 +245,16 @@ export type Scope = {
     name: string;
 };
 
+export const scopeTypeMap: Record<string, ScopeType> = Object.values(
+    ScopeType,
+).reduce(
+    (map, value) => {
+        map[value] = value;
+        return map;
+    },
+    {} as Record<string, ScopeType>,
+);
+
 /**
  * Complete code graph
  */

@@ -9,6 +9,7 @@ import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLangua
 import { PhpParser } from './php/php-parser';
 import { CSharpParser } from './csharp/csharp-parser';
 import { JavaParser } from './java/java-parser';
+import { RustParser } from './rust/rust-parser';
 
 export function getParserByFilePath(
     filePath: string,
@@ -42,6 +43,10 @@ export function getParserByFilePath(
             return new CSharpParser(importPathResolver, context);
         case SUPPORTED_LANGUAGES.java.name:
             return new JavaParser(importPathResolver, context);
+        case SUPPORTED_LANGUAGES.rust.name:
+            return new RustParser(importPathResolver, context);
+        case SUPPORTED_LANGUAGES.go.name:
+            throw new Error('Go parser not implemented yet');
         default:
             throw new Error(`Language not supported: ${language.name}`);
     }

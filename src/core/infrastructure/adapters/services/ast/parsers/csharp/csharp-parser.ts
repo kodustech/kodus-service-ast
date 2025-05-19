@@ -1,5 +1,5 @@
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
-import { Language, Query, SyntaxNode } from 'tree-sitter';
+import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as CSharpLang from 'tree-sitter-c-sharp';
 import { cSharpQueries } from './csharp-queries';
@@ -36,10 +36,8 @@ export class CSharpParser extends BaseParser {
     }
 
     protected override setupQueries(): void {
-        for (const [key, value] of cSharpQueries.entries()) {
-            const query = new Query(this.language, value.query);
-            this.queries.set(key, query);
-        }
+        this.rawQueries = cSharpQueries;
+        super.setupQueries();
     }
 
     protected override processChainNode(

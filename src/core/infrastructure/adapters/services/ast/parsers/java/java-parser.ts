@@ -1,9 +1,8 @@
 import { ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
-import { Language, Query, SyntaxNode } from 'tree-sitter';
+import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { javaQueries } from './java-queries';
 import * as JavaLang from 'tree-sitter-java';
-
 export class JavaParser extends BaseParser {
     protected override readonly constructorName: string = 'constructor';
     protected override readonly selfAccessReference: string = 'this';
@@ -31,10 +30,8 @@ export class JavaParser extends BaseParser {
     }
 
     protected override setupQueries(): void {
-        for (const [key, value] of javaQueries.entries()) {
-            const query = new Query(this.language, value.query);
-            this.queries.set(key, query);
-        }
+        this.rawQueries = javaQueries;
+        super.setupQueries();
     }
 
     protected override processChainNode(

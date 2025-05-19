@@ -4,11 +4,12 @@ import { Language } from 'tree-sitter';
 import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-import { objQueries, QueryType } from './query';
+import { objQueries, ParserQuery, QueryType } from './query';
 import {
     Call,
     Scope,
     ScopeType,
+    scopeTypeMap,
     TypeAnalysis,
 } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
@@ -56,6 +57,7 @@ export abstract class BaseParser {
     private readonly context: ParseContext;
 
     protected language: Language;
+    protected rawQueries: Map<QueryType, ParserQuery>;
     protected readonly queries: Map<QueryType, Query> = new Map<
         QueryType,
         Query
@@ -81,7 +83,6 @@ export abstract class BaseParser {
     }
 
     protected abstract setupLanguage(): void;
-    protected abstract setupQueries(): void;
 
     private setupParser(): void {
         if (this.parser) {
@@ -95,6 +96,13 @@ export abstract class BaseParser {
         const parser = new Parser();
         parser.setLanguage(this.language);
         this.parser = parser;
+    }
+
+    protected setupQueries(): void {
+        for (const [key, value] of this.rawQueries.entries()) {
+            const query = new Query(this.language, value.query);
+            this.queries.set(key, query);
+        }
     }
 
     public getParser(): Parser {
@@ -784,35 +792,41 @@ export abstract class BaseParser {
     }
 
     protected getScopeChain(node: SyntaxNode): Scope[] {
+        const query = this.getQuery(QueryType.SCOPE_QUERY);
+        if (!query) return [];
+
         const chain: Scope[] = [];
         let currentNode: SyntaxNode | null = node;
 
         while (currentNode) {
-            const scopeType = this.scopes.get(currentNode.type);
-            if (scopeType) {
-                const nameNode = currentNode.childForFieldName('name');
-                if (nameNode) {
-                    const name = nameNode.text;
-                    chain.unshift({
-                        type: scopeType,
-                        name: name,
-                    });
-                } else {
-                    // Arrow function ?
-                    const assignment = currentNode.childForFieldName('left');
-                    if (assignment) {
-                        const name = assignment.text;
-                        chain.unshift({
-                            type: scopeType,
-                            name: name,
-                        });
-                    }
-                }
+            const matches = query.matches(currentNode, {
+                maxStartDepth: 0,
+            }) as (QueryMatch & {
+                setProperties?: { scope?: string };
+            })[];
+
+            const match = matches?.[0];
+            const capture = match?.captures?.[0];
+            const scopeName = capture?.node?.text;
+            const scopeType =
+                match?.setProperties?.scope &&
+                this.stringToScopeType(match.setProperties.scope);
+
+            if (match && capture && scopeName && scopeType) {
+                chain.unshift({
+                    type: scopeType,
+                    name: scopeName,
+                });
             }
+
             currentNode = currentNode.parent;
         }
 
         return chain;
+    }
+
+    private stringToScopeType(type: string): ScopeType | undefined {
+        return scopeTypeMap[type];
     }
 
     protected abstract processChainNode(

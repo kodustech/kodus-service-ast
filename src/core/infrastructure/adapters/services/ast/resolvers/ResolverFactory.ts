@@ -7,6 +7,8 @@ import { RubyResolver } from './RubyResolver';
 import { Injectable } from '@nestjs/common';
 import { CSharpResolver } from './CSharpResolver';
 import { JavaResolver } from './JavaResolver';
+import { RustResolver } from './RustResolver';
+import { GoResolver } from './GoResolver';
 
 @Injectable()
 export class ResolverFactory {
@@ -22,6 +24,8 @@ export class ResolverFactory {
             new RubyResolver(),
             new CSharpResolver(),
             new JavaResolver(),
+            new RustResolver(),
+            new GoResolver(),
         ].sort((a, b) => b.getPriority() - a.getPriority()); // Sort by priority
     }
 

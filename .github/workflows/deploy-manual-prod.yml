@@ -1,0 +1,98 @@
+name: 🚀 Deploy Manual para Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag da imagem Docker para deploy. Se vazio, será usada a última publicada no GCR."
+        required: false
+
+env:
+  AR_REPOSITORY: kodus-images
+  AR_IMAGE: kodus-service-ast-prod
+  AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧠 Definir imagem a ser usada
+        id: define-image
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          export_default_credentials: true
+
+      - name: Verificar imagem no Artifact Registry
+        run: |
+          IMAGE_TAG_INPUT="${{ github.event.inputs.image_tag }}"
+
+          if [ -n "$IMAGE_TAG_INPUT" ]; then
+            echo "🧪 Validando se a imagem com tag '$IMAGE_TAG_INPUT' existe no Artifact Registry..."
+            IMAGE_EXISTS=$(gcloud artifacts docker tags list ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE} --filter="tag=$IMAGE_TAG_INPUT" --format="get(tag)")
+
+            if [ -z "$IMAGE_EXISTS" ]; then
+              echo "❌ Imagem com a tag '$IMAGE_TAG_INPUT' não encontrada no Artifact Registry."
+              exit 1
+            fi
+            echo "🟢 Imagem válida. Usando tag: $IMAGE_TAG_INPUT"
+            echo "IMAGE_TAG=$IMAGE_TAG_INPUT" >> $GITHUB_ENV
+          else
+            echo "ℹ️ Nenhuma tag fornecida. Buscando a mais recente no Artifact Registry..."
+            LAST_TAG=$(gcloud artifacts docker tags list ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE} --sort-by=~CREATE_TIME --limit=1 --format="get(tag)")
+
+            if [ -z "$LAST_TAG" ]; then
+              echo "❌ Nenhuma imagem encontrada no Artifact Registry."
+              exit 1
+            fi
+
+            echo "🟢 Última tag encontrada: $LAST_TAG"
+            echo "IMAGE_TAG=$LAST_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: 🌐 Obter IP do Runner
+        run: |
+          ip=$(curl -s https://ipinfo.io/ip)
+          echo "::add-mask::$ip"
+          echo "runner_ip=$ip" >> $GITHUB_ENV
+
+      - name: 🔐 Adicionar regra de firewall temporária
+        run: |
+          gcloud compute firewall-rules create github-actions-manual-deploy --action=allow --direction=ingress --rules=tcp:22 --source-ranges=${{ env.runner_ip }}/32 --target-tags=${{ secrets.GCP_VM_NETWORK_TAG }} --priority=1000
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 🚀 Executar Deploy na VM GCP
+        run: |
+          # Configurar gcloud para usar OS Login
+          gcloud config set compute/zone ${{ secrets.GCP_PROD_ZONE }}
+          
+          # Usando gcloud compute ssh com OS Login
+          gcloud compute ssh ${{ secrets.GCP_PROD_INSTANCE_NAME }} --project=${{ secrets.GCP_PROJECT_ID }} --zone=${{ secrets.GCP_PROD_ZONE }} --command="cd ~/kodus-service-ast && ./start-app.sh prod ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE}:${{ env.IMAGE_TAG }} > /dev/null 2>&1"
+
+      - name: 🔒 Remover regra de firewall
+        if: always()
+        run: |
+          gcloud compute firewall-rules delete github-actions-manual-deploy --quiet
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: 📣 Notificar Sucesso no Discord
+        if: success()
+        uses: sarisia/actions-status-discord@v1.15.3
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          content: ":tada: Deploy realizado com a imagem `${{ env.IMAGE_TAG }}` com sucesso em produção!"
+          title: "Deploy - kodus-service-ast"
+          color: 0x00FF00
+
+      - name: ❌ Notificar Falha no Discord
+        if: failure()
+        uses: sarisia/actions-status-discord@v1.15.3
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          content: ":x: Falha ao fazer deploy com a imagem `${{ env.IMAGE_TAG }}`. Verifique os logs!"
+          title: "Deploy - kodus-service-ast"
+          color: 0xFF0000

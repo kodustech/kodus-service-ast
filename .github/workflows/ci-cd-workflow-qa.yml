@@ -70,12 +70,22 @@ jobs:
     needs: build_and_push_image
 
     steps:
+      - id: auth-deploy
+        name: Autenticar com o Google Cloud para Deploy
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          project_id: ${{ secrets.GCP_PROJECT_QA_ID }}
+
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2.1.4
-        with:
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT_QA_ID }}
-          export_default_credentials: true
+
+      - name: Verificar Autenticau00e7u00e3o
+        run: |
+          # Confirmar que estamos autenticados
+          echo "Conta atual para deploy:"
+          gcloud auth list
+          gcloud config list project
 
       - name: Get runner IP
         run: |
@@ -93,14 +103,19 @@ jobs:
         run: |
           # Configurar gcloud para usar OS Login
           gcloud config set compute/zone ${{ secrets.GCP_ZONE }}
+          # Verificar configurauu00e7u00e3o
+          echo "Configurauu00e7u00e3o atual do gcloud:"
+          gcloud config list
 
       - name: Execute start-app.sh on GCP VM
         run: |
+          echo "Iniciando deploy na VM..."
           # Usando gcloud compute ssh com OS Login
           gcloud compute ssh ${{ secrets.GCP_QA_INSTANCE_NAME }} --project=${{ secrets.GCP_PROJECT_QA_ID }} --zone=${{ secrets.GCP_ZONE }} --command="cd ~/kodus-service-ast && ./start-app.sh qa ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_QA_ID }}/kodus-images/kodus-service-ast-qa:${{ github.sha }} ${{ github.ref }} > /dev/null 2>&1"
 
       - name: Remove firewall rule
         run: |
+          echo "Removendo regra de firewall temporu00e1ria..."
           gcloud compute firewall-rules delete github-actions-runner-temp --quiet
         env:
           CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}

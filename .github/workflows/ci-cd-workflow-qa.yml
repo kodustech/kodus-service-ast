@@ -14,15 +14,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - id: auth
+        name: Autenticar com o Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          export_default_credentials: true
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          project_id: ${{ secrets.GCP_PROJECT_QA_ID }}
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2.1.4
+
+      - name: Diagnóstico e Preparação
+        run: |
+          # Verificar identidade atual
+          echo "Conta atual:"
+          gcloud auth list
+
+          # Verificar permissões IAM para diagnóstico
+          echo "Verificando permissões IAM..."
+          gcloud projects get-iam-policy ${{ secrets.GCP_PROJECT_QA_ID }} --flatten="bindings[].members" --format="table(bindings.role,bindings.members)" | grep -i $(gcloud auth list --filter="status:ACTIVE" --format="value(account)") || echo "Conta não encontrada na política IAM"
+
+          # Verificar se o repositório existe
+          echo "Repositórios disponíveis:"
+          gcloud artifacts repositories list --project=${{ secrets.GCP_PROJECT_QA_ID }} --location=${{ secrets.GCP_REGION }}
+
+      - name: Preparar Docker para o Artifact Registry
+        run: |
+          # Usar a abordagem recomendada para autenticação do Docker com o Artifact Registry
+          echo "Configurando Docker para Artifact Registry..."
+          gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: Build, tag, and push image to Artifact Registry
         env:
@@ -51,7 +71,7 @@ jobs:
 
     steps:
       - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v2.1.4
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ secrets.GCP_PROJECT_QA_ID }}
@@ -105,3 +125,4 @@ jobs:
           title: "Deploy QA: kodus-service-ast"
           username: "GitHub Actions"
           color: 0xFF0000
+

@@ -87,17 +87,49 @@ jobs:
           gcloud auth list
           gcloud config list project
 
-      - name: Get runner IP
+      - name: Setup - Generate unique ID and get runner IP
+        id: setup
         run: |
-          ip=$(curl -s https://ipinfo.io/ip)
-          echo "::add-mask::$ip"
-          echo "runner_ip=$ip" >> $GITHUB_ENV
+          # Gera um ID único baseado no timestamp e número aleatório
+          UNIQUE_ID=$(date +%s)-$RANDOM
+          echo "UNIQUE_ID=$UNIQUE_ID" >> $GITHUB_ENV
+          echo "FIREWALL_RULE=github-runner-$UNIQUE_ID" >> $GITHUB_ENV
+          
+          # Obtém o IP do runner
+          RUNNER_IP=$(curl -s https://ipinfo.io/ip)
+          echo "::add-mask::$RUNNER_IP"
+          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_ENV
 
-      - name: Add firewall rule for GitHub runner
+      - name: Clean up old firewall rules
+        continue-on-error: true  # Não falha se não encontrar regras
         run: |
-          gcloud compute firewall-rules create github-actions-runner-temp --action=allow --direction=ingress --rules=tcp:22 --source-ranges=${{ env.runner_ip }}/32 --target-tags=${{ secrets.GCP_VM_NETWORK_TAG }} --priority=1000
-        env:
-          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
+          # Remove apenas regras antigas (mais de 1 hora)
+          gcloud compute firewall-rules list \
+            --project=${{ secrets.GCP_PROJECT_QA_ID }} \
+            --filter="name~'^github-runner-'\(-\d+\)\{2\}" \
+            --format="value(name,creationTimestamp)" | \
+          while read -r name timestamp; do
+            # Converte para timestamp UNIX e verifica se tem mais de 1 hora
+            if [ $(date -d "$timestamp" +%s) -lt $(date -d "1 hour ago" +%s) ]; then
+              echo "Removendo regra antiga: $name"
+              gcloud compute firewall-rules delete "$name" \
+                --project=${{ secrets.GCP_PROJECT_QA_ID }} \
+                --quiet || true
+            fi
+          done
+
+      - name: Create firewall rule for GitHub runner
+        run: |
+          echo "Criando regra de firewall: ${{ env.FIREWALL_RULE }}"
+          gcloud compute firewall-rules create ${{ env.FIREWALL_RULE }} \
+            --action=ALLOW \
+            --direction=INGRESS \
+            --rules=tcp:22 \
+            --source-ranges=${{ env.RUNNER_IP }}/32 \
+            --target-tags=${{ secrets.GCP_VM_NETWORK_TAG }} \
+            --priority=1000 \
+            --project=${{ secrets.GCP_PROJECT_QA_ID }} \
+            --description="Temporary rule for GitHub Actions runner"
 
       - name: Configure gcloud CLI for SSH
         run: |
@@ -147,12 +179,14 @@ jobs:
           echo "=== Deploy concluído ==="
 
       - name: Remove firewall rule
+        if: always()  # Executa mesmo se os passos anteriores falharem
         run: |
-          echo "Removendo regra de firewall temporu00e1ria..."
-          gcloud compute firewall-rules delete github-actions-runner-temp --quiet
-        env:
-          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
-        if: always()
+          echo "Removendo regra de firewall: ${{ env.FIREWALL_RULE }}"
+          gcloud compute firewall-rules delete ${{ env.FIREWALL_RULE }} \
+            --project=${{ secrets.GCP_PROJECT_QA_ID }} \
+            --quiet || true
+          
+          echo "Limpeza concluída"
 
       - name: Notify Discord on Success
         if: success()

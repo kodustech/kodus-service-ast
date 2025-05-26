@@ -1,9 +1,17 @@
-FROM node:22.14.0-slim
+FROM --platform=linux/amd64 node:22.14.0-slim
 WORKDIR /usr/src/app
 EXPOSE 3002
 
+# Instalar dependências para compilação de módulos nativos
 RUN apt-get update && \
-    apt-get install -y ca-certificates git && \
+    apt-get install -y ca-certificates git python3 make g++ pkg-config && \
     rm -rf /var/lib/apt/lists/*
+
+COPY package.json yarn.lock ./
+
+# Instalar dependências
+RUN yarn install --frozen-lockfile --network-timeout 600000
+
+# Não precisa copiar arquivos de configuração, pois serão montados via volume
 
 CMD ["yarn", "start:dev"]

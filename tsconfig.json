@@ -5,6 +5,7 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
+        "allowJs": true,
         "lib": ["ES2022"],
         "module": "commonjs",
         "target": "ES2022",
@@ -31,6 +32,6 @@
         // Avoid looping in "npm run start:dev"
         "watchFile": "useFsEventsOnParentDirectory"
     },
-    "include": ["src", "test/**/*.ts", "tsconfig-paths-bootstrap.js"],
+    "include": ["src", "test/**/*.ts", "tsconfig-paths-bootstrap.js", "ecosystem.config.js"],
     "exclude": ["node_modules", "dist", "ormlogs.log"]
 }

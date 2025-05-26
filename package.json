@@ -18,6 +18,8 @@
         "test:cov": "jest --coverage",
         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
         "test:e2e": "jest --config ./test/jest-e2e.json",
+        "health:check": "curl -s http://localhost:5001/api/health | jq",
+        "health:detail": "curl -s http://localhost:5001/api/health/detail | jq",
         "docker:build": "docker compose -f docker-compose.dev.yml build",
         "docker:up": "docker compose -f docker-compose.dev.yml up",
         "docker:down": "docker compose -f docker-compose.dev.yml down",

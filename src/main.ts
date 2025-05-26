@@ -14,22 +14,39 @@ async function bootstrap() {
         process.exit(1);
     }
 
-    const port = process.env.API_PORT;
-    if (!port) {
-        console.error('PORT environment variable is not set');
+    const grpcPort = process.env.API_PORT;
+    if (!grpcPort) {
+        console.error('API_PORT environment variable is not set');
         process.exit(1);
     }
-    const numberPort = Number(port);
-    if (isNaN(numberPort)) {
-        console.error('PORT environment variable is not a valid number');
+    const grpcNumberPort = Number(grpcPort);
+    if (isNaN(grpcNumberPort)) {
+        console.error('API_PORT environment variable is not a valid number');
         process.exit(1);
     }
-    if (numberPort < 0 || numberPort > 65535) {
-        console.error('PORT environment variable is out of range (0-65535)');
+    if (grpcNumberPort < 0 || grpcNumberPort > 65535) {
+        console.error(
+            'API_PORT environment variable is out of range (0-65535)',
+        );
         process.exit(1);
     }
 
-    const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    // Cria o servidor HTTP para health checks
+    const healthPort = process.env.API_HEALTH_PORT || '5001';
+    const healthNumberPort = Number(healthPort);
+
+    // Inicializa a aplicação HTTP para health checks
+    const httpApp = await NestFactory.create(AppModule);
+    httpApp.setGlobalPrefix('api');
+
+    // Inicia o servidor HTTP apenas para health checks
+    await httpApp.listen(healthNumberPort, '0.0.0.0');
+    console.log(
+        `Health check HTTP server is running on ${hostName}:${healthNumberPort}`,
+    );
+
+    // Inicializa o microserviço gRPC principal
+    const grpcApp = await NestFactory.createMicroservice<MicroserviceOptions>(
         AppModule,
         {
             transport: Transport.GRPC,
@@ -39,7 +56,7 @@ async function bootstrap() {
                     cwd(),
                     'node_modules/@kodus/kodus-proto/kodus/ast/v1/analyzer.proto',
                 ),
-                url: `0.0.0.0:${numberPort}`,
+                url: `0.0.0.0:${grpcNumberPort}`,
                 loader: {
                     includeDirs: [
                         resolve(cwd(), 'node_modules/@kodus/kodus-proto/'),
@@ -63,11 +80,13 @@ async function bootstrap() {
         },
     );
 
-    const pinoLogger = app.get(PinoLoggerService);
-    app.useLogger(pinoLogger);
+    const pinoLogger = grpcApp.get(PinoLoggerService);
+    grpcApp.useLogger(pinoLogger);
 
-    await app.listen();
-    console.log(`AST service is listening on ${hostName}:${numberPort}`);
+    await grpcApp.listen();
+    console.log(
+        `AST gRPC service is listening on ${hostName}:${grpcNumberPort}`,
+    );
 }
 
 void bootstrap();

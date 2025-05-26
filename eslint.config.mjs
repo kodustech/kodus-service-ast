@@ -5,12 +5,15 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
+  // Arquivos a serem ignorados completamente
   {
-    ignores: ['eslint.config.mjs'],
+    ignores: ['eslint.config.mjs', 'ecosystem.config.js'],
   },
+  // Configurações base
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   eslintPluginPrettierRecommended,
+  // Configuração global
   {
     languageOptions: {
       globals: {
@@ -25,6 +28,7 @@ export default tseslint.config(
       },
     },
   },
+  // Regras para arquivos TypeScript
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
@@ -34,4 +38,19 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'warn',
     },
   },
+  // Configuração específica para arquivos JavaScript puros (como ecosystem.config.js)
+  {
+    files: ['**/*.js', '*.js'],
+    ignores: ['src/**/*.js'], // Não aplicar a arquivos JS dentro de src
+    ...eslint.configs.recommended,
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      sourceType: 'module',
+      parserOptions: {
+        ecmaVersion: 2022,
+      },
+    },
+  }
 );

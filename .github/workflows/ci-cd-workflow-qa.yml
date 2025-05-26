@@ -103,15 +103,48 @@ jobs:
         run: |
           # Configurar gcloud para usar OS Login
           gcloud config set compute/zone ${{ secrets.GCP_ZONE }}
-          # Verificar configurauu00e7u00e3o
-          echo "Configurauu00e7u00e3o atual do gcloud:"
-          gcloud config list
 
-      - name: Execute start-app.sh on GCP VM
+      - name: Check out code to access scripts
+        uses: actions/checkout@v3
+
+      - name: Deploy to GCP VM
+        env:
+          GCP_ZONE: ${{ secrets.GCP_ZONE }}
+          GCP_INSTANCE: ${{ secrets.GCP_QA_INSTANCE_NAME }}
+          GCP_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
+          REGISTRY_URL: ${{ secrets.GCP_REGISTRY_URL || format('{0}-docker.pkg.dev', secrets.GCP_REGION) }}
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_QA_ID }}
+          ARTIFACT_REPO: ${{ secrets.ARTIFACT_REPO }}
+          IMAGE_NAME: ${{ secrets.IMAGE_NAME_QA }}
         run: |
-          echo "Iniciando deploy na VM..."
-          # Usando gcloud compute ssh com OS Login
-          gcloud compute ssh ${{ secrets.GCP_QA_INSTANCE_NAME }} --project=${{ secrets.GCP_PROJECT_QA_ID }} --zone=${{ secrets.GCP_ZONE }} --command="cd ~/kodus-service-ast && ./start-app.sh qa ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_QA_ID }}/kodus-images/kodus-service-ast-qa:${{ github.sha }} ${{ github.ref }} > /dev/null 2>&1"
+          echo "=== Iniciando deploy na VM ==="
+
+          # Criar comando de deploy inline
+          DEPLOY_CMD="""
+          # Navegar para o diretório do projeto
+          cd ~/kodus-service-ast
+          
+          # Executar o script de deploy com as variáveis de ambiente
+          REGISTRY_URL='$REGISTRY_URL' \
+          PROJECT_ID='$PROJECT_ID' \
+          ARTIFACT_REPO='$ARTIFACT_REPO' \
+          IMAGE_NAME='$IMAGE_NAME' \
+          ./start-app.sh "qa" "${{ github.sha }}"
+          """
+
+          # Executar o deploy diretamente na VM
+          echo "Conectando à VM $GCP_INSTANCE..."
+          gcloud compute ssh $GCP_INSTANCE \
+            --project=$GCP_PROJECT \
+            --zone=$GCP_ZONE \
+            --command="$DEPLOY_CMD" \
+            -- \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=5 \
+            -o ConnectTimeout=300 \
+            -o ConnectionAttempts=5
+
+          echo "=== Deploy concluído ==="
 
       - name: Remove firewall rule
         run: |

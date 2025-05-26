@@ -1030,7 +1030,7 @@
     webpack "5.99.6"
     webpack-node-externals "3.0.0"
 
-"@nestjs/common@^11.1.1":
+"@nestjs/common@^11.1.2":
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/@nestjs/common/-/common-11.1.2.tgz#b4852a4cc99228955b1ee68c73e0538f8e39ae29"
   integrity sha512-cHh4OPH44PjaHM93D1jgE1HO/B7XTZVRDxy/cPuGgyMEA4p2zXO+qqcOgTMC5FYcp7dX9jLeCjXAU0ToFAnODw==
@@ -1041,7 +1041,7 @@
     load-esm "1.0.2"
     tslib "2.8.1"
 
-"@nestjs/core@^11.1.1":
+"@nestjs/core@^11.1.2":
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/@nestjs/core/-/core-11.1.2.tgz#df169edec5b0b93b4001d5c603a2e18dcb4c514e"
   integrity sha512-QRuyxwu0BjNfmmmunsw1ylX7RSyfDQHt+xD+tKncdtgiMOOzAu+LA1gB4WoZnw4frQkk+qZbhEbM61cIjOxD3w==
@@ -1053,7 +1053,7 @@
     path-to-regexp "8.2.0"
     tslib "2.8.1"
 
-"@nestjs/microservices@^11.1.1":
+"@nestjs/microservices@^11.1.2":
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/@nestjs/microservices/-/microservices-11.1.2.tgz#41972e8db544e3f5005c46a92094acafb1535124"
   integrity sha512-1mhbTZ0rP/QogXN9vGTncmbAFdohfmLOFbxIJZB7QRUUAMoRD3yc7ZqkHPKADz6g6Kgn5B8gzKPkhslwU+gOjw==
@@ -1061,7 +1061,7 @@
     iterare "1.2.1"
     tslib "2.8.1"
 
-"@nestjs/platform-express@^11.1.1":
+"@nestjs/platform-express@^11.1.2":
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/@nestjs/platform-express/-/platform-express-11.1.2.tgz#e4b2671c74876ff399f50b7a7f36cb4b4c9e35ec"
   integrity sha512-GlNwOT4htRp8RpZ+TpqGtSHwGKw/abdxxBRse40XE2SWs5ikaoujr9Yd+5sJWDNXB4QTftwb+FplXhyk1Ra+4A==
@@ -1083,7 +1083,7 @@
     jsonc-parser "3.3.1"
     pluralize "8.0.0"
 
-"@nestjs/testing@^11.1.1":
+"@nestjs/testing@^11.1.2":
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/@nestjs/testing/-/testing-11.1.2.tgz#af5f03f1b58318db7d5a0b1dbf7006bc8145d288"
   integrity sha512-BQxVKUVW6gzEbbHAvmg5RgcP3s++pRgTCmsgaDF/DtcLRUeKi8SjAdqzLm14xbkMeibxOf3fNqM2iwqUKj8ffw==
@@ -3397,7 +3397,7 @@ globals@^14.0.0:
   resolved "https://registry.yarnpkg.com/globals/-/globals-14.0.0.tgz#898d7413c29babcf6bafe56fcadded858ada724e"
   integrity sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==
 
-globals@^16.1.0:
+globals@^16.2.0:
   version "16.2.0"
   resolved "https://registry.yarnpkg.com/globals/-/globals-16.2.0.tgz#19efcd1ddde2bd5efce128e5c2e441df1abc6f7c"
   integrity sha512-O+7l9tPdHCU320IigZZPj5zmRCFG9xHmx9cU8FqU2Rp+JN714seHV+2S9+JslCpY4gJwU2vOGox0wzgae/MCEg==

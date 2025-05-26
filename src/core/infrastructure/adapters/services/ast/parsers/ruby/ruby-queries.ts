@@ -125,37 +125,6 @@ const functionParametersQuery: ParserQuery = {
 `,
 };
 
-const scopeQuery: ParserQuery = {
-    type: QueryType.SCOPE_QUERY,
-    query: `
-(class
-    name: (constant) @scope
-    (#set! scope "class")
-)
-
-(module
-    name: (constant) @scope
-    (#set! scope "class")
-)
-
-(method
-    name: (identifier) @scope
-    (#set! scope "method")
-)
-
-(singleton_method
-    name: (identifier) @scope
-    (#set! scope "method")
-)
-
-(assignment
-    left: (identifier) @scope
-    right: (lambda)
-    (#set! scope "function")
-)
-`,
-};
-
 export const rubyQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -164,6 +133,4 @@ export const rubyQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
-
-    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

@@ -2,31 +2,43 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain } from '../base-parser';
 import * as GoLang from 'tree-sitter-go';
 import { goQueries } from './go-queries';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { QueryType, ParserQuery } from '../query';
 
 export class GoParser extends BaseParser {
-    protected override readonly constructorName: string = '';
-    protected override readonly selfAccessReference: string = '';
+    private static readonly language = GoLang as Language;
+    private static readonly rawQueries = goQueries;
+    private static readonly constructorName = '';
+    private static readonly selfAccessReference = '';
+    private static readonly validMemberTypes = new Set([''] as const);
+    private static readonly validFunctionTypes = new Set([''] as const);
 
-    protected override readonly validMemberTypes: Set<string> = new Set(
-        [] as const,
-    );
-    protected override readonly validFunctionTypes: Set<string> = new Set(
-        [] as const,
-    );
-
-    protected override setupLanguage(): void {
-        this.language = GoLang as Language;
+    protected getLanguage(): Language {
+        return GoParser.language;
+    }
+    protected getRawQueries(): Map<QueryType, ParserQuery> {
+        return GoParser.rawQueries;
+    }
+    protected getConstructorName(): string {
+        return GoParser.constructorName;
+    }
+    protected getSelfAccessReference(): string {
+        return GoParser.selfAccessReference;
+    }
+    protected getValidMemberTypes(): Set<string> {
+        return GoParser.validMemberTypes;
+    }
+    protected getValidFunctionTypes(): Set<string> {
+        return GoParser.validFunctionTypes;
     }
 
-    protected override setupQueries(): void {
-        this.rawQueries = goQueries;
-        super.setupQueries();
+    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {};
+
+    protected processChainNode(node: SyntaxNode, chain: CallChain[]): boolean {
+        throw new Error('Method not implemented.');
     }
 
-    protected override processChainNode(
-        node: SyntaxNode,
-        chain: CallChain[],
-    ): boolean {
+    protected getScopeTypeForNode(node: SyntaxNode): Scope | null {
         throw new Error('Method not implemented.');
     }
 }

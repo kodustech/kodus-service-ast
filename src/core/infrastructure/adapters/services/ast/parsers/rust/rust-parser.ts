@@ -2,28 +2,49 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import * as RustLang from 'tree-sitter-rust';
 import { rustQueries } from './rust-queries';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { QueryType, ParserQuery } from '../query';
 
 export class RustParser extends BaseParser {
-    protected override readonly constructorName: string = '';
-    protected override readonly selfAccessReference: string = 'self';
-
-    protected override readonly validMemberTypes: Set<string> = new Set([
+    private static readonly language = RustLang as Language;
+    private static readonly rawQueries = rustQueries;
+    private static readonly constructorName = '';
+    private static readonly selfAccessReference = 'self';
+    private static readonly validMemberTypes = new Set([
         'identifier',
         'scoped_identifier',
         'field_identifier',
     ] as const);
-    protected override readonly validFunctionTypes: Set<string> = new Set([
+    private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);
 
-    protected override setupLanguage(): void {
-        this.language = RustLang as Language;
+    protected getLanguage(): Language {
+        return RustParser.language;
+    }
+    protected getRawQueries(): Map<QueryType, ParserQuery> {
+        return RustParser.rawQueries;
+    }
+    protected getConstructorName(): string {
+        return RustParser.constructorName;
+    }
+    protected getSelfAccessReference(): string {
+        return RustParser.selfAccessReference;
+    }
+    protected getValidMemberTypes(): Set<string> {
+        return RustParser.validMemberTypes;
+    }
+    protected getValidFunctionTypes(): Set<string> {
+        return RustParser.validFunctionTypes;
     }
 
-    protected override setupQueries(): void {
-        this.rawQueries = rustQueries;
-        super.setupQueries();
-    }
+    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
+        struct_item: ScopeType.CLASS,
+        impl_item: ScopeType.CLASS,
+        trait_item: ScopeType.INTERFACE,
+        enum_item: ScopeType.ENUM,
+        function_item: ScopeType.FUNCTION,
+    };
 
     protected override processChainNode(
         node: SyntaxNode,
@@ -73,5 +94,32 @@ export class RustParser extends BaseParser {
             default:
                 return false;
         }
+    }
+
+    protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
+        const scopeType = RustParser.SCOPE_TYPES[node.type];
+        if (!scopeType) {
+            return null;
+        }
+
+        let nameNode: SyntaxNode | null = null;
+        switch (node.type) {
+            case 'impl_item': {
+                nameNode = node.childForFieldName('type');
+                break;
+            }
+            default: {
+                nameNode = node.childForFieldName('name');
+                break;
+            }
+        }
+        if (!nameNode) {
+            return null;
+        }
+
+        return {
+            name: nameNode.text,
+            type: scopeType,
+        };
     }
 }

@@ -180,36 +180,6 @@ const functionParametersQuery: ParserQuery = {
 `,
 };
 
-const scopeQuery: ParserQuery = {
-    type: QueryType.SCOPE_QUERY,
-    query: `
-(struct_item
-	name: (type_identifier) @scope
-    (#set! scope "class")
-)
-
-(impl_item
-    type: (_) @scope
-    (#set! scope "class")
-)
-
-(trait_item
-    name: (type_identifier) @scope
-    (#set! scope "interface")
-)
-
-(enum_item
-    name: (type_identifier) @scope
-    (#set! scope "enum")
-)
-
-(function_item
-    name: (identifier) @scope
-    (#set! scope "function")
-)
-`,
-};
-
 export const rustQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -222,6 +192,4 @@ export const rustQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
-
-    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

@@ -8,31 +8,55 @@ import {
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
 import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
-import { TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
+import {
+    Scope,
+    ScopeType,
+    TypeAnalysis,
+} from '@/core/domain/ast/contracts/CodeGraph';
+import { QueryType, ParserQuery } from '../query';
 
 export class RubyParser extends BaseParser {
-    protected override readonly constructorName: string = 'initialize';
-    protected override readonly selfAccessReference: string = 'self';
-
-    protected override readonly validMemberTypes: Set<string> = new Set([
+    private static readonly language = RubyLang as Language;
+    private static readonly rawQueries = rubyQueries;
+    private static readonly constructorName = 'initialize';
+    private static readonly selfAccessReference = 'self';
+    private static readonly validMemberTypes = new Set([
         'self',
         'identifier',
         'constant',
         'instance_variable',
         'class_variable',
     ] as const);
-    protected override readonly validFunctionTypes: Set<string> = new Set([
+    private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);
 
-    protected override setupLanguage(): void {
-        this.language = RubyLang as Language;
+    protected getLanguage(): Language {
+        return RubyParser.language;
+    }
+    protected getRawQueries(): Map<QueryType, ParserQuery> {
+        return RubyParser.rawQueries;
+    }
+    protected getConstructorName(): string {
+        return RubyParser.constructorName;
+    }
+    protected getSelfAccessReference(): string {
+        return RubyParser.selfAccessReference;
+    }
+    protected getValidMemberTypes(): Set<string> {
+        return RubyParser.validMemberTypes;
+    }
+    protected getValidFunctionTypes(): Set<string> {
+        return RubyParser.validFunctionTypes;
     }
 
-    protected override setupQueries(): void {
-        this.rawQueries = rubyQueries;
-        super.setupQueries();
-    }
+    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
+        class: ScopeType.CLASS,
+        module: ScopeType.CLASS,
+        method: ScopeType.METHOD,
+        singleton_method: ScopeType.METHOD,
+        assignment: ScopeType.FUNCTION,
+    };
 
     protected override processExtraObjCapture(
         capture: QueryCapture,
@@ -91,5 +115,36 @@ export class RubyParser extends BaseParser {
         this.addToChain(method, ChainType.FUNCTION, chain, node.id);
 
         return true;
+    }
+
+    protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
+        const scopeType = RubyParser.SCOPE_TYPES[node.type];
+        if (!scopeType) {
+            return null;
+        }
+
+        let nameNode: SyntaxNode | null = null;
+        switch (node.type) {
+            case 'assignment': {
+                const rightNode = node.childForFieldName('right');
+                if (rightNode?.type !== 'lambda') {
+                    return null;
+                }
+                nameNode = node.childForFieldName('left');
+                break;
+            }
+            default: {
+                nameNode = node.childForFieldName('name');
+                break;
+            }
+        }
+        if (!nameNode) {
+            return null;
+        }
+
+        return {
+            type: scopeType,
+            name: nameNode.text,
+        };
     }
 }

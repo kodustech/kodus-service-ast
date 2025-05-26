@@ -13,7 +13,6 @@ services:
         restart: unless-stopped
         volumes:
             - .:/usr/src/app
-            - ../kodus-proto:/usr/src/kodus-proto
             - ../certs:/usr/src/app/certs
         networks:
             - kodus-backend-services

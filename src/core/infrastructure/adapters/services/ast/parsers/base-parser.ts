@@ -53,27 +53,24 @@ export enum ChainType {
 export abstract class BaseParser {
     private readonly importCache: Map<string, ResolvedImport> = new Map();
     private readonly importPathResolver: ImportPathResolverService;
-    private parser: Parser;
+    private readonly parser: Parser = new Parser();
     private readonly context: ParseContext;
-
-    protected language: Language;
-    protected rawQueries: Map<QueryType, ParserQuery>;
-    protected readonly queries: Map<QueryType, Query> = new Map<
+    private readonly queries: Map<QueryType, Query> = new Map<
         QueryType,
         Query
     >();
 
-    protected abstract readonly constructorName: string;
-    protected abstract readonly selfAccessReference: string;
-
-    protected abstract readonly validMemberTypes: Set<string>;
-    protected abstract readonly validFunctionTypes: Set<string>;
+    protected abstract getLanguage(): Language;
+    protected abstract getRawQueries(): Map<QueryType, ParserQuery>;
+    protected abstract getConstructorName(): string;
+    protected abstract getSelfAccessReference(): string;
+    protected abstract getValidMemberTypes(): Set<string>;
+    protected abstract getValidFunctionTypes(): Set<string>;
 
     constructor(
         importPathResolver: ImportPathResolverService,
         context: ParseContext,
     ) {
-        this.setupLanguage();
         this.setupParser();
         this.setupQueries();
 
@@ -81,25 +78,23 @@ export abstract class BaseParser {
         this.context = context;
     }
 
-    protected abstract setupLanguage(): void;
-
     private setupParser(): void {
-        if (this.parser) {
-            return;
-        }
+        if (this.parser.getLanguage()) return;
 
-        if (!this.language) {
+        const language = this.getLanguage();
+        if (!language) {
             throw new Error('Language not set up');
         }
 
-        const parser = new Parser();
-        parser.setLanguage(this.language);
-        this.parser = parser;
+        this.parser.setLanguage(language);
     }
 
-    protected setupQueries(): void {
-        for (const [key, value] of this.rawQueries.entries()) {
-            const query = new Query(this.language, value.query);
+    private setupQueries(): void {
+        const queries = this.getRawQueries();
+        const language = this.getLanguage();
+
+        for (const [key, value] of queries.entries()) {
+            const query = new Query(language, value.query);
             this.queries.set(key, query);
         }
     }
@@ -547,7 +542,7 @@ export abstract class BaseParser {
         methods: Method[],
     ): void {
         const constructor = methods.find(
-            (method) => method.name === this.constructorName,
+            (method) => method.name === this.getConstructorName(),
         );
         if (!constructor) return;
 
@@ -698,7 +693,7 @@ export abstract class BaseParser {
                 const chain = this.getMemberChain(node, chains);
                 if (!chain || chain.length === 0) continue;
 
-                let caller = this.selfAccessReference;
+                let caller = this.getSelfAccessReference();
                 let targetFile = absolutePath;
 
                 for (const { name, type } of chain) {
@@ -791,31 +786,13 @@ export abstract class BaseParser {
     }
 
     protected getScopeChain(node: SyntaxNode): Scope[] {
-        const query = this.getQuery(QueryType.SCOPE_QUERY);
-        if (!query) return [];
-
         const chain: Scope[] = [];
         let currentNode: SyntaxNode | null = node;
 
         while (currentNode) {
-            const matches = query.matches(currentNode, {
-                maxStartDepth: 0,
-            }) as (QueryMatch & {
-                setProperties?: { scope?: string };
-            })[];
-
-            const match = matches?.[0];
-            const capture = match?.captures?.[0];
-            const scopeName = capture?.node?.text;
-            const scopeType =
-                match?.setProperties?.scope &&
-                this.stringToScopeType(match.setProperties.scope);
-
-            if (match && capture && scopeName && scopeType) {
-                chain.unshift({
-                    type: scopeType,
-                    name: scopeName,
-                });
+            const scope = this.getScopeTypeForNode(currentNode);
+            if (scope) {
+                chain.unshift(scope);
             }
 
             currentNode = currentNode.parent;
@@ -823,6 +800,8 @@ export abstract class BaseParser {
 
         return chain;
     }
+
+    protected abstract getScopeTypeForNode(node: SyntaxNode): Scope | null;
 
     private stringToScopeType(type: string): ScopeType | undefined {
         return scopeTypeMap[type];
@@ -869,8 +848,8 @@ export abstract class BaseParser {
 
         const validTypes =
             type === ChainType.FUNCTION
-                ? this.validFunctionTypes
-                : this.validMemberTypes;
+                ? this.getValidFunctionTypes()
+                : this.getValidMemberTypes();
 
         if (validTypes.has(field.type)) {
             chain.push({

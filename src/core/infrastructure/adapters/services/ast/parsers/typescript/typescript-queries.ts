@@ -244,47 +244,6 @@ const functionParametersQuery: ParserQuery = {
 `,
 };
 
-const scopeQuery: ParserQuery = {
-    type: QueryType.SCOPE_QUERY,
-    query: `
-(class_declaration
-    name: (type_identifier) @scope
-    (#set! scope "class")
-)
-
-(abstract_class_declaration
-    name: (type_identifier) @scope
-    (#set! scope "class")
-)
-
-(interface_declaration
-    name: (type_identifier) @scope
-    (#set! scope "interface")
-)
-
-(enum_declaration
-    name: (identifier) @scope
-    (#set! scope "enum")
-)
-
-(function_declaration
-    name: (identifier) @scope
-    (#set! scope "function")
-)
-
-(variable_declarator
-	name: (identifier) @scope
-    value: (arrow_function)
-    (#set! scope "function")
-)
-
-(method_definition
-    name: (property_identifier) @scope
-    (#set! scope "method")
-)
-`,
-};
-
 export const typeScriptQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -297,6 +256,4 @@ export const typeScriptQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
-
-    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

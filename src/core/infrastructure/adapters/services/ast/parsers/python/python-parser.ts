@@ -2,26 +2,43 @@ import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { Language, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
 import { pythonQueries } from './python-queries';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { QueryType, ParserQuery } from '../query';
 
 export class PythonParser extends BaseParser {
-    protected override readonly constructorName: string = '__init__';
-    protected override readonly selfAccessReference: string = 'self';
-
-    protected override readonly validMemberTypes: Set<string> = new Set([
+    private static readonly language = PythonLang as Language;
+    private static readonly rawQueries = pythonQueries;
+    private static readonly constructorName = '__init__';
+    private static readonly selfAccessReference = 'self';
+    private static readonly validMemberTypes = new Set(['identifier'] as const);
+    private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);
-    protected override readonly validFunctionTypes: Set<string> = new Set([
-        'identifier',
-    ] as const);
 
-    protected override setupLanguage(): void {
-        this.language = PythonLang as Language;
+    protected getLanguage(): Language {
+        return PythonParser.language;
+    }
+    protected getRawQueries(): Map<QueryType, ParserQuery> {
+        return PythonParser.rawQueries;
+    }
+    protected getConstructorName(): string {
+        return PythonParser.constructorName;
+    }
+    protected getSelfAccessReference(): string {
+        return PythonParser.selfAccessReference;
+    }
+    protected getValidMemberTypes(): Set<string> {
+        return PythonParser.validMemberTypes;
+    }
+    protected getValidFunctionTypes(): Set<string> {
+        return PythonParser.validFunctionTypes;
     }
 
-    protected override setupQueries(): void {
-        this.rawQueries = pythonQueries;
-        super.setupQueries();
-    }
+    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
+        class_definition: ScopeType.CLASS,
+        function_definition: ScopeType.FUNCTION,
+        assignment: ScopeType.FUNCTION,
+    };
 
     protected override processChainNode(
         node: SyntaxNode,
@@ -51,5 +68,36 @@ export class PythonParser extends BaseParser {
             default:
                 return false;
         }
+    }
+
+    protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
+        const scopeType = PythonParser.SCOPE_TYPES[node.type];
+        if (!scopeType) {
+            return null;
+        }
+
+        let nameNode: SyntaxNode | null = null;
+        switch (node.type) {
+            case 'assignment': {
+                const rightNode = node.childForFieldName('right');
+                if (rightNode?.type !== 'lambda') {
+                    return null;
+                }
+                nameNode = node.childForFieldName('left');
+                break;
+            }
+            default: {
+                nameNode = node.childForFieldName('name');
+                break;
+            }
+        }
+        if (!nameNode) {
+            return null;
+        }
+
+        return {
+            type: scopeType,
+            name: nameNode.text,
+        };
     }
 }

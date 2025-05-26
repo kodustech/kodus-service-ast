@@ -2,28 +2,50 @@ import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { BaseParser, CallChain, ChainType } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { QueryType, ParserQuery } from '../query';
 
 export class PhpParser extends BaseParser {
-    protected override readonly constructorName: string = '__construct';
-    protected override readonly selfAccessReference: string = '$this';
-
-    protected override readonly validMemberTypes: Set<string> = new Set([
+    private static readonly language = PhpLang as Language;
+    private static readonly rawQueries = phpQueries;
+    private static readonly constructorName = '__construct';
+    private static readonly selfAccessReference = '$this';
+    private static readonly validMemberTypes = new Set([
         'variable_name',
         'name',
     ] as const);
-    protected override readonly validFunctionTypes: Set<string> = new Set([
+    private static readonly validFunctionTypes = new Set([
         'variable_name',
         'name',
     ] as const);
 
-    protected override setupLanguage(): void {
-        this.language = PhpLang as Language;
+    protected getLanguage(): Language {
+        return PhpParser.language;
+    }
+    protected getRawQueries(): Map<QueryType, ParserQuery> {
+        return PhpParser.rawQueries;
+    }
+    protected getConstructorName(): string {
+        return PhpParser.constructorName;
+    }
+    protected getSelfAccessReference(): string {
+        return PhpParser.selfAccessReference;
+    }
+    protected getValidMemberTypes(): Set<string> {
+        return PhpParser.validMemberTypes;
+    }
+    protected getValidFunctionTypes(): Set<string> {
+        return PhpParser.validFunctionTypes;
     }
 
-    protected override setupQueries(): void {
-        this.rawQueries = phpQueries;
-        super.setupQueries();
-    }
+    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
+        class_declaration: ScopeType.CLASS,
+        interface_declaration: ScopeType.INTERFACE,
+        enum_declaration: ScopeType.ENUM,
+        function_definition: ScopeType.FUNCTION,
+        method_declaration: ScopeType.METHOD,
+        assignment_expression: ScopeType.FUNCTION,
+    };
 
     protected override getImportOriginName(match: QueryMatch): string | null {
         const originCapture = match.captures.find(
@@ -102,5 +124,36 @@ export class PhpParser extends BaseParser {
             default:
                 return false;
         }
+    }
+
+    protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
+        const scopeType = PhpParser.SCOPE_TYPES[node.type];
+        if (!scopeType) {
+            return null;
+        }
+
+        let nameNode: SyntaxNode | null = null;
+        switch (node.type) {
+            case 'assignment_expression': {
+                const rightNode = node.childForFieldName('right');
+                if (rightNode?.type !== 'arrow_function') {
+                    return null;
+                }
+                nameNode = node.childForFieldName('left');
+                break;
+            }
+            default: {
+                nameNode = node.childForFieldName('name');
+                break;
+            }
+        }
+        if (!nameNode) {
+            return null;
+        }
+
+        return {
+            type: scopeType,
+            name: nameNode.text,
+        };
     }
 }

@@ -191,42 +191,6 @@ const functionParametersQuery: ParserQuery = {
 `,
 };
 
-const scopeQuery: ParserQuery = {
-    type: QueryType.SCOPE_QUERY,
-    query: `
-(class_declaration
-    name: (identifier) @scope
-    (#set! scope "class")
-)
-
-(interface_declaration
-    name: (identifier) @scope
-    (#set! scope "interface")
-)
-
-(enum_declaration
-    name: (identifier) @scope
-    (#set! scope "enum")
-)
-
-(constructor_declaration
-    name: (identifier) @scope
-    (#set! scope "function")
-)
-
-(method_declaration
-    name: (identifier) @scope
-    (#set! scope "method")
-)
-
-(variable_declarator
-	name: (identifier) @scope
-    value: (lambda_expression)
-    (#set! scope "function")
-)
-`,
-};
-
 export const javaQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -237,6 +201,4 @@ export const javaQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
-
-    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

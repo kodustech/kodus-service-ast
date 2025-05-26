@@ -301,42 +301,6 @@ const functionParametersQuery: ParserQuery = {
 `,
 };
 
-const scopeQuery: ParserQuery = {
-    type: QueryType.SCOPE_QUERY,
-    query: `
-(class_declaration
-    name: (name) @scope
-    (#set! scope "class")
-)
-
-(interface_declaration
-    name: (name) @scope
-    (#set! scope "interface")
-)
-
-(enum_declaration
-    name: (name) @scope
-    (#set! scope "enum")
-)
-
-(function_definition
-    name: (name) @scope
-    (#set! scope "function")
-)
-
-(method_declaration
-    name: (name) @scope
-    (#set! scope "method")
-)
-
-(assignment_expression
-    left: (variable_name) @scope
-    right: (arrow_function)
-    (#set! scope "function")
-)
-`,
-};
-
 export const phpQueries = new Map<QueryType, ParserQuery>([
     [QueryType.IMPORT_QUERY, importQuery],
 
@@ -347,6 +311,4 @@ export const phpQueries = new Map<QueryType, ParserQuery>([
     [QueryType.FUNCTION_QUERY, functionQuery],
     [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
     [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
-
-    [QueryType.SCOPE_QUERY, scopeQuery],
 ] as const);

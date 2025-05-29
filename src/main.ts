@@ -6,24 +6,16 @@ import { resolve } from 'path';
 import { cwd } from 'process';
 import * as grpc from '@grpc/grpc-js';
 import * as fs from 'fs';
+import {
+    getEnvVariableAsNumberOrExit,
+    getEnvVariableOrExit,
+} from './shared/utils/env';
 
 async function bootstrap() {
-    const hostName = process.env.CONTAINER_NAME;
-    if (!hostName) {
-        console.error('HOST environment variable is not set');
-        process.exit(1);
-    }
+    const containerName = getEnvVariableOrExit('CONTAINER_NAME');
+    const grpcNumberPort = getEnvVariableAsNumberOrExit('API_PORT');
+    const healthNumberPort = getEnvVariableAsNumberOrExit('API_HEALTH_PORT');
 
-    const grpcPort = process.env.API_PORT;
-    if (!grpcPort) {
-        console.error('API_PORT environment variable is not set');
-        process.exit(1);
-    }
-    const grpcNumberPort = Number(grpcPort);
-    if (isNaN(grpcNumberPort)) {
-        console.error('API_PORT environment variable is not a valid number');
-        process.exit(1);
-    }
     if (grpcNumberPort < 0 || grpcNumberPort > 65535) {
         console.error(
             'API_PORT environment variable is out of range (0-65535)',
@@ -31,9 +23,17 @@ async function bootstrap() {
         process.exit(1);
     }
 
-    // Cria o servidor HTTP para health checks
-    const healthPort = process.env.API_HEALTH_PORT || '5001';
-    const healthNumberPort = Number(healthPort);
+    if (healthNumberPort < 0 || healthNumberPort > 65535) {
+        console.error(
+            'API_HEALTH_PORT environment variable is out of range (0-65535)',
+        );
+        process.exit(1);
+    }
+
+    if (healthNumberPort === grpcNumberPort) {
+        console.error('API_HEALTH_PORT and API_PORT cannot be the same port');
+        process.exit(1);
+    }
 
     // Inicializa a aplicação HTTP para health checks
     const httpApp = await NestFactory.create(AppModule);
@@ -41,51 +41,45 @@ async function bootstrap() {
 
     // Inicia o servidor HTTP apenas para health checks
     await httpApp.listen(healthNumberPort, '0.0.0.0');
-    console.log(
-        `Health check HTTP server is running on ${hostName}:${healthNumberPort}`,
-    );
 
-    // Inicializa o microserviço gRPC principal
-    const grpcApp = await NestFactory.createMicroservice<MicroserviceOptions>(
-        AppModule,
-        {
-            transport: Transport.GRPC,
-            options: {
-                package: 'kodus.ast.v1',
-                protoPath: resolve(
-                    cwd(),
-                    'node_modules/@kodus/kodus-proto/kodus/ast/v1/analyzer.proto',
-                ),
-                url: `0.0.0.0:${grpcNumberPort}`,
-                loader: {
-                    includeDirs: [
-                        resolve(cwd(), 'node_modules/@kodus/kodus-proto/'),
-                    ],
-                },
-                credentials: grpc.ServerCredentials.createSsl(
-                    fs.readFileSync(resolve(cwd(), 'certs/ca.crt')),
-                    [
-                        {
-                            private_key: fs.readFileSync(
-                                resolve(cwd(), 'certs/server.key'),
-                            ),
-                            cert_chain: fs.readFileSync(
-                                resolve(cwd(), 'certs/server.crt'),
-                            ),
-                        },
-                    ],
-                    true,
-                ),
+    httpApp.connectMicroservice<MicroserviceOptions>({
+        transport: Transport.GRPC,
+        options: {
+            package: 'kodus.ast.v1',
+            protoPath: resolve(
+                cwd(),
+                'node_modules/@kodus/kodus-proto/kodus/ast/v1/analyzer.proto',
+            ),
+            url: `0.0.0.0:${grpcNumberPort}`,
+            loader: {
+                includeDirs: [
+                    resolve(cwd(), 'node_modules/@kodus/kodus-proto/'),
+                ],
             },
+            credentials: grpc.ServerCredentials.createSsl(
+                fs.readFileSync(resolve(cwd(), 'certs/ca.crt')),
+                [
+                    {
+                        private_key: fs.readFileSync(
+                            resolve(cwd(), 'certs/server.key'),
+                        ),
+                        cert_chain: fs.readFileSync(
+                            resolve(cwd(), 'certs/server.crt'),
+                        ),
+                    },
+                ],
+                true,
+            ),
         },
-    );
+    });
 
-    const pinoLogger = grpcApp.get(PinoLoggerService);
-    grpcApp.useLogger(pinoLogger);
-
-    await grpcApp.listen();
+    httpApp.useLogger(httpApp.get(PinoLoggerService));
+    await httpApp.startAllMicroservices();
     console.log(
-        `AST gRPC service is listening on ${hostName}:${grpcNumberPort}`,
+        `HTTP service is listening on ${containerName}:${healthNumberPort}`,
+    );
+    console.log(
+        `gRPC service is listening on ${containerName}:${grpcNumberPort}`,
     );
 }
 

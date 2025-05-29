@@ -2,7 +2,6 @@ import { BaseParser } from './base-parser';
 import * as Path from 'path';
 import { TypeScriptParser } from './typescript/typescript-parser';
 import { PythonParser } from './python/python-parser';
-import { ImportPathResolverService } from '../import-path-resolver.service';
 import { ParseContext } from '../../../../../domain/ast/contracts/Parser';
 import { RubyParser } from './ruby/ruby-parser';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
@@ -10,10 +9,11 @@ import { PhpParser } from './php/php-parser';
 import { CSharpParser } from './csharp/csharp-parser';
 import { JavaParser } from './java/java-parser';
 import { RustParser } from './rust/rust-parser';
+import { LanguageResolver } from '@/core/domain/ast/contracts/LanguageResolver';
 
 export function getParserByFilePath(
     filePath: string,
-    importPathResolver: ImportPathResolverService,
+    importPathResolver: LanguageResolver,
     context: ParseContext,
 ): BaseParser {
     if (!filePath || filePath.length === 0) {

@@ -5,18 +5,14 @@ import {
     TypeAnalysis,
 } from '@/core/domain/ast/contracts/CodeGraph';
 import * as fs from 'fs';
-import * as path from 'path';
-import { ResolverFactory } from './resolvers/ResolverFactory';
-import { ImportPathResolverService } from './import-path-resolver.service';
 import { getParserByFilePath } from './parsers';
 import { BaseParser } from './parsers/base-parser';
 import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
+import { getLanguageResolver } from './resolvers';
+import { LanguageResolver } from '@/core/domain/ast/contracts/LanguageResolver';
 
 export class SourceFileAnalyzer {
-    private importPathResolver: ImportPathResolverService =
-        new ImportPathResolverService();
-    private resolverFactory: ResolverFactory = new ResolverFactory();
-
+    private importPathResolver: LanguageResolver | null = null;
     private languageParser: BaseParser | null = null;
 
     async analyzeSourceFile(
@@ -26,6 +22,10 @@ export class SourceFileAnalyzer {
     ): Promise<ParserAnalysis> {
         try {
             await this.initializeImportResolver(rootDir);
+            if (!this.importPathResolver) {
+                console.warn(`No import resolver found for ${rootDir}`);
+                return this.emptyAnalysis();
+            }
 
             const content = await this.readFileContent(filePath);
             if (!content) {
@@ -89,6 +89,7 @@ export class SourceFileAnalyzer {
                             const resolved =
                                 this.languageParser.resolveImportWithCache(
                                     imp,
+                                    [],
                                     filePath,
                                 );
                             return resolved?.normalizedPath || imp;
@@ -141,13 +142,9 @@ export class SourceFileAnalyzer {
     }
 
     private async initializeImportResolver(rootDir: string): Promise<void> {
-        const resolver = await this.resolverFactory.getResolver(
-            rootDir,
-            // path.join(
-            //     rootDir,
-            //     'src/core/application/use-cases/codeBase/csharp_project',
-            // ),
-        );
-        this.importPathResolver.initialize(rootDir, resolver);
+        const resolver = await getLanguageResolver(rootDir);
+        if (!resolver) return;
+        this.importPathResolver = resolver;
+        await resolver.initialize();
     }
 }

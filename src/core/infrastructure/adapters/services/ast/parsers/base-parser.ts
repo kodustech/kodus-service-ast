@@ -1,8 +1,6 @@
 import * as Parser from 'tree-sitter';
 import { Query, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { Language } from 'tree-sitter';
-import { ImportPathResolverService } from '../import-path-resolver.service';
-import { ResolvedImport } from '@/core/domain/ast/contracts/ImportPathResolver';
 import { ParseContext } from '@/core/domain/ast/contracts/Parser';
 import { objQueries, ParserQuery, QueryType } from './query';
 import {
@@ -14,6 +12,10 @@ import {
 } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 import { findLastIndexOf } from '@/shared/utils/arrays';
+import {
+    LanguageResolver,
+    ResolvedImport,
+} from '@/core/domain/ast/contracts/LanguageResolver';
 
 export type Method = {
     name: string;
@@ -51,8 +53,7 @@ export enum ChainType {
 }
 
 export abstract class BaseParser {
-    private readonly importCache: Map<string, ResolvedImport> = new Map();
-    private readonly importPathResolver: ImportPathResolverService;
+    private readonly importPathResolver: LanguageResolver;
     private readonly parser: Parser = new Parser();
     private readonly context: ParseContext;
     private readonly queries: Map<QueryType, Query> = new Map<
@@ -67,10 +68,7 @@ export abstract class BaseParser {
     protected abstract getValidMemberTypes(): Set<string>;
     protected abstract getValidFunctionTypes(): Set<string>;
 
-    constructor(
-        importPathResolver: ImportPathResolverService,
-        context: ParseContext,
-    ) {
+    constructor(importPathResolver: LanguageResolver, context: ParseContext) {
         this.setupParser();
         this.setupQueries();
 
@@ -150,6 +148,7 @@ export abstract class BaseParser {
             const imported = this.parseImportedSymbols(captures);
             const resolvedImport = this.resolveImportWithCache(
                 originName,
+                imported,
                 filePath,
             );
             if (!resolvedImport) continue;
@@ -891,19 +890,19 @@ export abstract class BaseParser {
     }
 
     public resolveImportWithCache(
-        importPath: string,
+        origin: string,
+        imported: { symbol: string; alias: string | null }[],
         filePath: string,
     ): ResolvedImport {
-        const cacheKey = `${importPath}:${filePath}`;
-        if (this.importCache.has(cacheKey)) {
-            return this.importCache.get(cacheKey);
-        }
+        const importedModule = {
+            origin,
+            imported,
+        };
 
         const resolved = this.importPathResolver.resolveImport(
-            importPath,
+            importedModule,
             filePath,
         );
-        this.importCache.set(cacheKey, resolved);
         return resolved;
     }
 

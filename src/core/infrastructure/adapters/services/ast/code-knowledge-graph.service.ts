@@ -1,9 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as fg from 'fast-glob';
 import * as fs from 'fs';
 import * as os from 'os';
-import { IImportPathResolver } from '@/core/domain/ast/contracts/ImportPathResolver';
-import { ResolverFactory } from './resolvers/ResolverFactory';
 import {
     CodeGraph,
     FileAnalysis,
@@ -15,7 +13,6 @@ import { Piscina } from 'piscina';
 import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
 import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
-import { IMPORT_PATH_RESOLVER_TOKEN } from './import-path-resolver.service';
 import { PinoLoggerService } from '../logger/pino.service';
 import { handleError } from '@/shared/utils/errors';
 import { SourceFileAnalyzer } from './analyze-source-file';
@@ -24,13 +21,7 @@ import { SourceFileAnalyzer } from './analyze-source-file';
 export class CodeKnowledgeGraphService {
     private piscina: Piscina;
 
-    constructor(
-        @Inject(IMPORT_PATH_RESOLVER_TOKEN)
-        private readonly importPathResolver: IImportPathResolver,
-        private readonly resolverFactory: ResolverFactory,
-
-        private readonly logger: PinoLoggerService,
-    ) {
+    constructor(private readonly logger: PinoLoggerService) {
         this.piscina = new Piscina({
             // Piscina has no support for typescript, so we need to use the compiled version
             filename: path.resolve(__dirname, 'worker/worker.js'),
@@ -70,19 +61,6 @@ export class CodeKnowledgeGraphService {
             throw new Error(`Root directory not found: ${rootDir}`);
         }
 
-        await this.initializeImportResolver(
-            rootDir,
-            // path.join(
-            //     rootDir,
-            //     'src/core/application/use-cases/codeBase/csharp_project',
-            // ),
-        );
-        if (!this.importPathResolver) {
-            throw new Error(
-                `Import path resolver not initialized for directory: ${rootDir}`,
-            );
-        }
-
         const result = {
             files: new Map<string, FileAnalysis>(),
             functions: new Map<string, FunctionAnalysis>(),
@@ -107,7 +85,7 @@ export class CodeKnowledgeGraphService {
             // 'user.py',
             // 'example.rb',
             // 'src/core/application/use-cases/codeReviewFeedback',
-            // 'src/core/application/use-cases/codeBase/rust_project',
+            // 'src/core/application/use-cases/codeBase/php_project',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',
         ];
@@ -145,8 +123,10 @@ export class CodeKnowledgeGraphService {
 
                 const batchResults = await Promise.allSettled(
                     batchFiles.map(async (filePath) => {
-                        const normalizedPath =
-                            this.importPathResolver.getNormalizedPath(filePath);
+                        const normalizedPath = this.getNormalizedPath(
+                            rootDir,
+                            filePath,
+                        );
                         try {
                             const timeoutPromise = new Promise<never>(
                                 (_, reject) => {
@@ -171,7 +151,10 @@ export class CodeKnowledgeGraphService {
                                         { name: 'analyze' },
                                     ),
                                     // new SourceFileAnalyzer().analyzeSourceFile(
-                                    //     rootDir,
+                                    //     path.join(
+                                    //         rootDir,
+                                    //         'src/core/application/use-cases/codeBase/php_project',
+                                    //     ),
                                     //     filePath,
                                     //     normalizedPath,
                                     // ),
@@ -319,21 +302,6 @@ export class CodeKnowledgeGraphService {
         return graph;
     }
 
-    private async initializeImportResolver(rootDir: string): Promise<void> {
-        const resolver = await this.resolverFactory.getResolver(rootDir);
-        if (!resolver) {
-            this.logger.error({
-                message: 'No resolver found for the project',
-                context: CodeKnowledgeGraphService.name,
-                metadata: {
-                    rootDir,
-                },
-            });
-            throw new Error(`No resolver found for the project: ${rootDir}`);
-        }
-        this.importPathResolver.initialize(rootDir, resolver);
-    }
-
     private completeBidirectionalTypeRelations(
         types: Map<string, TypeAnalysis>,
     ): void {
@@ -378,5 +346,9 @@ export class CodeKnowledgeGraphService {
             });
         }
         return map;
+    }
+
+    private getNormalizedPath(rootDir: string, filePath: string): string {
+        return path.resolve(rootDir, filePath).replace(/\\/g, '/');
     }
 }

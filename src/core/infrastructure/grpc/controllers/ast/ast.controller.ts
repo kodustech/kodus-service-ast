@@ -11,6 +11,7 @@ import {
     BuildEnrichedGraphResponse,
 } from '@kodus/kodus-proto';
 import { from, Observable, switchMap } from 'rxjs';
+import { status } from '@grpc/grpc-js';
 
 function* createChunkStream(
     result: CodeAnalysisAST,
@@ -47,7 +48,7 @@ export class ASTController implements ASTAnalyzerServiceController {
                     return [
                         {
                             data: '',
-                            code: 2,
+                            code: status.INTERNAL,
                             error: handleError(error).message,
                         },
                     ];

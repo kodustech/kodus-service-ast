@@ -1,13 +1,14 @@
-export type SupportedLanguage =
-    | 'typescript'
-    | 'javascript'
-    | 'python'
-    | 'java'
-    | 'go'
-    | 'ruby'
-    | 'php'
-    | 'csharp'
-    | 'rust';
+export enum SupportedLanguage {
+    TYPESCRIPT = 'typescript',
+    JAVASCRIPT = 'javascript',
+    PYTHON = 'python',
+    JAVA = 'java',
+    GO = 'go',
+    RUBY = 'ruby',
+    PHP = 'php',
+    CSHARP = 'csharp',
+    RUST = 'rust',
+}
 
 export interface LanguageConfig {
     name: SupportedLanguage;
@@ -17,47 +18,47 @@ export interface LanguageConfig {
 
 export const SUPPORTED_LANGUAGES: Record<SupportedLanguage, LanguageConfig> = {
     typescript: {
-        name: 'typescript',
+        name: SupportedLanguage.TYPESCRIPT,
         extensions: ['.ts', '.tsx'],
         defaultExtension: '.ts',
     },
     javascript: {
-        name: 'javascript',
+        name: SupportedLanguage.JAVASCRIPT,
         extensions: ['.js', '.jsx'],
         defaultExtension: '.js',
     },
     python: {
-        name: 'python',
+        name: SupportedLanguage.PYTHON,
         extensions: ['.py'],
         defaultExtension: '.py',
     },
     java: {
-        name: 'java',
+        name: SupportedLanguage.JAVA,
         extensions: ['.java'],
         defaultExtension: '.java',
     },
     go: {
-        name: 'go',
+        name: SupportedLanguage.GO,
         extensions: ['.go'],
         defaultExtension: '.go',
     },
     ruby: {
-        name: 'ruby',
+        name: SupportedLanguage.RUBY,
         extensions: ['.rb'],
         defaultExtension: '.rb',
     },
     php: {
-        name: 'php',
+        name: SupportedLanguage.PHP,
         extensions: ['.php'],
         defaultExtension: '.php',
     },
     csharp: {
-        name: 'csharp',
+        name: SupportedLanguage.CSHARP,
         extensions: ['.cs'],
         defaultExtension: '.cs',
     },
     rust: {
-        name: 'rust',
+        name: SupportedLanguage.RUST,
         extensions: ['.rs'],
         defaultExtension: '.rs',
     },

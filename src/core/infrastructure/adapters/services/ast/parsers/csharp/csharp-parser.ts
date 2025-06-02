@@ -1,10 +1,11 @@
 import { Language, SyntaxNode } from 'tree-sitter';
-import { BaseParser, CallChain, ChainType } from '../base-parser';
+import { BaseParser } from '../base-parser';
 import * as CSharpLang from 'tree-sitter-c-sharp';
 import { cSharpQueries } from './csharp-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
 import { ParserQuery, QueryType } from '../query';
 import { findNamedChildByType } from '@/shared/utils/ast-helpers';
+import { ChainType, CallChain } from '@/core/domain/ast/contracts/Parser';
 
 export class CSharpParser extends BaseParser {
     private static readonly language = CSharpLang as Language;

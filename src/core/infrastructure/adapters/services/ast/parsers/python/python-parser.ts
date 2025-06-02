@@ -1,9 +1,10 @@
-import { BaseParser, CallChain, ChainType } from '../base-parser';
+import { BaseParser } from '../base-parser';
 import { Language, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
 import { pythonQueries } from './python-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
 import { QueryType, ParserQuery } from '../query';
+import { ChainType, CallChain } from '@/core/domain/ast/contracts/Parser';
 
 export class PythonParser extends BaseParser {
     private static readonly language = PythonLang as Language;

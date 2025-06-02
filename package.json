@@ -29,6 +29,7 @@
     "dependencies": {
         "@grpc/grpc-js": "^1.13.4",
         "@grpc/proto-loader": "^0.7.15",
+        "@grpc/reflection": "^1.0.4",
         "@kodus/kodus-proto": "^1.0.2",
         "@nestjs/common": "^11.1.2",
         "@nestjs/core": "^11.1.2",
@@ -86,12 +87,19 @@
         "typescript-eslint": "^8.32.1"
     },
     "jest": {
+        "moduleNameMapper": {
+            "^@/(.*)$": "<rootDir>/src/$1",
+            "^test/mocks/(.*)$": "<rootDir>/test/mocks/$1"
+        },
         "moduleFileExtensions": [
             "js",
             "json",
             "ts"
         ],
-        "rootDir": "src",
+        "roots": [
+            "src",
+            "test"
+        ],
         "testRegex": ".*\\.spec\\.ts$",
         "transform": {
             "^.+\\.(t|j)s$": "ts-jest"

@@ -88,6 +88,7 @@ export class CodeKnowledgeGraphService {
             // 'src/core/application/use-cases/codeBase/php_project',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',
+            // 'fooooooooooooooooooooooooooooooo',
         ];
         const filteredFiles =
             filterCriteria.length > 0
@@ -151,10 +152,11 @@ export class CodeKnowledgeGraphService {
                                         { name: 'analyze' },
                                     ),
                                     // new SourceFileAnalyzer().analyzeSourceFile(
-                                    //     path.join(
-                                    //         rootDir,
-                                    //         'src/core/application/use-cases/codeBase/php_project',
-                                    //     ),
+                                    //     // path.join(
+                                    //     //     rootDir,
+                                    //     //     'src/core/application/use-cases/codeBase/php_project',
+                                    //     // ),
+                                    //     rootDir,
                                     //     filePath,
                                     //     normalizedPath,
                                     // ),

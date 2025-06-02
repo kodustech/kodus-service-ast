@@ -17,15 +17,18 @@ const resolvers: LanguageResolver[] = [
     new PHPResolver(),
     new CSharpResolver(),
     new JavaResolver(),
-] as const;
+];
 
 export async function getLanguageResolver(
     projectRoot: string,
 ): Promise<LanguageResolver | null> {
-    for (const resolver of resolvers) {
-        if (await resolver.canHandle(projectRoot)) {
-            return resolver;
-        }
-    }
-    return null;
+    const results = await Promise.all(
+        resolvers.map(async (resolver) => ({
+            resolver,
+            canHandle: await resolver.canHandle(projectRoot),
+        })),
+    );
+
+    const match = results.find((result) => result.canHandle);
+    return match ? match.resolver : null;
 }

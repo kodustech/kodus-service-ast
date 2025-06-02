@@ -1,9 +1,10 @@
-import { BaseParser, CallChain, ChainType } from '../base-parser';
+import { BaseParser } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
 import { Language, SyntaxNode } from 'tree-sitter';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
 import { QueryType, ParserQuery } from '../query';
+import { CallChain, ChainType } from '@/core/domain/ast/contracts/Parser';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
 
 export class TypeScriptParser extends BaseParser {
     private static readonly language = TypeScriptLang as Language;

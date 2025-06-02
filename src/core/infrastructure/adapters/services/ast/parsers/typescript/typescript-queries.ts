@@ -67,7 +67,7 @@ const importQuery: ParserQuery = {
     	(
           [
               (namespace_import
-                  (identifier) @alias
+                  (identifier) @symbol
               )
               (identifier) @symbol
               (named_imports
@@ -84,7 +84,7 @@ const importQuery: ParserQuery = {
         )*
     )?
     source: (string (string_fragment) @origin)
-)
+) @import
 
 (variable_declarator
 	name: (identifier) @symbol
@@ -95,7 +95,7 @@ const importQuery: ParserQuery = {
         )
     )
     (#eq? @call.type "require")
-)
+) @import
 `,
 };
 
@@ -104,11 +104,11 @@ const classQuery: ParserQuery = {
     query: `
 (class_declaration
 ${classAuxiliaryQuery()}
-)
+) @obj
 
 (abstract_class_declaration
 ${classAuxiliaryQuery()}
-)
+) @obj
 `,
 };
 
@@ -141,7 +141,7 @@ const interfaceQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -158,7 +158,7 @@ const enumQuery: ParserQuery = {
            	","?
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -188,7 +188,7 @@ const typeAliasQuery: ParserQuery = {
         (predefined_type) @typeValue
         (type_identifier) @typeValue
     ]
-)
+) @typeAlias
 `,
 };
 
@@ -198,19 +198,19 @@ const functionQuery: ParserQuery = {
 (function_declaration
 	name: (identifier) @funcName
     ${functionAxuliaryQuery()}
-)
+) @func
 
 (method_definition
 	name: (property_identifier) @funcName
     ${functionAxuliaryQuery()}
-)
+) @func
 
 (variable_declarator
 	name: (identifier) @funcName
     value: (arrow_function
         ${functionAxuliaryQuery()}
     )
-)
+) @func
 `,
 };
 
@@ -230,7 +230,7 @@ const functionCallQuery: ParserQuery = {
 const functionParametersQuery: ParserQuery = {
     type: QueryType.FUNCTION_PARAMETERS_QUERY,
     query: `
-(_
+(formal_parameters
     (
         (_
             pattern: (identifier) @funcParamName
@@ -240,7 +240,7 @@ const functionParametersQuery: ParserQuery = {
         )
         _*
     )*
-)?
+)
 `,
 };
 

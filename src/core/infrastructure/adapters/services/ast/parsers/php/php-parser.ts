@@ -1,9 +1,10 @@
 import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
-import { BaseParser, CallChain, ChainType } from '../base-parser';
+import { BaseParser } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/CodeGraph';
+import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
 import { QueryType, ParserQuery } from '../query';
+import { ChainType, CallChain } from '@/core/domain/ast/contracts/Parser';
 
 export class PhpParser extends BaseParser {
     private static readonly language = PhpLang as Language;
@@ -47,14 +48,16 @@ export class PhpParser extends BaseParser {
         assignment_expression: ScopeType.FUNCTION,
     };
 
-    protected override getImportOriginName(match: QueryMatch): string | null {
-        const originCapture = match.captures.find(
-            (capture) => capture.name === 'origin',
-        );
-        if (!originCapture) return null;
+    protected override getImportOriginName(
+        node: SyntaxNode,
+        match?: QueryMatch | null,
+    ): string | null {
+        if (!node) {
+            return null;
+        }
 
-        let originName = originCapture.node.text;
-        if (match['properties']) {
+        let originName = node.text;
+        if (match && match['properties']) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const properties = match['properties'];
             if (

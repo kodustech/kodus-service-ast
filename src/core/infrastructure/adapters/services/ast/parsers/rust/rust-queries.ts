@@ -8,7 +8,7 @@ const importQuery: ParserQuery = {
     	path: (_) @origin
         name: (identifier) @symbol
     )
-)
+) @import
 
 (use_declaration
 	argument: (scoped_use_list
@@ -20,7 +20,7 @@ const importQuery: ParserQuery = {
             )*
         )
     )
-)
+) @import
 
 (use_declaration
 	argument: (use_wildcard
@@ -29,7 +29,7 @@ const importQuery: ParserQuery = {
             (scoped_identifier)
         ] @origin
     )
-)
+) @import
 `,
 };
 
@@ -47,7 +47,7 @@ const classQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 
 (impl_item
 	trait: (_)? @objImplements
@@ -62,7 +62,7 @@ const classQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -92,7 +92,7 @@ const interfaceQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -110,7 +110,7 @@ const enumQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -120,7 +120,7 @@ const typeAliasQuery: ParserQuery = {
 (type_item
 	name: (type_identifier) @typeName
     type: (_) @typeValue
-)
+) @typeAlias
 `,
 };
 
@@ -132,7 +132,7 @@ const functionQuery: ParserQuery = {
     parameters: (parameters)? @funcParams
     return_type: (_)? @funcReturnType
     body: (_) @funcBody
-)
+) @func
 `,
 };
 

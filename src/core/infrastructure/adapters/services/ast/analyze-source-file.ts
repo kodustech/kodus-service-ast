@@ -1,13 +1,16 @@
 import {
-    Call,
-    FileAnalysis,
     FunctionAnalysis,
     TypeAnalysis,
 } from '@/core/domain/ast/contracts/CodeGraph';
 import * as fs from 'fs';
 import { getParserByFilePath } from './parsers';
 import { BaseParser } from './parsers/base-parser';
-import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
+import {
+    AnalysisNode,
+    Call,
+    ParseContext,
+    ParserAnalysis,
+} from '@/core/domain/ast/contracts/Parser';
 import { getLanguageResolver } from './resolvers';
 import { LanguageResolver } from '@/core/domain/ast/contracts/LanguageResolver';
 
@@ -41,7 +44,7 @@ export class SourceFileAnalyzer {
                 return this.emptyAnalysis();
             }
 
-            const context = {
+            const context: ParseContext = {
                 fileDefines: new Set<string>(),
                 fileImports: new Set<string>(),
                 fileClassNames: new Set<string>(),
@@ -50,6 +53,7 @@ export class SourceFileAnalyzer {
                 importedMapping: new Map<string, string>(),
                 instanceMapping: new Map<string, string>(),
                 types: new Map<string, TypeAnalysis>(),
+                analysisNodes: new Map<number, AnalysisNode>(),
             };
 
             this.languageParser = getParserByFilePath(
@@ -111,6 +115,7 @@ export class SourceFileAnalyzer {
                 },
                 functions: context.functions,
                 types: context.types,
+                analysisNodes: context.analysisNodes,
             };
         } catch (error) {
             console.error(`Error analyzing file ${filePath}:`, error);
@@ -129,15 +134,12 @@ export class SourceFileAnalyzer {
         }
     }
 
-    private emptyAnalysis(): {
-        fileAnalysis: FileAnalysis;
-        functions: Map<string, FunctionAnalysis>;
-        types: Map<string, TypeAnalysis>;
-    } {
+    private emptyAnalysis(): ParserAnalysis {
         return {
             fileAnalysis: { defines: [], calls: [], imports: [] },
             functions: new Map(),
             types: new Map(),
+            analysisNodes: new Map<number, AnalysisNode>(),
         };
     }
 

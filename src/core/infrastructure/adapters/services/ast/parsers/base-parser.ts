@@ -1,56 +1,26 @@
 import * as Parser from 'tree-sitter';
 import { Query, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { Language } from 'tree-sitter';
-import { ParseContext } from '@/core/domain/ast/contracts/Parser';
-import { objQueries, ParserQuery, QueryType } from './query';
 import {
+    AnalysisNode,
     Call,
+    CallChain,
+    ChainType,
+    ImportedSymbol,
+    Method,
+    ObjectProperties,
+    ParseContext,
     Scope,
     ScopeType,
-    scopeTypeMap,
-    TypeAnalysis,
-} from '@/core/domain/ast/contracts/CodeGraph';
+} from '@/core/domain/ast/contracts/Parser';
+import { objQueries, ParserQuery, QueryType } from './query';
+import { TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 import { findLastIndexOf } from '@/shared/utils/arrays';
 import {
     LanguageResolver,
     ResolvedImport,
 } from '@/core/domain/ast/contracts/LanguageResolver';
-
-export type Method = {
-    name: string;
-    params: MethodParameter[];
-    returnType: string | null;
-    bodyNode: SyntaxNode | null;
-    scope: Scope[];
-};
-
-export type MethodParameter = {
-    name: string;
-    type: string | null;
-};
-
-export type ObjectProperties = {
-    properties: ObjectProperty[];
-    type: string | null;
-};
-
-export type ObjectProperty = {
-    name: string;
-    type: string | null;
-    value: string | null;
-};
-
-export type CallChain = {
-    name: string;
-    type: ChainType;
-    id: number;
-};
-
-export enum ChainType {
-    FUNCTION = 'function',
-    MEMBER = 'member',
-}
 
 export abstract class BaseParser {
     private readonly importPathResolver: LanguageResolver;
@@ -142,10 +112,22 @@ export abstract class BaseParser {
         for (const match of matches) {
             const captures = match.captures;
 
-            const originName = this.getImportOriginName(match);
-            if (!originName) continue;
+            const importCap = captures.find(
+                (capture) => capture.name === 'import',
+            );
+            if (!importCap || !importCap.node) continue;
 
-            const imported = this.parseImportedSymbols(captures);
+            const analysisNode = this.newAnalysisNode(
+                importCap.node,
+                QueryType.IMPORT_QUERY,
+            );
+
+            const originName = this.processImportOrigin(match, analysisNode);
+
+            const imported = this.processImportedSymbols(
+                captures,
+                analysisNode,
+            );
             const resolvedImport = this.resolveImportWithCache(
                 originName,
                 imported,
@@ -160,55 +142,97 @@ export abstract class BaseParser {
         }
     }
 
-    protected getImportOriginName(match: QueryMatch): string | null {
+    protected processImportOrigin(
+        match: QueryMatch,
+        parentNode: AnalysisNode,
+    ): string | null {
         const originCapture = match.captures.find(
             (capture) => capture.name === 'origin',
         );
-        if (!originCapture) return null;
+        if (!originCapture || !originCapture.node) return;
+        const originNode = originCapture.node;
 
-        return originCapture.node.text;
+        this.addChildSyntaxNodeToNode(parentNode, originNode);
+        return this.getImportOriginName(originNode, match);
     }
 
-    protected parseImportedSymbols(
+    protected getImportOriginName(
+        node: SyntaxNode,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        match?: QueryMatch | null,
+    ): string | null {
+        return node ? node.text : null;
+    }
+
+    protected processImportedSymbols(
         captures: QueryCapture[],
-    ): { symbol: string; alias: string | null }[] {
-        const imported: { symbol: string; alias: string | null }[] = [];
+        parentNode: AnalysisNode,
+    ): ImportedSymbol[] {
+        const imported: ImportedSymbol[] = [];
 
         for (const capture of captures) {
             const captureName = capture.name;
             const nodeText = capture.node.text;
 
-            if (captureName === 'symbol') {
-                imported.push({ symbol: nodeText, alias: null });
+            switch (captureName) {
+                case 'symbol': {
+                    this.appendOrUpdateElement(imported, {
+                        nodeId: capture.node.id,
+                        symbol: nodeText,
+                    });
+                    break;
+                }
+                case 'alias': {
+                    this.appendOrUpdateElement(imported, {
+                        alias: nodeText,
+                    });
+                    break;
+                }
             }
 
-            if (captureName === 'alias' && imported.length > 0) {
-                imported[imported.length - 1].alias = nodeText;
-            }
+            this.addChildSyntaxNodeToNode(parentNode, capture.node);
         }
 
         if (imported.length === 0) {
+            let nodeId = -1;
             let alias: string | null = null;
             const aliasCapture = captures.find(
                 (capture) => capture.name === 'alias',
             );
             if (aliasCapture) {
+                nodeId = aliasCapture.node.id;
                 alias = aliasCapture.node.text;
             }
-            imported.push({ symbol: '*', alias });
+            imported.push({
+                nodeId,
+                symbol: '*',
+                alias,
+            });
+        } else if (
+            imported.length === 1 &&
+            imported[0].alias &&
+            !imported[0].symbol
+        ) {
+            const first = imported[0];
+            const aliasCapture = captures.find(
+                (capture) => capture.name === 'alias',
+            );
+            first.symbol = '*';
+            first.nodeId = aliasCapture.node.id;
         }
 
         return imported;
     }
 
     protected registerImportedSymbols(
-        imported: { symbol: string; alias: string | null }[],
+        imported: ImportedSymbol[],
         normalizedPath: string,
     ): void {
-        for (const { symbol: name, alias } of imported) {
-            this.context.importedMapping.set(name, normalizedPath);
+        for (const { nodeId, symbol, alias } of imported) {
+            this.context.importedMapping.set(nodeId.toString(), symbol);
+            this.context.importedMapping.set(symbol, normalizedPath);
             if (alias) {
-                this.context.importedMapping.set(alias, name);
+                this.context.importedMapping.set(alias, symbol);
             }
         }
     }
@@ -262,9 +286,10 @@ export abstract class BaseParser {
     protected processObjMatch(
         match: QueryMatch,
         absolutePath: string,
-        type: string,
+        type: QueryType,
     ): TypeAnalysis {
         const objAnalysis: TypeAnalysis = {
+            nodeId: -1,
             name: '',
             extends: [],
             implements: [],
@@ -279,8 +304,28 @@ export abstract class BaseParser {
             type: null,
         };
 
+        const objCapture = match.captures.find(
+            (capture) => capture.name === 'obj',
+        );
+        if (!objCapture || !objCapture.node) {
+            throw new Error('Object capture not found in match');
+        }
+
+        objAnalysis.nodeId = objCapture.node.id;
+
+        const objNode = this.newAnalysisNode(objCapture.node, objAnalysis.type);
+        if (!objNode) {
+            throw new Error('Failed to create analysis node for object');
+        }
+
         for (const capture of match.captures) {
-            this.processObjCapture(capture, objAnalysis, methods, properties);
+            this.processObjCapture(
+                capture,
+                objAnalysis,
+                methods,
+                properties,
+                objNode,
+            );
         }
 
         this.processMethods(objAnalysis, methods);
@@ -295,17 +340,18 @@ export abstract class BaseParser {
         objAnalysis: TypeAnalysis,
         methods: Method[],
         objProps: ObjectProperties,
+        objNode: AnalysisNode,
     ): void {
-        const text = capture.node?.text;
-        if (!text) {
-            return;
-        }
+        const node = capture.node;
+        if (!node) return;
+
+        const text = node.text;
 
         const lastMethod = methods[methods.length - 1];
 
         switch (capture.name) {
             case 'objName': {
-                const scopeChain = this.getScopeChain(capture.node);
+                const scopeChain = this.getScopeChain(node);
                 objAnalysis.name = text;
                 objAnalysis.scope = scopeChain;
                 break;
@@ -319,11 +365,11 @@ export abstract class BaseParser {
                 break;
             }
             case 'objMethod': {
-                this.addNewMethod(methods, text);
+                this.addNewMethod(methods, node);
                 break;
             }
             case 'objMethodParams': {
-                this.processMethodParameters(lastMethod, capture.node);
+                this.processMethodParameters(lastMethod, node);
                 break;
             }
             case 'objMethodReturnType': {
@@ -331,19 +377,20 @@ export abstract class BaseParser {
                 break;
             }
             case 'objProperty': {
-                this.addObjProperty(objProps.properties, {
+                this.appendOrUpdateElement(objProps.properties, {
+                    nodeId: node.id,
                     name: text,
                 });
                 break;
             }
             case 'objPropertyType': {
-                this.addObjProperty(objProps.properties, {
+                this.appendOrUpdateElement(objProps.properties, {
                     type: text,
                 });
                 break;
             }
             case 'objPropertyValue': {
-                this.addObjProperty(objProps.properties, {
+                this.appendOrUpdateElement(objProps.properties, {
                     value: text,
                 });
                 break;
@@ -353,30 +400,30 @@ export abstract class BaseParser {
                 break;
             }
             default: {
-                this.processExtraObjCapture(
-                    capture,
-                    objAnalysis,
-                    methods,
-                    objProps,
-                );
+                if (this.processExtraObjCapture)
+                    this.processExtraObjCapture(
+                        capture,
+                        objAnalysis,
+                        methods,
+                        objProps,
+                    );
                 break;
             }
         }
+
+        this.addChildSyntaxNodeToNode(objNode, node);
     }
 
-    /* eslint-disable @typescript-eslint/no-unused-vars */
     /**
-     * override this method to process extra captures that are not handled by the default implementation.
+     * Override this method to process extra captures that are not handled by the default implementation.
+     * See Ruby parser for an example.
      */
-    protected processExtraObjCapture(
+    protected processExtraObjCapture?(
         capture: QueryCapture,
         objAnalysis: TypeAnalysis,
         methods: Method[],
         objProps: ObjectProperties,
-    ): void {
-        return; // No extra processing needed generally
-    }
-    /* eslint-enable @typescript-eslint/no-unused-vars */
+    ): void;
 
     protected addObjExtension(
         objAnalysis: TypeAnalysis,
@@ -414,9 +461,12 @@ export abstract class BaseParser {
         objAnalysis.implements.push(key);
     }
 
-    protected addNewMethod(methods: Method[], methodName: string): void {
+    protected addNewMethod(methods: Method[], node: SyntaxNode): void {
+        if (!node || !node.id) return;
+
         methods.push({
-            name: methodName,
+            nodeId: node.id,
+            name: node.text,
             params: [],
             returnType: null,
             bodyNode: null,
@@ -435,13 +485,14 @@ export abstract class BaseParser {
             for (const capture of match.captures) {
                 switch (capture.name) {
                     case 'funcParamName': {
-                        this.addMethodParameter(method, {
+                        this.appendOrUpdateElement(method.params, {
+                            nodeId: capture.node.id,
                             name: capture.node.text,
                         });
                         break;
                     }
                     case 'funcParamType': {
-                        this.addMethodParameter(method, {
+                        this.appendOrUpdateElement(method.params, {
                             type: capture.node.text,
                         });
                         break;
@@ -451,53 +502,9 @@ export abstract class BaseParser {
         }
     }
 
-    protected addMethodParameter(
-        method: Method,
-        newInfo: Partial<MethodParameter>,
-    ): void {
-        const last = method.params[method.params.length - 1];
-
-        const needsNew =
-            !last || // no params yet
-            (newInfo.name && last.name !== null) || // a new name seen
-            (newInfo.type && last.type !== null); // a new type seen
-
-        if (needsNew) {
-            method.params.push({ name: null, type: null });
-        }
-
-        const current = method.params[method.params.length - 1];
-
-        if (newInfo.name !== undefined) current.name = newInfo.name;
-        if (newInfo.type !== undefined) current.type = newInfo.type;
-    }
-
     protected setMethodReturnType(method: Method, returnType: string): void {
         if (!method) return;
         method.returnType = returnType;
-    }
-
-    protected addObjProperty(
-        properties: ObjectProperty[],
-        newInfo: Partial<ObjectProperty>,
-    ): void {
-        const last = properties[properties.length - 1];
-
-        const needsNew =
-            !last || // no properties yet
-            (newInfo.name && last.name !== null) || // a new name seen
-            (newInfo.type && last.type !== null) || // a new type seen
-            (newInfo.value && last.value !== null); // a new value seen
-
-        if (needsNew) {
-            properties.push({ name: null, type: null, value: null });
-        }
-
-        const current = properties[properties.length - 1];
-
-        if (newInfo.name !== undefined) current.name = newInfo.name;
-        if (newInfo.type !== undefined) current.type = newInfo.type;
-        if (newInfo.value !== undefined) current.value = newInfo.value;
     }
 
     protected processMethods(
@@ -545,11 +552,12 @@ export abstract class BaseParser {
         );
         if (!constructor) return;
 
-        for (const param of constructor.params) {
-            if (param.name && param.type && objAnalysis.scope) {
-                const fullName = `${this.scopeToString(objAnalysis.scope)}::${param.name}`;
-                const fullType = `${this.scopeToString(objAnalysis.scope)}::${param.type}`;
+        for (const { nodeId, name, type } of constructor.params) {
+            if (nodeId && name && type && objAnalysis.scope) {
+                const fullName = `${this.scopeToString(objAnalysis.scope)}::${name}`;
+                const fullType = `${this.scopeToString(objAnalysis.scope)}::${type}`;
 
+                this.context.instanceMapping.set(nodeId.toString(), fullName);
                 this.context.instanceMapping.set(fullName, fullType);
                 this.context.instanceMapping.set(fullType, fullName);
             }
@@ -571,6 +579,7 @@ export abstract class BaseParser {
             if (captures.length === 0) continue;
 
             const method: Method = {
+                nodeId: -1,
                 name: '',
                 params: [],
                 returnType: null,
@@ -618,6 +627,7 @@ export abstract class BaseParser {
                 '';
 
             this.context.functions.set(key, {
+                nodeId: method.nodeId,
                 file: absolutePath,
                 name: method.name,
                 params,
@@ -642,6 +652,10 @@ export abstract class BaseParser {
         if (!node) return;
 
         switch (capture.name) {
+            case 'func': {
+                method.nodeId = node.id;
+                break;
+            }
             case 'funcName': {
                 const scopeChain = this.getScopeChain(node);
                 method.name = node.text;
@@ -695,9 +709,10 @@ export abstract class BaseParser {
                 let caller = this.getSelfAccessReference();
                 let targetFile = absolutePath;
 
-                for (const { name, type } of chain) {
+                for (const { name, type, nodeId } of chain) {
                     if (type === ChainType.FUNCTION) {
                         calls.push({
+                            nodeId,
                             function: name,
                             file: targetFile,
                             caller,
@@ -732,6 +747,7 @@ export abstract class BaseParser {
             if (captures.length === 0) continue;
 
             const typeAnalysis: TypeAnalysis = {
+                nodeId: -1,
                 name: '',
                 extends: [],
                 implements: [],
@@ -747,6 +763,10 @@ export abstract class BaseParser {
                 const typeFields = [] as string[];
 
                 switch (capture.name) {
+                    case 'typeAlias': {
+                        typeAnalysis.nodeId = node.id;
+                        break;
+                    }
                     case 'typeName': {
                         const scopeChain = this.getScopeChain(node);
                         typeAnalysis.name = node.text;
@@ -802,10 +822,6 @@ export abstract class BaseParser {
 
     protected abstract getScopeTypeForNode(node: SyntaxNode): Scope | null;
 
-    private stringToScopeType(type: string): ScopeType | undefined {
-        return scopeTypeMap[type];
-    }
-
     protected abstract processChainNode(
         node: SyntaxNode,
         chain: CallChain[],
@@ -854,7 +870,7 @@ export abstract class BaseParser {
             chain.push({
                 name: field.text,
                 type,
-                id: nodeId,
+                nodeId,
             });
         }
     }
@@ -912,5 +928,121 @@ export abstract class BaseParser {
 
     protected normalizeSignatureText(original: string): string {
         return original.replace(/\s+/g, ' ').trim();
+    }
+
+    protected newAnalysisNode(
+        node: SyntaxNode,
+        queryType: QueryType,
+    ): AnalysisNode | null {
+        if (!node) return null;
+        const newNode = {
+            type: node.type,
+            queryType,
+            text: node.text,
+            id: node.id,
+            position: {
+                endIndex: node.endIndex,
+                startIndex: node.startIndex,
+                startPosition: node.startPosition,
+                endPosition: node.endPosition,
+            },
+        };
+
+        this.registerAnalysisNode(newNode);
+        return newNode;
+    }
+
+    protected addChildToNode(parent: AnalysisNode, child: AnalysisNode): void {
+        if (!parent.children) {
+            parent.children = [];
+        }
+
+        if (parent.id === child.id) return;
+
+        parent.children.push(child);
+    }
+
+    protected addChildSyntaxNodeToNode(
+        parent: AnalysisNode,
+        child: SyntaxNode,
+        queryType: QueryType = parent.queryType,
+    ): AnalysisNode | null {
+        if (!parent.children) {
+            parent.children = [];
+        }
+
+        if (parent.id === child.id) return null;
+
+        const childNode = this.newAnalysisNode(child, queryType);
+        if (childNode) {
+            parent.children.push(childNode);
+        }
+        return childNode;
+    }
+
+    protected registerAnalysisNode(node: AnalysisNode): void {
+        if (!node || !node.id) return;
+
+        if (this.context.analysisNodes.has(node.id)) {
+            return;
+        }
+
+        this.context.analysisNodes.set(node.id, node);
+    }
+
+    /**
+     * Appends a new element to the array or updates the last element with new values.
+     * If the last element has any non-null properties that would be overwritten, a new element is created.
+     *
+     * This method is useful when maintaining a list of objects that follow a pattern where the first element is non-optional/always the same type.
+     *
+     * `(name1, name2: type2, name3: type3 = defaultValue3)` always starts with the parameter name.
+     *
+     * results in: `[{ name: 'name1', type: null, defaultValue: null }, { name: 'name2', type: 'type2', defaultValue: null  }, { name: 'name3', type: 'type3', defaultValue: 'defaultValue3' }]`
+     *
+     * Not recommended when the first element type is optional or may change.
+     *
+     * `(name1, type2: name2, type3: name3 = defaultValue3)` the first element may be name or type.
+     *
+     * results in: `[{ name: 'name1', type: 'type2', defaultValue: null }, { name: 'name2', type: 'type3', defaultValue: null }, { name: 'name3', type: null, defaultValue: 'defaultValue3' }]`
+     *
+     * @param array The array to append or update.
+     * @param newInfo The new information to apply to the last element or the new element.
+     */
+    protected appendOrUpdateElement<T>(array: T[], newInfo: Partial<T>): void {
+        // Get the last element or create a new one with all null values
+        let current = array[array.length - 1];
+
+        // If no elements exist or if any property in newInfo would overwrite a non-null value
+        const needsNew =
+            !current ||
+            Object.keys(newInfo).some(
+                (key) =>
+                    newInfo[key] !== undefined &&
+                    current[key] !== undefined &&
+                    current[key] !== null,
+            );
+
+        if (needsNew) {
+            // Merge keys
+            const keys = new Set([
+                ...Object.keys(newInfo),
+                ...Object.keys(current || {}),
+            ]);
+
+            // Create a new object with all properties set to null
+            current = {} as T;
+            for (const key in keys) {
+                current[key] = null;
+            }
+            array.push(current);
+        }
+
+        // Apply the new values
+        for (const key in newInfo) {
+            if (newInfo[key] !== undefined) {
+                current[key] = newInfo[key]!;
+            }
+        }
     }
 }

@@ -40,7 +40,7 @@ const importQuery: ParserQuery = {
         "load"
         "autoload"
     )
-)
+) @import
 `,
 };
 
@@ -51,12 +51,12 @@ const classQuery: ParserQuery = {
     name: (constant) @objName
     superclass: (superclass (constant) @objExtends)?
     ${classBodyQuery()}
-)
+) @obj
 
 (module
     name: (constant) @objName
     ${classBodyQuery()}
-)
+) @obj
 `,
 };
 
@@ -67,13 +67,13 @@ const functionQuery: ParserQuery = {
     name: (identifier) @funcName
     parameters: (_)? @funcParams
     body: (_) @funcBody
-)
+) @func
 
 (singleton_method
     name: (identifier) @funcName
     parameters: (_)? @funcParams
     body: (_) @funcBody
-)
+) @func
 
 (assignment
     left: (identifier) @funcName
@@ -81,7 +81,7 @@ const functionQuery: ParserQuery = {
     	parameters: (_)? @funcParams
         body: (_) @funcBody
     )
-)
+) @func
 `,
 };
 

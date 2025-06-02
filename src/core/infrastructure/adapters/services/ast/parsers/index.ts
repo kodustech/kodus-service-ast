@@ -4,12 +4,34 @@ import { TypeScriptParser } from './typescript/typescript-parser';
 import { PythonParser } from './python/python-parser';
 import { ParseContext } from '../../../../../domain/ast/contracts/Parser';
 import { RubyParser } from './ruby/ruby-parser';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
+import {
+    SUPPORTED_LANGUAGES,
+    SupportedLanguage,
+} from '@/core/domain/ast/contracts/SupportedLanguages';
 import { PhpParser } from './php/php-parser';
 import { CSharpParser } from './csharp/csharp-parser';
 import { JavaParser } from './java/java-parser';
 import { RustParser } from './rust/rust-parser';
 import { LanguageResolver } from '@/core/domain/ast/contracts/LanguageResolver';
+
+type ParserFactory = (
+    resolver: LanguageResolver,
+    context: ParseContext,
+) => BaseParser;
+
+const parserFactories: Record<SupportedLanguage, ParserFactory> = {
+    typescript: (r, c) => new TypeScriptParser(r, c),
+    javascript: (r, c) => new TypeScriptParser(r, c),
+    python: (r, c) => new PythonParser(r, c),
+    ruby: (r, c) => new RubyParser(r, c),
+    php: (r, c) => new PhpParser(r, c),
+    csharp: (r, c) => new CSharpParser(r, c),
+    java: (r, c) => new JavaParser(r, c),
+    rust: (r, c) => new RustParser(r, c),
+    go: () => {
+        throw new Error('Go parser not implemented yet');
+    },
+};
 
 export function getParserByFilePath(
     filePath: string,
@@ -24,30 +46,15 @@ export function getParserByFilePath(
     const language = Object.values(SUPPORTED_LANGUAGES).find((lang) =>
         lang.extensions.includes(extension),
     );
+
     if (!language) {
         throw new Error(`Language not supported: ${extension}`);
     }
 
-    switch (language.name) {
-        case SUPPORTED_LANGUAGES.typescript.name:
-            return new TypeScriptParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.javascript.name:
-            return new TypeScriptParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.python.name:
-            return new PythonParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.ruby.name:
-            return new RubyParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.php.name:
-            return new PhpParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.csharp.name:
-            return new CSharpParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.java.name:
-            return new JavaParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.rust.name:
-            return new RustParser(importPathResolver, context);
-        case SUPPORTED_LANGUAGES.go.name:
-            throw new Error('Go parser not implemented yet');
-        default:
-            throw new Error(`Language not supported: ${language.name}`);
+    const factory = parserFactories[language.name];
+    if (!factory) {
+        throw new Error(`Parser not implemented for: ${language.name}`);
     }
+
+    return factory(importPathResolver, context);
 }

@@ -10,13 +10,13 @@ const importQuery: ParserQuery = {
     	name: (identifier) @symbol
     )
     .
-)
+) @import
 
 (using_directive
     name: (identifier)? @alias
 	(identifier) @origin
     .
-)
+) @import
 `,
 };
 
@@ -61,15 +61,15 @@ const classQuery: ParserQuery = {
     query: `
 (class_declaration
     ${classAuxiliaryQuery}
-)
+) @obj
 
 (record_declaration
     ${classAuxiliaryQuery}
-)
+) @obj
 
 (struct_declaration
     ${classAuxiliaryQuery}
-)
+) @obj
 `,
 };
 
@@ -78,7 +78,7 @@ const interfaceQuery: ParserQuery = {
     query: `
 (interface_declaration
     ${classAuxiliaryQuery}
-)
+) @obj
 `,
 };
 
@@ -101,7 +101,7 @@ const enumQuery: ParserQuery = {
             	_*
             )*
         )
-)
+) @obj
 `,
 };
 
@@ -113,13 +113,13 @@ const functionQuery: ParserQuery = {
     name: (identifier) @funcName
     parameters: (parameter_list)? @funcParams
     body: (_) @funcBody
-)
+) @func
 
 (constructor_declaration
     name: (identifier) @funcName
     parameters: (parameter_list)? @funcParams
     body: (_) @funcBody
-)
+) @func
 
 (variable_declaration
     (variable_declarator
@@ -129,8 +129,8 @@ const functionQuery: ParserQuery = {
             (block) @funcBody
         )
     )
-)
-    `,
+) @func
+`,
 };
 
 const functionCallQuery: ParserQuery = {

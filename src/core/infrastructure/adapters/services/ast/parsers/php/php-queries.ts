@@ -71,7 +71,7 @@ const importQuery: ParserQuery = {
         )
         (name)? @alias
     )
-)
+) @import
 
 ;; use foo\bar\ {
 ;;  baz\buz,
@@ -89,7 +89,7 @@ const importQuery: ParserQuery = {
             ","?
         )+
     )
-)
+) @import
 
 ;; require 'foo.php';
 ;; include __DIR__ . '/foo.php';
@@ -109,7 +109,7 @@ const importQuery: ParserQuery = {
             ${importAuxiliaryQuery()}
         )
     ]
-)
+) @import
 `,
 };
 
@@ -128,7 +128,7 @@ const classQuery: ParserQuery = {
         )+
     )?
     body: ${declarationListQuery()}
-)
+) @obj
 `,
 };
 
@@ -147,7 +147,7 @@ const interfaceQuery: ParserQuery = {
         )+
     )?
     body: ${declarationListQuery()}
-)
+) @obj
 `,
 };
 
@@ -182,7 +182,7 @@ const enumQuery: ParserQuery = {
         _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -194,14 +194,14 @@ const functionQuery: ParserQuery = {
     parameters: (_)? @funcParams
 	return_type: (_)? @funcReturnType
     body: (_) @funcBody
-)
+) @func
 
 (method_declaration
     name: (name) @funcName
     parameters: (_)? @funcParams
     return_type: (_)? @funcReturnType
     body: (_) @funcBody
-)
+) @func
 
 (expression_statement
 	(assignment_expression
@@ -212,7 +212,8 @@ const functionQuery: ParserQuery = {
             body: (_) @funcBody
         )
     )
-)`,
+) @func
+`,
 };
 
 const functionCallQuery: ParserQuery = {

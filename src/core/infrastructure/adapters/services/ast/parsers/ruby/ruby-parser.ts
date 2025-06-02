@@ -1,19 +1,17 @@
-import {
-    BaseParser,
-    CallChain,
-    ChainType,
-    Method,
-    ObjectProperties,
-} from '../base-parser';
+import { BaseParser } from '../base-parser';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
 import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
+import { TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
+import { QueryType, ParserQuery } from '../query';
 import {
+    Method,
+    ObjectProperties,
+    ChainType,
+    CallChain,
     Scope,
     ScopeType,
-    TypeAnalysis,
-} from '@/core/domain/ast/contracts/CodeGraph';
-import { QueryType, ParserQuery } from '../query';
+} from '@/core/domain/ast/contracts/Parser';
 
 export class RubyParser extends BaseParser {
     private static readonly language = RubyLang as Language;
@@ -97,7 +95,7 @@ export class RubyParser extends BaseParser {
 
         if (propertiesCalls.has(methodName)) {
             args.forEach((arg) => {
-                this.addObjProperty(objProps.properties, { name: arg });
+                this.appendOrUpdateElement(objProps.properties, { name: arg });
             });
         }
     }

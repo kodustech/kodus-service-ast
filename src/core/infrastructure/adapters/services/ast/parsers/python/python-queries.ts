@@ -14,7 +14,7 @@ const importQuery: ParserQuery = {
         ]+
         ","?
     )+
-)
+) @import
 
 (import_from_statement
 	module_name: [
@@ -32,7 +32,7 @@ const importQuery: ParserQuery = {
         ]+
         ","?
     )+
-)
+) @import
 `,
 };
 
@@ -65,7 +65,7 @@ const classQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -77,7 +77,7 @@ const functionQuery: ParserQuery = {
     parameters: (_) @funcParams
     return_type: (_)? @funcReturnType
     body: (block) @funcBody
-)
+) @func
 
 (assignment
     left: (identifier) @funcName
@@ -85,7 +85,7 @@ const functionQuery: ParserQuery = {
         parameters: (_) @funcParams
         body: (_) @funcBody
     )
-)
+) @func
 `,
 };
 

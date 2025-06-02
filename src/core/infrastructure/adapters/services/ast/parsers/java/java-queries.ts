@@ -8,11 +8,11 @@ const importQuery: ParserQuery = {
     	scope: (_) @origin
     	name: (identifier) @symbol
     )
-)
+) @import
 
 (import_declaration
 	(identifier) @origin
-)
+) @import
 `,
 };
 
@@ -54,7 +54,7 @@ const classQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -83,7 +83,7 @@ const interfaceQuery: ParserQuery = {
             _*
         )*
     )
-)
+) @obj
 `,
 };
 
@@ -130,7 +130,7 @@ const enumQuery: ParserQuery = {
         )*
         )?
     )
-)
+) @obj
 `,
 };
 
@@ -142,13 +142,13 @@ const functionQuery: ParserQuery = {
     name: (identifier) @funcName
     parameters: (formal_parameters)? @funcParams
     body: (_) @funcBody
-)
+) @func
 
 (constructor_declaration
     name: (identifier) @funcName
     parameters: (formal_parameters)? @funcParams
     body: (_) @funcBody
-)
+) @func
 
 (variable_declarator
 	name: (identifier) @funcName
@@ -156,7 +156,7 @@ const functionQuery: ParserQuery = {
     	parameters: (_)? @funcParams
         body: (_)? @funcBody
     )
-)
+) @func
 `,
 };
 

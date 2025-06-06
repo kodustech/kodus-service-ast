@@ -4,8 +4,6 @@ import { AppModule } from './modules/app.module';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service';
 import { resolve } from 'path';
 import { cwd } from 'process';
-import * as grpc from '@grpc/grpc-js';
-import * as fs from 'fs';
 import {
     getEnvVariableAsNumberOrExit,
     getEnvVariableOrExit,
@@ -56,20 +54,6 @@ async function bootstrap() {
                     resolve(cwd(), 'node_modules/@kodus/kodus-proto/'),
                 ],
             },
-            credentials: grpc.ServerCredentials.createSsl(
-                fs.readFileSync(resolve(cwd(), 'certs/ca.crt')),
-                [
-                    {
-                        private_key: fs.readFileSync(
-                            resolve(cwd(), 'certs/server.key'),
-                        ),
-                        cert_chain: fs.readFileSync(
-                            resolve(cwd(), 'certs/server.crt'),
-                        ),
-                    },
-                ],
-                true,
-            ),
         },
     });
 

@@ -2,17 +2,17 @@ import { BaseParser } from './base-parser';
 import * as Path from 'path';
 import { TypeScriptParser } from './typescript/typescript-parser';
 import { PythonParser } from './python/python-parser';
-import { ParseContext } from '../../../../../domain/ast/contracts/Parser';
+import { ParseContext } from '../../../../../domain/ast/types/parser';
 import { RubyParser } from './ruby/ruby-parser';
 import {
     SUPPORTED_LANGUAGES,
     SupportedLanguage,
-} from '@/core/domain/ast/contracts/SupportedLanguages';
+} from '@/core/domain/ast/types/supported-languages';
 import { PhpParser } from './php/php-parser';
 import { CSharpParser } from './csharp/csharp-parser';
 import { JavaParser } from './java/java-parser';
 import { RustParser } from './rust/rust-parser';
-import { LanguageResolver } from '@/core/domain/ast/contracts/LanguageResolver';
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
 
 type ParserFactory = (
     resolver: LanguageResolver,

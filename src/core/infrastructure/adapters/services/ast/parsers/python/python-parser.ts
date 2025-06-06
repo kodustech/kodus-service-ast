@@ -2,9 +2,9 @@ import { BaseParser } from '../base-parser';
 import { Language, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
 import { pythonQueries } from './python-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
+import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
 import { QueryType, ParserQuery } from '../query';
-import { ChainType, CallChain } from '@/core/domain/ast/contracts/Parser';
+import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
 
 export class PythonParser extends BaseParser {
     private static readonly language = PythonLang as Language;

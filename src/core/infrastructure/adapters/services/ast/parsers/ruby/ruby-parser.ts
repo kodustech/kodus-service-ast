@@ -2,7 +2,7 @@ import { BaseParser } from '../base-parser';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
 import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
-import { TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
+import { TypeAnalysis } from '@/core/domain/ast/types/code-graph';
 import { QueryType, ParserQuery } from '../query';
 import {
     Method,
@@ -11,7 +11,7 @@ import {
     CallChain,
     Scope,
     ScopeType,
-} from '@/core/domain/ast/contracts/Parser';
+} from '@/core/domain/ast/types/parser';
 
 export class RubyParser extends BaseParser {
     private static readonly language = RubyLang as Language;

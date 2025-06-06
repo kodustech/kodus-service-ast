@@ -2,9 +2,9 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import { javaQueries } from './java-queries';
 import * as JavaLang from 'tree-sitter-java';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
+import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
 import { QueryType, ParserQuery } from '../query';
-import { ChainType, CallChain } from '@/core/domain/ast/contracts/Parser';
+import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
 
 export class JavaParser extends BaseParser {
     private static readonly language = JavaLang as Language;

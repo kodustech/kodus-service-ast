@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
 import { handleError, isError } from '@/shared/utils/errors';
-import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto';
+import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/v1';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -29,7 +29,12 @@ export class RepositoryManagerService implements IRepositoryManager {
                 await fs.promises.mkdir(this.baseDir, { recursive: true });
             }
         } catch (error) {
-            console.error('Error creating base directory:', error);
+            this.logger.error({
+                message: 'Error ensuring base directory exists',
+                context: RepositoryManagerService.name,
+                error: handleError(error),
+                metadata: { baseDir: this.baseDir },
+            });
             throw error;
         }
     }
@@ -39,16 +44,13 @@ export class RepositoryManagerService implements IRepositoryManager {
         return path.join(this.baseDir, safeOrgId);
     }
 
-    private async getRepoDir(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
-        branchName: string,
-    ): Promise<string> {
+    private async getRepoDir(repoData: RepositoryData): Promise<string> {
+        const { organizationId, repositoryId, repositoryName, branch } =
+            repoData;
         const safeOrgId = this.sanitizeIdentifier(organizationId);
         const safeRepoId = this.sanitizeIdentifier(repositoryId);
         const safeRepoName = this.sanitizeIdentifier(repositoryName);
-        const safeBranchName = this.sanitizeIdentifier(branchName);
+        const safeBranchName = this.sanitizeIdentifier(branch);
         const repoPath = path.join(
             this.baseDir,
             safeOrgId,
@@ -183,35 +185,25 @@ export class RepositoryManagerService implements IRepositoryManager {
         return git;
     }
 
-    async gitCloneWithAuth(params: RepositoryData): Promise<string> {
-        this.validateGitUrl(params.url);
-        await this.ensureClientDirExists(params.organizationId);
+    async gitCloneWithAuth(repoData: RepositoryData): Promise<string> {
+        this.validateGitUrl(repoData.url);
+        await this.ensureClientDirExists(repoData.organizationId);
 
-        const repoPath = await this.getRepoDir(
-            params.organizationId,
-            params.repositoryId,
-            params.repositoryName,
-            params.branch,
-        );
+        const repoPath = await this.getRepoDir(repoData);
 
         if (await fs.promises.stat(repoPath).catch(() => false)) {
-            await this.deleteLocalRepository(
-                params.organizationId,
-                params.repositoryId,
-                params.repositoryName,
-                params.branch,
-            );
+            await this.deleteLocalRepository(repoData);
         }
 
-        let cloneUrl = params.url;
+        let cloneUrl = repoData.url;
 
-        if (params.auth) {
-            const { token } = params.auth;
-            const urlObj = new URL(params.url);
+        if (repoData.auth) {
+            const { token } = repoData.auth;
+            const urlObj = new URL(repoData.url);
 
             if (token) {
                 if (
-                    params.provider ===
+                    repoData.provider ===
                     ProtoPlatformType.PROTO_PLATFORM_TYPE_GITHUB
                 ) {
                     urlObj.username = token;
@@ -235,20 +227,15 @@ export class RepositoryManagerService implements IRepositoryManager {
                 '--progress',
             ];
 
-            if (params.branch) {
-                cloneOptions.push('--branch', params.branch);
+            if (repoData.branch) {
+                cloneOptions.push('--branch', repoData.branch);
             }
 
             await git.clone(cloneUrl, repoPath, cloneOptions);
 
             const stats = await this.getDirectorySize(repoPath);
             if (stats > this.MAX_REPO_SIZE) {
-                await this.deleteLocalRepository(
-                    params.organizationId,
-                    params.repositoryId,
-                    params.repositoryName,
-                    params.branch,
-                );
+                await this.deleteLocalRepository(repoData);
 
                 throw new Error(
                     `Repository size (${Math.round(stats / 1024 / 1024)}MB) exceeds max allowed (${Math.round(this.MAX_REPO_SIZE / 1024 / 1024)}MB)`,
@@ -261,15 +248,10 @@ export class RepositoryManagerService implements IRepositoryManager {
                 message: 'Error cloning repository',
                 context: RepositoryManagerService.name,
                 error: handleError(error),
-                metadata: { params, repoPath, cloneUrl },
+                metadata: { params: repoData, repoPath, cloneUrl },
             });
 
-            await this.deleteLocalRepository(
-                params.organizationId,
-                params.repositoryId,
-                params.repositoryName,
-                params.branch,
-            );
+            await this.deleteLocalRepository(repoData);
 
             throw error;
         }
@@ -301,18 +283,11 @@ export class RepositoryManagerService implements IRepositoryManager {
     }
 
     async deleteLocalRepository(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
-        branchName: string,
+        repoData: RepositoryData,
+        keepKodusData: boolean = true,
     ): Promise<void> {
         try {
-            const repoPath = await this.getRepoDir(
-                organizationId,
-                repositoryId,
-                repositoryName,
-                branchName,
-            );
+            const repoPath = await this.getRepoDir(repoData);
 
             const normalizedPath = repoPath.normalize();
             if (!normalizedPath.startsWith(this.baseDir)) {
@@ -322,17 +297,16 @@ export class RepositoryManagerService implements IRepositoryManager {
             }
 
             if (await fs.promises.stat(repoPath).catch(() => false)) {
-                await fs.promises.rm(repoPath, {
-                    recursive: true,
-                    force: true,
+                const entries = await fs.promises.readdir(repoPath, {
+                    withFileTypes: true,
                 });
-            }
-
-            const clientDir = this.getClientDir(organizationId);
-            if (await fs.promises.stat(clientDir).catch(() => false)) {
-                const files = await fs.promises.readdir(clientDir);
-                if (files.length === 0) {
-                    await fs.promises.rmdir(clientDir);
+                for (const entry of entries) {
+                    if (!keepKodusData && entry.name === '.kodus') continue;
+                    const entryPath = path.join(repoPath, entry.name);
+                    await fs.promises.rm(entryPath, {
+                        recursive: true,
+                        force: true,
+                    });
                 }
             }
         } catch (error) {
@@ -342,10 +316,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 context: RepositoryManagerService.name,
                 error: handleError(error),
                 metadata: {
-                    organizationId,
-                    repositoryId,
-                    repositoryName,
-                    branchName,
+                    repoData,
                 },
             });
             throw error;
@@ -404,21 +375,13 @@ export class RepositoryManagerService implements IRepositoryManager {
     }
 
     async listRepositoryFiles(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
-        branchName: string,
+        repoData: RepositoryData,
         patterns?: string[],
         excludePatterns?: string[],
         maxFiles?: number,
     ): Promise<string[]> {
         try {
-            const repoPath = await this.getRepoDir(
-                organizationId,
-                repositoryId,
-                repositoryName,
-                branchName,
-            );
+            const repoPath = await this.getRepoDir(repoData);
 
             const repoExists = await fs.promises
                 .stat(repoPath)
@@ -439,63 +402,85 @@ export class RepositoryManagerService implements IRepositoryManager {
 
             return files;
         } catch (error) {
-            console.error('Error listing repository files:', error);
+            this.logger.error({
+                message: 'Error listing repository files',
+                context: RepositoryManagerService.name,
+                error: handleError(error),
+                metadata: {
+                    repoData,
+                    patterns,
+                    excludePatterns,
+                    maxFiles,
+                },
+            });
             throw error;
         }
     }
 
-    async readFileContent(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
-        filePath: string,
-        branchName: string,
-    ): Promise<string> {
+    public async writeFile(
+        repoData: RepositoryData,
+        fileName: string,
+        data: Buffer | string,
+    ): Promise<boolean> {
         try {
-            const repoPath = await this.getRepoDir(
-                organizationId,
-                repositoryId,
-                repositoryName,
-                branchName,
-            );
+            const repoPath = await this.getRepoDir(repoData);
 
-            const repoExists = await fs.promises
-                .stat(repoPath)
-                .catch(() => false);
-            if (!repoExists) {
-                throw new Error('Repository not found');
-            }
-
-            const fullPath = path.join(repoPath, filePath);
+            const fullPath = path.join(repoPath, '.kodus', fileName);
             const normalizedFullPath = fullPath.normalize();
             if (!normalizedFullPath.startsWith(repoPath)) {
                 throw new Error('Invalid file path: path traversal detected');
             }
 
-            const stats = await fs.promises.stat(fullPath);
-            const MAX_FILE_SIZE = 10 * 1024 * 1024;
+            await fs.promises.mkdir(path.dirname(fullPath), {
+                recursive: true,
+            });
+            await fs.promises.writeFile(fullPath, data);
 
-            if (stats.size > MAX_FILE_SIZE) {
-                throw new Error(
-                    `File size (${Math.round(stats.size / 1024 / 1024)}MB) exceeds max allowed (10MB)`,
-                );
-            }
-
-            return await fs.promises.readFile(fullPath, 'utf-8');
+            return true;
         } catch (error) {
             this.logger.error({
-                message: 'Error reading file content',
+                message: 'Error writing file',
                 context: RepositoryManagerService.name,
                 error: handleError(error),
                 metadata: {
-                    organizationId,
-                    repositoryId,
-                    repositoryName,
-                    filePath,
-                    branchName,
+                    repoData,
+                    filePath: fileName,
+                    data: data.toString('base64').slice(0, 100), // Log only first 100 chars for safety
                 },
             });
-            throw error;
+            return false;
+        }
+    }
+
+    public async readFile(
+        repoData: RepositoryData,
+        fileName: string,
+    ): Promise<Buffer | null> {
+        try {
+            const repoPath = await this.getRepoDir(repoData);
+
+            const fullPath = path.join(repoPath, '.kodus', fileName);
+            const normalizedFullPath = fullPath.normalize();
+            if (!normalizedFullPath.startsWith(repoPath)) {
+                throw new Error('Invalid file path: path traversal detected');
+            }
+
+            if (!(await fs.promises.stat(fullPath).catch(() => false))) {
+                return null;
+            }
+
+            return await fs.promises.readFile(fullPath);
+        } catch (error) {
+            this.logger.error({
+                message: 'Error reading file',
+                context: RepositoryManagerService.name,
+                error: handleError(error),
+                metadata: {
+                    repoData,
+                    filePath: fileName,
+                },
+            });
+            return null;
         }
     }
 }

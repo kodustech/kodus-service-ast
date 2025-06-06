@@ -12,15 +12,13 @@ import {
     ParseContext,
     Scope,
     ScopeType,
-} from '@/core/domain/ast/contracts/Parser';
+} from '@/core/domain/ast/types/parser';
 import { objQueries, ParserQuery, QueryType } from './query';
-import { TypeAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
+import { TypeAnalysis } from '@/core/domain/ast/types/code-graph';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 import { findLastIndexOf } from '@/shared/utils/arrays';
-import {
-    LanguageResolver,
-    ResolvedImport,
-} from '@/core/domain/ast/contracts/LanguageResolver';
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
+import { ResolvedImport } from '@/core/domain/ast/types/language-resolver';
 
 export abstract class BaseParser {
     private readonly importPathResolver: LanguageResolver;
@@ -294,6 +292,9 @@ export abstract class BaseParser {
             extends: [],
             implements: [],
             fields: {},
+            extendedBy: [],
+            implementedBy: [],
+            scope: [],
             file: absolutePath,
             type,
         };
@@ -752,6 +753,9 @@ export abstract class BaseParser {
                 extends: [],
                 implements: [],
                 fields: {},
+                extendedBy: [],
+                implementedBy: [],
+                scope: [],
                 file: absolutePath,
                 type: QueryType.TYPE_ALIAS_QUERY,
             };

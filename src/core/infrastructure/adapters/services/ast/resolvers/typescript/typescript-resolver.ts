@@ -7,12 +7,12 @@ import {
     resolveModuleName,
 } from 'typescript';
 import { JavaScriptResolver } from '../javascript/javascript-resolver';
-import { SupportedLanguage } from '@/core/domain/ast/contracts/SupportedLanguages';
+import { SupportedLanguage } from '@/core/domain/ast/types/supported-languages';
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
 import {
     ImportedModule,
-    LanguageResolver,
     ResolvedImport,
-} from '@/core/domain/ast/contracts/LanguageResolver';
+} from '@/core/domain/ast/types/language-resolver';
 
 export class TypeScriptResolver
     extends JavaScriptResolver

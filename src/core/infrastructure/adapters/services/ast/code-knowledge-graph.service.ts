@@ -7,12 +7,12 @@ import {
     FileAnalysis,
     FunctionAnalysis,
     TypeAnalysis,
-} from '@/core/domain/ast/contracts/CodeGraph';
+} from '@/core/domain/ast/types/code-graph';
 
 import { Piscina } from 'piscina';
 import * as path from 'path';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/contracts/SupportedLanguages';
-import { ParserAnalysis } from '@/core/domain/ast/contracts/Parser';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/types/supported-languages';
+import { ParserAnalysis } from '@/core/domain/ast/types/parser';
 import { PinoLoggerService } from '../logger/pino.service';
 import { handleError } from '@/shared/utils/errors';
 import { SourceFileAnalyzer } from './analyze-source-file';
@@ -66,9 +66,7 @@ export class CodeKnowledgeGraphService {
             functions: new Map<string, FunctionAnalysis>(),
             types: new Map<string, TypeAnalysis>(),
             failedFiles: [],
-        } as CodeGraph & {
-            failedFiles: string[];
-        };
+        } as CodeGraph;
 
         const sourceFiles = await this.getAllSourceFiles(rootDir);
 
@@ -84,7 +82,7 @@ export class CodeKnowledgeGraphService {
             // 'integrationConfig.service.ts',
             // 'user.py',
             // 'example.rb',
-            // 'src/core/application/use-cases/codeReviewFeedback',
+            'src/core/application/use-cases/codeReviewFeedback',
             // 'src/core/application/use-cases/codeBase/php_project',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',
@@ -252,56 +250,6 @@ export class CodeKnowledgeGraphService {
         this.completeBidirectionalTypeRelations(result.types);
 
         return result;
-    }
-
-    prepareGraphForSerialization(graph: CodeGraph): CodeGraph {
-        const serialized: CodeGraph = {
-            files: new Map<string, FileAnalysis>(),
-            functions: new Map<string, FunctionAnalysis>(),
-            types: new Map<string, TypeAnalysis>(),
-        };
-
-        for (const [key, value] of graph.files.entries()) {
-            serialized.files[key] = value;
-        }
-
-        for (const [key, value] of graph.functions.entries()) {
-            serialized.functions[key] = value;
-        }
-
-        for (const [key, value] of graph.types.entries()) {
-            serialized.types[key] = value;
-        }
-
-        return serialized;
-    }
-
-    private deserializeGraph(serialized: CodeGraph): CodeGraph {
-        const graph: CodeGraph = {
-            files: new Map(),
-            functions: new Map(),
-            types: new Map(),
-        };
-
-        if (serialized.files) {
-            for (const [key, value] of Object.entries(serialized.files)) {
-                graph.files.set(key, value as FileAnalysis);
-            }
-        }
-
-        if (serialized.functions) {
-            for (const [key, value] of Object.entries(serialized.functions)) {
-                graph.functions.set(key, value as FunctionAnalysis);
-            }
-        }
-
-        if (serialized.types) {
-            for (const [key, value] of Object.entries(serialized.types)) {
-                graph.types.set(key, value as TypeAnalysis);
-            }
-        }
-
-        return graph;
     }
 
     private completeBidirectionalTypeRelations(

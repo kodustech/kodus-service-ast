@@ -30,7 +30,7 @@
         "@grpc/grpc-js": "^1.13.4",
         "@grpc/proto-loader": "^0.7.15",
         "@grpc/reflection": "^1.0.4",
-        "@kodus/kodus-proto": "^1.0.2",
+        "@kodus/kodus-proto": "^2.0.3",
         "@nestjs/common": "^11.1.2",
         "@nestjs/core": "^11.1.2",
         "@nestjs/microservices": "^11.1.2",

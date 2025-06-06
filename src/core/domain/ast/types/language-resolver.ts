@@ -1,14 +1,9 @@
-import { SupportedLanguage } from './SupportedLanguages';
+import { SupportedLanguage } from './supported-languages';
 
-export interface LanguageResolver {
-    canHandle(projectRoot: string): Promise<boolean>;
-    initialize(): Promise<boolean>;
-    resolveImport(imported: ImportedModule, fromFile: string): ResolvedImport;
-}
-export interface AliasConfig {
+export type AliasConfig = {
     pattern: string;
     target: string;
-}
+};
 
 export type ResolvedImport = {
     originalPath: string;

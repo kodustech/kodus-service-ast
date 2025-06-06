@@ -45,10 +45,10 @@ async function bootstrap() {
     httpApp.connectMicroservice<MicroserviceOptions>({
         transport: Transport.GRPC,
         options: {
-            package: 'kodus.ast.v1',
+            package: 'kodus.ast.v2',
             protoPath: resolve(
                 cwd(),
-                'node_modules/@kodus/kodus-proto/kodus/ast/v1/analyzer.proto',
+                'node_modules/@kodus/kodus-proto/kodus/ast/v2/analyzer.proto',
             ),
             url: `0.0.0.0:${grpcNumberPort}`,
             loader: {

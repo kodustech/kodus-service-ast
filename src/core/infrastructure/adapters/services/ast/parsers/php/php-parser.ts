@@ -2,9 +2,9 @@ import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
+import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
 import { QueryType, ParserQuery } from '../query';
-import { ChainType, CallChain } from '@/core/domain/ast/contracts/Parser';
+import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
 
 export class PhpParser extends BaseParser {
     private static readonly language = PhpLang as Language;

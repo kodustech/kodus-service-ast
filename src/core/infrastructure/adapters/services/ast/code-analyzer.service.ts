@@ -1,113 +1,13 @@
-import { CodeGraph, FileAnalysis } from '@/core/domain/ast/contracts/CodeGraph';
+import { CodeGraph, FileAnalysis } from '@/core/domain/ast/types/code-graph';
 import { Injectable } from '@nestjs/common';
-import { SyntaxNode } from 'tree-sitter';
 import { PinoLoggerService } from '../logger/pino.service';
-
-export enum NodeType {
-    CLASS = 'CLASS',
-    METHOD = 'METHOD',
-    FUNCTION = 'FUNCTION',
-    INTERFACE = 'INTERFACE',
-}
-interface EnrichGraphNode {
-    id: string;
-    type: NodeType;
-    file: string;
-    filePath: string;
-}
-
-export enum RelationshipType {
-    CALLS = 'CALLS',
-    CALLS_IMPLEMENTATION = 'CALLS_IMPLEMENTATION',
-    HAS_METHOD = 'HAS_METHOD',
-    IMPORTS = 'IMPORTS',
-    IMPLEMENTS = 'IMPLEMENTS',
-    IMPLEMENTED_BY = 'IMPLEMENTED_BY',
-    EXTENDS = 'EXTENDS',
-}
-
-interface ImpactedNode {
-    id: string;
-    type: string;
-    severity: string;
-    level: number;
-    filePath: string;
-    calledBy?: string[];
-    importedBy?: string[];
-}
-
-interface EnrichGraphEdge {
-    from: string;
-    to: string;
-    type: RelationshipType;
-    fromPath: string;
-    toPath: string;
-}
-
-export interface EnrichGraph {
-    nodes: EnrichGraphNode[];
-    relationships: EnrichGraphEdge[];
-}
-
-export interface ScopeAnalysis {
-    variables: string[];
-    functions: string[];
-    dependencies: string[];
-}
-
-export interface ComplexityAnalysis {
-    cyclomaticComplexity: number;
-    cognitiveComplexity: number;
-    details: {
-        conditionals: number;
-        loops: number;
-        switches: number;
-        catches: number;
-        logicalOperators: number;
-        recursion: boolean;
-    };
-}
-
-export interface ImpactResult {
-    function: string;
-    impact: {
-        summary: any;
-        groupedByLevel: Record<string, ImpactedNode[]>;
-    };
-}
-
-export interface FunctionsAffect {
-    functionName: string;
-    filePath: string;
-    functionBody: string;
-}
-
-export interface FunctionsAffectResult {
-    oldFunction: string;
-    newFunction: string;
-    functionsAffect: FunctionsAffect[];
-}
-
-export interface FunctionSimilarity {
-    functionName: string;
-    similarFunctions: [];
-}
-
-export interface ChangeResult {
-    added: FunctionResult[];
-    modified: FunctionResult[];
-    deleted: FunctionResult[];
-}
-
-export interface FunctionResult {
-    name: string;
-    fullName: string;
-    functionHash: string;
-    signatureHash: string;
-    node: SyntaxNode;
-    fullText: string;
-    lines: number;
-}
+import {
+    EnrichGraphNode,
+    EnrichGraphEdge,
+    EnrichGraph,
+    NodeType,
+    RelationshipType,
+} from '@/core/domain/ast/types/encriched-graph';
 
 @Injectable()
 export class CodeAnalyzerService {

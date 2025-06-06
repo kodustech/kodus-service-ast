@@ -2,9 +2,9 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import * as GoLang from 'tree-sitter-go';
 import { goQueries } from './go-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
+import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
 import { QueryType, ParserQuery } from '../query';
-import { CallChain } from '@/core/domain/ast/contracts/Parser';
+import { CallChain } from '@/core/domain/ast/types/parser';
 
 export class GoParser extends BaseParser {
     private static readonly language = GoLang as Language;

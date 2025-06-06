@@ -1,58 +1,47 @@
-import {
-    BuildEnrichedGraphUseCase,
-    CodeAnalysisAST,
-} from '@/core/application/use-cases/ast/build-enriched-graph.use-case';
-import { handleError } from '@/shared/utils/errors';
 import { Controller } from '@nestjs/common';
 import {
-    BuildEnrichedGraphRequest,
     ASTAnalyzerServiceController,
     ASTAnalyzerServiceControllerMethods,
-    BuildEnrichedGraphResponse,
-} from '@kodus/kodus-proto';
-import { from, Observable, switchMap } from 'rxjs';
-import { status } from '@grpc/grpc-js';
+    DeleteRepositoryRequest,
+    DeleteRepositoryResponse,
+    GetDiffRequest,
+    GetDiffResponse,
+    GetGraphsRequest,
+    GetGraphsResponse,
+    InitializeRepositoryRequest,
+    InitializeRepositoryResponse,
+} from '@kodus/kodus-proto/v2';
+import { Observable } from 'rxjs';
+import { InitializeRepositoryUseCase } from '@/core/application/use-cases/ast/initialize-repository.use-case';
+import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/delete-repository.use-case';
+import { GetGraphsUseCase } from '@/core/application/use-cases/ast/get-graphs.use-case';
 
-function* createChunkStream(
-    result: CodeAnalysisAST,
-    chunkSize = 1024 * 1024,
-): Generator<BuildEnrichedGraphResponse> {
-    const jsonString = JSON.stringify(result);
-    const totalLength = jsonString.length;
-
-    for (let i = 0; i < totalLength; i += chunkSize) {
-        yield {
-            data: jsonString.slice(i, i + chunkSize),
-            code: 0,
-        };
-    }
-}
 @Controller('ast')
 @ASTAnalyzerServiceControllerMethods()
 export class ASTController implements ASTAnalyzerServiceController {
     constructor(
-        private readonly buildEnrichedGraphUseCase: BuildEnrichedGraphUseCase,
+        private readonly initializeRepositoryUseCase: InitializeRepositoryUseCase,
+        private readonly deleteRepositoryUseCase: DeleteRepositoryUseCase,
+        private readonly getGraphsUseCase: GetGraphsUseCase,
     ) {}
 
-    buildEnrichedGraph(
-        request: BuildEnrichedGraphRequest,
-    ): Observable<BuildEnrichedGraphResponse> {
-        return from(
-            this.buildEnrichedGraphUseCase
-                .execute({
-                    baseRepo: request.baseRepo,
-                    headRepo: request.headRepo,
-                })
-                .then((result) => createChunkStream(result))
-                .catch((error) => {
-                    return [
-                        {
-                            data: '',
-                            code: status.INTERNAL,
-                            error: handleError(error).message,
-                        },
-                    ];
-                }),
-        ).pipe(switchMap((generator) => from(generator)));
+    initializeRepository(
+        request: InitializeRepositoryRequest,
+    ): Promise<InitializeRepositoryResponse> {
+        return this.initializeRepositoryUseCase.execute(request);
+    }
+
+    deleteRepository(
+        request: DeleteRepositoryRequest,
+    ): Promise<DeleteRepositoryResponse> {
+        return this.deleteRepositoryUseCase.execute(request);
+    }
+
+    getGraphs(request: GetGraphsRequest): Observable<GetGraphsResponse> {
+        return this.getGraphsUseCase.execute(request);
+    }
+
+    getDiff(request: GetDiffRequest): Observable<GetDiffResponse> {
+        throw new Error('Method not implemented.');
     }
 }

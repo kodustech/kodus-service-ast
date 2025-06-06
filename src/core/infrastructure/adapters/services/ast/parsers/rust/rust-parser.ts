@@ -2,9 +2,9 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import * as RustLang from 'tree-sitter-rust';
 import { rustQueries } from './rust-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/contracts/Parser';
+import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
 import { QueryType, ParserQuery } from '../query';
-import { CallChain, ChainType } from '@/core/domain/ast/contracts/Parser';
+import { CallChain, ChainType } from '@/core/domain/ast/types/parser';
 
 export class RustParser extends BaseParser {
     private static readonly language = RustLang as Language;

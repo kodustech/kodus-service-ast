@@ -1,7 +1,7 @@
 import {
     FunctionAnalysis,
     TypeAnalysis,
-} from '@/core/domain/ast/contracts/CodeGraph';
+} from '@/core/domain/ast/types/code-graph';
 import * as fs from 'fs';
 import { getParserByFilePath } from './parsers';
 import { BaseParser } from './parsers/base-parser';
@@ -10,9 +10,9 @@ import {
     Call,
     ParseContext,
     ParserAnalysis,
-} from '@/core/domain/ast/contracts/Parser';
+} from '@/core/domain/ast/types/parser';
 import { getLanguageResolver } from './resolvers';
-import { LanguageResolver } from '@/core/domain/ast/contracts/LanguageResolver';
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;
@@ -136,7 +136,12 @@ export class SourceFileAnalyzer {
 
     private emptyAnalysis(): ParserAnalysis {
         return {
-            fileAnalysis: { defines: [], calls: [], imports: [] },
+            fileAnalysis: {
+                defines: [],
+                calls: [],
+                imports: [],
+                className: [],
+            },
             functions: new Map(),
             types: new Map(),
             analysisNodes: new Map<number, AnalysisNode>(),

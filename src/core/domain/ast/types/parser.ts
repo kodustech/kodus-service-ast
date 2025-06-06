@@ -1,5 +1,5 @@
 import { QueryType } from '@/core/infrastructure/adapters/services/ast/parsers/query';
-import { FileAnalysis, FunctionAnalysis, TypeAnalysis } from './CodeGraph';
+import { FileAnalysis, FunctionAnalysis, TypeAnalysis } from './code-graph';
 import { Range, SyntaxNode } from 'tree-sitter';
 
 export enum ScopeType {
@@ -29,12 +29,12 @@ export const scopeTypeMap: Record<string, ScopeType> = Object.values(
 /**
  * Details of a function call
  */
-export interface Call {
+export type Call = {
     nodeId: number;
     function: string;
     file: string;
     caller?: string;
-}
+};
 
 export type AnalysisNode = {
     text: string;

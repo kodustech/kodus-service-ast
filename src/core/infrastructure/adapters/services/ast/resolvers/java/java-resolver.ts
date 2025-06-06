@@ -1,9 +1,9 @@
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
 import {
     ImportedModule,
-    LanguageResolver,
     ResolvedImport,
-} from '@/core/domain/ast/contracts/LanguageResolver';
-import { SupportedLanguage } from '@/core/domain/ast/contracts/SupportedLanguages';
+} from '@/core/domain/ast/types/language-resolver';
+import { SupportedLanguage } from '@/core/domain/ast/types/supported-languages';
 import {
     doesFileExist,
     tryReadFile,

@@ -10,11 +10,11 @@ export enum SupportedLanguage {
     RUST = 'rust',
 }
 
-export interface LanguageConfig {
+export type LanguageConfig = {
     name: SupportedLanguage;
     extensions: string[];
     defaultExtension: string;
-}
+};
 
 export const SUPPORTED_LANGUAGES: Record<SupportedLanguage, LanguageConfig> = {
     typescript: {

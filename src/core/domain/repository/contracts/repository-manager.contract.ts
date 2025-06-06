@@ -1,27 +1,24 @@
-import { RepositoryData } from '@kodus/kodus-proto';
+import { RepositoryData } from '@kodus/kodus-proto/v1';
 
 export interface IRepositoryManager {
-    gitCloneWithAuth(params: RepositoryData): Promise<string>;
+    gitCloneWithAuth(repoData: RepositoryData): Promise<string>;
     deleteLocalRepository(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
-        branchName: string,
+        repoData: RepositoryData,
+        keepKodusData?: boolean,
     ): Promise<void>;
     listRepositoryFiles(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
-        branchName: string,
+        repoData: RepositoryData,
         patterns?: string[],
         excludePatterns?: string[],
         maxFiles?: number,
     ): Promise<string[]>;
-    readFileContent(
-        organizationId: string,
-        repositoryId: string,
-        repositoryName: string,
+    writeFile(
+        repoData: RepositoryData,
         filePath: string,
-        branchName: string,
-    ): Promise<string>;
+        data: Buffer,
+    ): Promise<boolean>;
+    readFile(
+        repoData: RepositoryData,
+        filePath: string,
+    ): Promise<Buffer | null>;
 }

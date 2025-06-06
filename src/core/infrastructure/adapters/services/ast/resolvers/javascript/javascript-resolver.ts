@@ -1,10 +1,10 @@
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
 import {
     ImportedModule,
-    LanguageResolver,
     ResolvedImport,
-} from '@/core/domain/ast/contracts/LanguageResolver';
+} from '@/core/domain/ast/types/language-resolver';
 import * as path from 'path';
-import { SupportedLanguage } from '@/core/domain/ast/contracts/SupportedLanguages';
+import { SupportedLanguage } from '@/core/domain/ast/types/supported-languages';
 import { doesFileExist, tryReadFile } from '@/shared/utils/files';
 import { tryParseJson } from '@/shared/utils/parsers';
 

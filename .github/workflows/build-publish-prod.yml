@@ -37,6 +37,24 @@ jobs:
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3.10.0
 
+            - name: 🕵️‍♂️ Debug All CI/CD Variables
+              run: |
+                  echo "-------------------------------------------"
+                  echo "DEBUGGING CI/CD VALUES"
+                  echo "-------------------------------------------"
+                  echo "GCP_REGION Secret: '${{ secrets.GCP_REGION }}'"
+                  echo "GCP_PROJECT_ID Secret: '${{ secrets.GCP_PROJECT_ID }}'"
+                  echo "---"
+                  echo "AR_REGISTRY Env Var: '${{ env.AR_REGISTRY }}'"
+                  echo "GCP_PROJECT Env Var: '${{ env.GCP_PROJECT }}'"
+                  echo "REPOSITORY Env Var: '${{ env.REPOSITORY }}'"
+                  echo "IMAGE Env Var: '${{ env.IMAGE }}'"
+                  echo "IMAGE_TAG_VERSION Env Var: '${{ env.IMAGE_TAG_VERSION }}'"
+                  echo "---"
+                  echo "Final Push Path (SHA): ${{ env.AR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG_SHA }}"
+                  echo "Final Push Path (Version): ${{ env.AR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG_VERSION }}"
+                  echo "-------------------------------------------"
+
             - name: Build and Push Docker Image
               env:
                   AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev

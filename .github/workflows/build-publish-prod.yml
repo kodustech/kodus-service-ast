@@ -8,8 +8,20 @@ jobs:
     build-and-push:
         name: Build and Push Docker Image for Production
         runs-on: ubuntu-latest
+
+        # As variáveis de ambiente agora estão no nível do Job,
+        # disponíveis para todos os passos abaixo.
+        env:
+            AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+            GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+            REPOSITORY: kodus-images
+            IMAGE: kodus-service-ast-prod
+            IMAGE_TAG_SHA: ${{ github.sha }}
+            IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
+
         permissions:
             contents: read
+
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v4.2.2
@@ -27,42 +39,11 @@ jobs:
             - name: Configure Docker for Artifact Registry
               run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
-              # ADICIONE ESTE NOVO PASSO AQUI
-            - name: Debug Docker Config
-              run: |
-                  echo "--- Verificando o arquivo de configuração do Docker ---"
-                  cat ~/.docker/config.json
-                  echo "----------------------------------------------------"
-
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3.10.0
 
-            - name: 🕵️‍♂️ Debug All CI/CD Variables
-              run: |
-                  echo "-------------------------------------------"
-                  echo "DEBUGGING CI/CD VALUES"
-                  echo "-------------------------------------------"
-                  echo "GCP_REGION Secret: '${{ secrets.GCP_REGION }}'"
-                  echo "GCP_PROJECT_ID Secret: '${{ secrets.GCP_PROJECT_ID }}'"
-                  echo "---"
-                  echo "AR_REGISTRY Env Var: '${{ env.AR_REGISTRY }}'"
-                  echo "GCP_PROJECT Env Var: '${{ env.GCP_PROJECT }}'"
-                  echo "REPOSITORY Env Var: '${{ env.REPOSITORY }}'"
-                  echo "IMAGE Env Var: '${{ env.IMAGE }}'"
-                  echo "IMAGE_TAG_VERSION Env Var: '${{ env.IMAGE_TAG_VERSION }}'"
-                  echo "---"
-                  echo "Final Push Path (SHA): ${{ env.AR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG_SHA }}"
-                  echo "Final Push Path (Version): ${{ env.AR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG_VERSION }}"
-                  echo "-------------------------------------------"
-
             - name: Build and Push Docker Image
-              env:
-                  AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
-                  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
-                  REPOSITORY: kodus-images
-                  IMAGE: kodus-service-ast-prod
-                  IMAGE_TAG_SHA: ${{ github.sha }}
-                  IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
+              # Este passo não precisa mais de um bloco 'env'
               run: |
                   docker build \
                     --build-arg RELEASE_VERSION=$IMAGE_TAG_VERSION \
@@ -75,23 +56,17 @@ jobs:
                   docker push $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION
 
             - name: Cleanup Docker images
+              # Este passo também não precisa mais de um bloco 'env'
               run: |
                   docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA || true
                   docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION || true
-              env:
-                  AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
-                  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
-                  REPOSITORY: kodus-images
-                  IMAGE: kodus-service-ast-prod
-                  IMAGE_TAG_SHA: ${{ github.sha }}
-                  IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
 
             - name: Update Infrastructure Repository
               env:
-                  # Este token dá permissão para este workflow fazer push no repositório de infra
+                  # Este passo precisa de um 'env' próprio para o token, que é específico para ele
                   INFRA_REPO_PAT: ${{ secrets.INFRA_REPO_PAT }}
-                  # Variáveis para construir o nome completo da imagem
-                  FULL_IMAGE_PATH: "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/kodus-images/kodus-service-ast-prod:${{ github.event.release.tag_name }}"
+                  # A variável FULL_IMAGE_PATH é construída com as variáveis do job
+                  FULL_IMAGE_PATH: "$AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION"
               run: |
                   git config --global user.name "GitHub Actions"
                   git config --global user.email "actions@github.com"
@@ -105,7 +80,7 @@ jobs:
 
                   echo "Commitando e fazendo push da nova versão..."
                   git add envs/prod/platform-base.tfvars
-                  git commit -m "Deploy: Atualiza imagem do kodus-service-ast para ${{ github.event.release.tag_name }}"
+                  git commit -m "Deploy: Atualiza imagem do kodus-service-ast para $IMAGE_TAG_VERSION"
                   git push
 
             - name: Notificar Discord sobre Sucesso

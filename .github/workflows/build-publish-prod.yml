@@ -8,9 +8,6 @@ jobs:
     build-and-push:
         name: Build and Push Docker Image for Production
         runs-on: ubuntu-latest
-
-        # As variáveis de ambiente agora estão no nível do Job,
-        # disponíveis para todos os passos abaixo.
         env:
             AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
             GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
@@ -18,10 +15,8 @@ jobs:
             IMAGE: kodus-service-ast-prod
             IMAGE_TAG_SHA: ${{ github.sha }}
             IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
-
         permissions:
             contents: read
-
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v4.2.2
@@ -39,11 +34,24 @@ jobs:
             - name: Configure Docker for Artifact Registry
               run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
+            - name: 🕵️‍♂️ DANGER - DEBUG ALL VALUES
+              run: |
+                  echo "===================================================================="
+                  echo "ATENÇÃO: DADOS SENSÍVEIS ABAIXO. APAGUE ESTE LOG APÓS O USO."
+                  echo "===================================================================="
+                  echo "GCP_PROJECT_ID Secret: ${{ secrets.GCP_PROJECT_ID }}"
+                  echo "GCP_REGION Secret: ${{ secrets.GCP_REGION }}"
+                  echo "---"
+                  echo "Final Push Path: ${{ env.AR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG_VERSION }}"
+                  echo "---"
+                  echo "GCP_SA_KEY Secret Content:"
+                  echo "${{ secrets.GCP_SA_KEY }}"
+                  echo "===================================================================="
+
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3.10.0
 
             - name: Build and Push Docker Image
-              # Este passo não precisa mais de um bloco 'env'
               run: |
                   docker build \
                     --build-arg RELEASE_VERSION=$IMAGE_TAG_VERSION \
@@ -51,54 +59,5 @@ jobs:
                     -f DockerFiles/Dockerfile.prod \
                     -t $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA \
                     -t $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION .
-
                   docker push $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA
                   docker push $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION
-
-            - name: Cleanup Docker images
-              # Este passo também não precisa mais de um bloco 'env'
-              run: |
-                  docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA || true
-                  docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION || true
-
-            - name: Update Infrastructure Repository
-              env:
-                  # Este passo precisa de um 'env' próprio para o token, que é específico para ele
-                  INFRA_REPO_PAT: ${{ secrets.INFRA_REPO_PAT }}
-                  # A variável FULL_IMAGE_PATH é construída com as variáveis do job
-                  FULL_IMAGE_PATH: "$AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION"
-              run: |
-                  git config --global user.name "GitHub Actions"
-                  git config --global user.email "actions@github.com"
-
-                  echo "Clonando repositório de infraestrutura..."
-                  git clone https://x-access-token:$INFRA_REPO_PAT@github.com/kodus-git/kodus-infra.git
-                  cd kodus-infra
-
-                  echo "Atualizando arquivo de configuração com a nova imagem: $FULL_IMAGE_PATH"
-                  sed -i.bak "s|container_image.*=.*|container_image     = \"$FULL_IMAGE_PATH\"|" envs/prod/platform-base.tfvars
-
-                  echo "Commitando e fazendo push da nova versão..."
-                  git add envs/prod/platform-base.tfvars
-                  git commit -m "Deploy: Atualiza imagem do kodus-service-ast para $IMAGE_TAG_VERSION"
-                  git push
-
-            - name: Notificar Discord sobre Sucesso
-              if: success()
-              uses: sarisia/actions-status-discord@v1.15.3
-              with:
-                  webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":tada: A imagem Docker `${{ env.RELEASE_VERSION }}` foi publicada no Artifact Registry com sucesso."
-                  title: "Build e Push: kodus-service-ast"
-                  username: "GitHub Actions"
-                  color: 0x00FF00
-
-            - name: Notificar Discord sobre Falha
-              if: failure()
-              uses: sarisia/actions-status-discord@v1.15.3
-              with:
-                  webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":x: Falha ao publicar a imagem Docker `${{ env.RELEASE_VERSION }}` no Artifact Registry."
-                  title: "Build e Push: kodus-service-ast"
-                  username: "GitHub Actions"
-                  color: 0xFF0000

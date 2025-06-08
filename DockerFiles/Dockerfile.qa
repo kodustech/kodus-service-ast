@@ -3,9 +3,9 @@ FROM --platform=linux/amd64 node:22.14.0-slim AS deps
 ARG RELEASE_VERSION
 WORKDIR /usr/src/app
 
-RUN apt-get update && \
-    apt-get install -y ca-certificates git python3 make g++ pkg-config && \
-    rm -rf /var/lib/apt/lists/* && \
+RUN apt-get update &&
+    apt-get install -y ca-certificates git python3 make g++ pkg-config &&
+    rm -rf /var/lib/apt/lists/* &&
     yarn global add clinic
 
 # Configurar opções otimizadas para Node.js e processamento de ASTs
@@ -32,17 +32,14 @@ EXPOSE 3002
 EXPOSE 5001
 
 # Instalar apenas o essencial para produção
-RUN apt-get update && \
-    apt-get install -y ca-certificates && \
-    rm -rf /var/lib/apt/lists/* && \
+RUN apt-get update &&
+    apt-get install -y ca-certificates &&
+    rm -rf /var/lib/apt/lists/* &&
     mkdir -p /app/logs/kodus-service-ast
 
 # Configuração otimizada para produção
 ENV NODE_ENV="production"
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-
-# Criar diretório para certificados
-RUN mkdir -p /usr/src/app/certs
 
 # Copiar apenas arquivos necessários
 COPY --from=deps /usr/src/app/node_modules ./node_modules

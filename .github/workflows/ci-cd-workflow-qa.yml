@@ -1,9 +1,14 @@
 name: CI/CD Workflow QA
 
+# Dispara em pushes na branch main
 on:
   push:
     branches:
       - main
+
+permissions:
+  contents: read        # ler o repositório
+  id-token: write       # emitir o OIDC token
 
 jobs:
   build_and_push_image:
@@ -12,39 +17,29 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
-      - id: auth
-        name: Autenticar com o Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Authenticate to GCP via OIDC
+        uses: google-github-actions/auth@v2.1.10
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
-          project_id: ${{ secrets.GCP_PROJECT_QA_ID }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SA_EMAIL }}
 
-      - name: Set up Google Cloud SDK
+      - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2.1.4
 
-      - name: Diagnóstico e Preparação
+      - name: Verify authentication
         run: |
-          # Verificar identidade atual
-          echo "Conta atual:"
+          echo "Authenticated as:"
           gcloud auth list
+          gcloud config list project
 
-          # Verificar permissões IAM para diagnóstico
-          echo "Verificando permissões IAM..."
-          gcloud projects get-iam-policy ${{ secrets.GCP_PROJECT_QA_ID }} --flatten="bindings[].members" --format="table(bindings.role,bindings.members)" | grep -i $(gcloud auth list --filter="status:ACTIVE" --format="value(account)") || echo "Conta não encontrada na política IAM"
-
-          # Verificar se o repositório existe
-          echo "Repositórios disponíveis:"
-          gcloud artifacts repositories list --project=${{ secrets.GCP_PROJECT_QA_ID }} --location=${{ secrets.GCP_REGION }}
-
-      - name: Preparar Docker para o Artifact Registry
+      - name: Configure Docker for Artifact Registry
         run: |
-          # Usar a abordagem recomendada para autenticação do Docker com o Artifact Registry
-          echo "Configurando Docker para Artifact Registry..."
-          gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin ${{ secrets.GCP_REGION }}-docker.pkg.dev
+          gcloud auth print-access-token \
+            | docker login -u oauth2accesstoken --password-stdin ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
-      - name: Build, tag, and push image to Artifact Registry
+      - name: Build, tag, and push image
         env:
           AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
           GCP_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
@@ -52,141 +47,64 @@ jobs:
           IMAGE: kodus-service-ast-qa
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --build-arg RELEASE_VERSION=${{ env.RELEASE_VERSION }} --build-arg API_CLOUD_MODE=true -f DockerFiles/Dockerfile.qa -t $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG .
+          docker build \
+            --build-arg RELEASE_VERSION=${{ env.RELEASE_VERSION }} \
+            --build-arg API_CLOUD_MODE=true \
+            -f DockerFiles/Dockerfile.qa \
+            -t $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG .
           docker push $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG
 
       - name: Cleanup Docker image
-        run: docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG || true
-        env:
-          AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
-          GCP_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
-          REPOSITORY: kodus-images
-          IMAGE: kodus-service-ast-qa
-          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG || true
 
   deploy_in_server:
-    name: Deploy in server
+    name: Deploy on VM via IAP SSH
     runs-on: ubuntu-latest
     needs: build_and_push_image
 
     steps:
-      - id: auth-deploy
-        name: Autenticar com o Google Cloud para Deploy
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
-          project_id: ${{ secrets.GCP_PROJECT_QA_ID }}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Google Cloud SDK
+      - name: Authenticate to GCP via OIDC
+        uses: google-github-actions/auth@v2.1.10
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SA_EMAIL }}
+
+      - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2.1.4
 
-      - name: Verificar Autenticau00e7u00e3o
+      - name: Verify authentication
         run: |
-          # Confirmar que estamos autenticados
-          echo "Conta atual para deploy:"
+          echo "Authenticated as:"
           gcloud auth list
           gcloud config list project
 
-      - name: Setup - Generate unique ID and get runner IP
-        id: setup
-        run: |
-          # Gera um ID único baseado no timestamp e número aleatório
-          UNIQUE_ID=$(date +%s)-$RANDOM
-          echo "UNIQUE_ID=$UNIQUE_ID" >> $GITHUB_ENV
-          echo "FIREWALL_RULE=github-runner-$UNIQUE_ID" >> $GITHUB_ENV
-          
-          # Obtém o IP do runner
-          RUNNER_IP=$(curl -s https://ipinfo.io/ip)
-          echo "::add-mask::$RUNNER_IP"
-          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_ENV
-
-      - name: Clean up old firewall rules
-        continue-on-error: true  # Não falha se não encontrar regras
-        run: |
-          # Remove apenas regras antigas (mais de 1 hora)
-          gcloud compute firewall-rules list \
-            --project=${{ secrets.GCP_PROJECT_QA_ID }} \
-            --filter="name~'^github-runner-'\(-\d+\)\{2\}" \
-            --format="value(name,creationTimestamp)" | \
-          while read -r name timestamp; do
-            # Converte para timestamp UNIX e verifica se tem mais de 1 hora
-            if [ $(date -d "$timestamp" +%s) -lt $(date -d "1 hour ago" +%s) ]; then
-              echo "Removendo regra antiga: $name"
-              gcloud compute firewall-rules delete "$name" \
-                --project=${{ secrets.GCP_PROJECT_QA_ID }} \
-                --quiet || true
-            fi
-          done
-
-      - name: Create firewall rule for GitHub runner
-        run: |
-          echo "Criando regra de firewall: ${{ env.FIREWALL_RULE }}"
-          gcloud compute firewall-rules create ${{ env.FIREWALL_RULE }} \
-            --action=ALLOW \
-            --direction=INGRESS \
-            --rules=tcp:22 \
-            --source-ranges=${{ env.RUNNER_IP }}/32 \
-            --target-tags=${{ secrets.GCP_VM_NETWORK_TAG }} \
-            --priority=1000 \
-            --project=${{ secrets.GCP_PROJECT_QA_ID }} \
-            --description="Temporary rule for GitHub Actions runner"
-
-      - name: Configure gcloud CLI for SSH
-        run: |
-          # Configurar gcloud para usar OS Login
-          gcloud config set compute/zone ${{ secrets.GCP_ZONE }}
-
-      - name: Check out code to access scripts
-        uses: actions/checkout@v3
-
-      - name: Deploy to GCP VM
+      - name: Deploy via IAP SSH
         env:
+          GCP_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
           GCP_ZONE: ${{ secrets.GCP_ZONE }}
           GCP_INSTANCE: ${{ secrets.GCP_QA_INSTANCE_NAME }}
-          GCP_PROJECT: ${{ secrets.GCP_PROJECT_QA_ID }}
-          REGISTRY_URL: ${{ secrets.GCP_REGISTRY_URL || format('{0}-docker.pkg.dev', secrets.GCP_REGION) }}
+          REGISTRY_URL: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_QA_ID }}
           PROJECT_ID: ${{ secrets.GCP_PROJECT_QA_ID }}
-          ARTIFACT_REPO: ${{ secrets.ARTIFACT_REPO }}
-          IMAGE_NAME: ${{ secrets.IMAGE_NAME_QA }}
+          ARTIFACT_REPO: kodus-images
+          IMAGE_NAME: kodus-service-ast-qa
         run: |
-          echo "=== Iniciando deploy na VM ==="
-
-          # Criar comando de deploy inline
-          DEPLOY_CMD="""
-          # Navegar para o diretório do projeto
-          cd ~/kodus-service-ast
-          
-          # Executar o script de deploy com as variáveis de ambiente
-          REGISTRY_URL='$REGISTRY_URL' \
-          PROJECT_ID='$PROJECT_ID' \
-          ARTIFACT_REPO='$ARTIFACT_REPO' \
-          IMAGE_NAME='$IMAGE_NAME' \
-          ./start-app.sh "qa" "${{ github.sha }}"
-          """
-
-          # Executar o deploy diretamente na VM
-          echo "Conectando à VM $GCP_INSTANCE..."
+          echo "Starting deploy on VM via IAP..."
           gcloud compute ssh $GCP_INSTANCE \
             --project=$GCP_PROJECT \
             --zone=$GCP_ZONE \
-            --command="$DEPLOY_CMD" \
-            -- \
-            -o ServerAliveInterval=30 \
-            -o ServerAliveCountMax=5 \
-            -o ConnectTimeout=300 \
-            -o ConnectionAttempts=5
-
-          echo "=== Deploy concluído ==="
-
-      - name: Remove firewall rule
-        if: always()  # Executa mesmo se os passos anteriores falharem
-        run: |
-          echo "Removendo regra de firewall: ${{ env.FIREWALL_RULE }}"
-          gcloud compute firewall-rules delete ${{ env.FIREWALL_RULE }} \
-            --project=${{ secrets.GCP_PROJECT_QA_ID }} \
-            --quiet || true
-          
-          echo "Limpeza concluída"
+            --tunnel-through-iap \
+            --command="\
+              cd ~/kodus-service-ast && \
+              REGISTRY_URL='$REGISTRY_URL' \
+              PROJECT_ID='$PROJECT_ID' \
+              ARTIFACT_REPO='$ARTIFACT_REPO' \
+              IMAGE_NAME='$IMAGE_NAME' \
+              ./start-app.sh qa $GITHUB_SHA" \
+            -- -o ServerAliveInterval=30 -o ServerAliveCountMax=5
 
       - name: Notify Discord on Success
         if: success()
@@ -203,8 +121,7 @@ jobs:
         uses: sarisia/actions-status-discord@v1.15.3
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          content: ":x: Build or deployment failed. Please check the logs."
+          content: ":x: Build or deployment failed. Check logs."
           title: "Deploy QA: kodus-service-ast"
           username: "GitHub Actions"
           color: 0xFF0000
-

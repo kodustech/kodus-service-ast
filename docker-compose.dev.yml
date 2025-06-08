@@ -14,7 +14,6 @@ services:
         restart: unless-stopped
         volumes:
             - .:/usr/src/app
-            - ../certs:/usr/src/app/certs
         networks:
             - kodus-backend-services
 

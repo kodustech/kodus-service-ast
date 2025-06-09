@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { RequestMethod } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './modules/app.module';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service';
@@ -35,7 +36,10 @@ async function bootstrap() {
 
     // Inicializa a aplicação HTTP para health checks
     const httpApp = await NestFactory.create(AppModule);
-    httpApp.setGlobalPrefix('api');
+
+    httpApp.setGlobalPrefix('api', {
+        exclude: [{ path: 'health', method: RequestMethod.GET }],
+    });
 
     // Inicia o servidor HTTP apenas para health checks
     await httpApp.listen(healthNumberPort, '0.0.0.0');

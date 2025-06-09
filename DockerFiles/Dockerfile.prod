@@ -35,11 +35,10 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 ENV NODE_ENV="production"
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Copiar apenas arquivos necessários
 COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY package.json yarn.lock ./
 COPY --from=build /usr/src/app/dist ./dist
 COPY ecosystem.config.js ./
-COPY package.json yarn.lock ./
 
 RUN yarn global add pm2
 RUN pm2 install pm2-logrotate

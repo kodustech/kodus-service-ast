@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { RequestMethod } from '@nestjs/common';
+import { ServerCredentials } from '@grpc/grpc-js';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './modules/app.module';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service';
@@ -53,6 +54,7 @@ async function bootstrap() {
                 'node_modules/@kodus/kodus-proto/kodus/ast/v2/analyzer.proto',
             ),
             url: `0.0.0.0:${grpcNumberPort}`,
+            credentials: ServerCredentials.createInsecure(),
             loader: {
                 includeDirs: [
                     resolve(cwd(), 'node_modules/@kodus/kodus-proto/'),

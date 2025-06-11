@@ -42,6 +42,7 @@
         "pino-http": "^10.5.0",
         "pino-pretty": "^13.0.0",
         "piscina": "^5.0.0",
+        "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
         "simple-git": "^3.28.0",
         "toml": "^3.0.0",

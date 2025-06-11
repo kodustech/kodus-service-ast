@@ -1042,10 +1042,10 @@
   resolved "https://registry.yarnpkg.com/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz#9299f82874bab9e4c7f9c48d865becbfe8d6907c"
   integrity sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==
 
-"@kodus/kodus-proto@2.0.9":
-  version "2.0.9"
-  resolved "https://registry.yarnpkg.com/@kodus/kodus-proto/-/kodus-proto-2.0.9.tgz#89d6c18fc16192a32338e2c6c5fd4c527316ba6c"
-  integrity sha512-kF6MaepokEdW+OceqRZWZItXSl5C9U/PKwGpWF4udKQ1KpM9kc3AvLbZfXbWNOm7/R5hK3pfiwkxdPBN0Z1+6w==
+"@kodus/kodus-proto@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@kodus/kodus-proto/-/kodus-proto-2.0.3.tgz#a3c1eaf0ef81893263158793bf92c80980585ff9"
+  integrity sha512-xDvep+I6nynsAu8GnFwcjAefRcfHjffYgOSFmpzzI8GJDQFCO/ceNx9+Ix+QdDMGM2pzf9xOxBs1RjtscgOeBg==
 
 "@kwsites/file-exists@^1.1.1":
   version "1.1.1"

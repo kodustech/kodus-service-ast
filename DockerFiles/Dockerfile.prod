@@ -29,7 +29,7 @@ EXPOSE 3002
 EXPOSE 5001
 
 # Instalar apenas o essencial para produção
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir -p /app/logs/kodus-service-ast
+RUN apt-get update && apt-get install -y ca-certificates git python3 make g++ pkg-config && rm -rf /var/lib/apt/lists/* && mkdir -p /app/logs/kodus-service-ast
 
 # Configurau00e7u00e3o otimizada para produção
 ENV NODE_ENV="production"

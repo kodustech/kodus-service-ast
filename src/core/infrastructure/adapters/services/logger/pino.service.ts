@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import pino from 'pino';
+import { pid } from 'process';
 
 type LogLevel = 'info' | 'error' | 'warn' | 'debug' | 'verbose';
 
@@ -24,6 +24,11 @@ const shouldPrettyPrint = (process.env.API_LOG_PRETTY || 'false') === 'true';
 export class PinoLoggerService {
     private baseLogger = pino({
         level: process.env.API_LOG_LEVEL || 'info',
+        base: {
+            instance: process.env.NODE_APP_INSTANCE ?? '0',
+            pid: false,
+        },
+        timestamp: pino.stdTimeFunctions.isoTime,
         transport:
             shouldPrettyPrint && !isProduction
                 ? {

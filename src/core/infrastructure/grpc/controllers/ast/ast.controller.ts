@@ -42,6 +42,10 @@ export class ASTController implements ASTAnalyzerServiceController {
     }
 
     getDiff(request: GetDiffRequest): Observable<GetDiffResponse> {
+        console.warn(
+            request,
+            'getDiff method is not implemented yet. This will be implemented in the future.',
+        );
         throw new Error('Method not implemented.');
     }
 }

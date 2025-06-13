@@ -1,48 +1,85 @@
-FROM --platform=linux/amd64 node:22.14.0-slim AS deps
+# Etapa de build
+FROM --platform=linux/amd64 node:22.14.0-slim AS builder
 
+# Argumento de build
 ARG RELEASE_VERSION
+
+# Variáveis de ambiente
+ENV NODE_ENV=development
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get install -y ca-certificates git python3 make g++ pkg-config && rm -rf /var/lib/apt/lists/*
+# Instala dependências do sistema necessárias para build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    python3 \
+    make \
+    g++ \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-# Configurar opções otimizadas para Node.js e processamento de ASTs
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
+# Copia apenas os arquivos necessários para instalação de dependências
 COPY package.json yarn.lock ./
 
-# Instalar dependências com cache otimizado
+# Instala dependências incluindo as de desenvolvimento
 RUN yarn install --frozen-lockfile --network-timeout 600000
 
-FROM --platform=linux/amd64 deps AS build
-WORKDIR /usr/src/app
+# Instala o NestJS CLI globalmente
+RUN yarn global add @nestjs/cli
 
+# Copia o restante do código
 COPY . .
 
-# Build otimizado
+# Gera o build de produção
 RUN yarn build
 
-FROM --platform=linux/amd64 node:22.14.0-slim AS production
+# Etapa de produção
+FROM --platform=linux/amd64 node:22.14.0-slim
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV PORT=3002
+ENV API_HEALTH_PORT=5001
+
 WORKDIR /usr/src/app
 
-# Expor portas para o serviço gRPC e health check
-EXPOSE 3002
-EXPOSE 5001
+# Instala dependências do sistema necessárias para produção
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar apenas o essencial para produção
-RUN apt-get update && apt-get install -y ca-certificates git python3 make g++ pkg-config && rm -rf /var/lib/apt/lists/* && mkdir -p /app/logs/kodus-service-ast
+# Copia apenas o necessário da etapa de build
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package.json ./
+COPY --from=builder /usr/src/app/ecosystem.config.js ./
 
-# Configurau00e7u00e3o otimizada para produção
-ENV NODE_ENV="production"
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Configura permissões
+RUN chmod -R 755 /usr/src/app
 
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY package.json yarn.lock ./
-COPY --from=build /usr/src/app/dist ./dist
-COPY ecosystem.config.js ./
+# Instala e configura o PM2 com logrotate
+RUN yarn global add pm2 && \
+    pm2 install pm2-logrotate && \
+    pm2 set pm2-logrotate:max_size 30M && \
+    pm2 set pm2-logrotate:retain 10 && \
+    pm2 set pm2-logrotate:compress true && \
+    pm2 set pm2-logrotate:dateFormat YYYY-MM-DD_HH-mm-ss && \
+    pm2 set pm2-logrotate:workerInterval 30 && \
+    pm2 set pm2-logrotate:rotateInterval '0 0 * * *' && \
+    pm2 set pm2-logrotate:rotateModule true
 
-RUN yarn global add pm2
-RUN pm2 install pm2-logrotate
-RUN pm2 set pm2-logrotate:max_size 30M
-RUN pm2 set pm2-logrotate:retain 10
+# Configura healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:5001/health || exit 1
 
-CMD ["pm2-runtime", "start", "ecosystem.config.js", "--env", "production"]
+# Expõe as portas necessárias
+EXPOSE ${PORT} ${API_HEALTH_PORT}
+
+# Comando de inicialização
+CMD ["pm2-runtime", "start", "ecosystem.config.js"]

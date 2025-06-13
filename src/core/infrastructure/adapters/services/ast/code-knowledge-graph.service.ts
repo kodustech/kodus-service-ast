@@ -15,16 +15,31 @@ import { SUPPORTED_LANGUAGES } from '@/core/domain/ast/types/supported-languages
 import { ParserAnalysis } from '@/core/domain/ast/types/parser';
 import { PinoLoggerService } from '../logger/pino.service';
 import { handleError } from '@/shared/utils/errors';
-import { SourceFileAnalyzer } from './analyze-source-file';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
     private piscina: Piscina;
 
     constructor(private readonly logger: PinoLoggerService) {
+        const cpuCount = os.cpus().length;
+        const minThreads = Math.max(2, Math.floor(cpuCount * 0.5));
+        const maxThreads = cpuCount;
+        const idleTimeout = 30000;
+        const maxQueue = 1000;
+        const concurrentTasksPerWorker = 2;
+
         this.piscina = new Piscina({
-            // Piscina has no support for typescript, so we need to use the compiled version
             filename: path.resolve(__dirname, 'worker/worker.js'),
+            minThreads,
+            maxThreads,
+            idleTimeout,
+            maxQueue,
+            concurrentTasksPerWorker,
+            workerData: {
+                env: process.env.NODE_ENV,
+                cpuCount,
+                isProduction: process.env.NODE_ENV === 'production',
+            } as const,
         });
     }
 
@@ -82,7 +97,7 @@ export class CodeKnowledgeGraphService {
             // 'integrationConfig.service.ts',
             // 'user.py',
             // 'example.rb',
-            'src/core/application/use-cases/codeReviewFeedback',
+            // 'src/core/application/use-cases/codeReviewFeedback',
             // 'src/core/application/use-cases/codeBase/php_project',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',

@@ -50,6 +50,7 @@ WORKDIR /usr/src/app
 # Instala dependências do sistema necessárias para produção
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    git \
     ca-certificates \
     tzdata \
     && rm -rf /var/lib/apt/lists/*

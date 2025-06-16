@@ -889,10 +889,10 @@
   resolved "https://registry.yarnpkg.com/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz#9299f82874bab9e4c7f9c48d865becbfe8d6907c"
   integrity sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==
 
-"@kodus/kodus-proto@^2.0.3":
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/@kodus/kodus-proto/-/kodus-proto-2.0.3.tgz#a3c1eaf0ef81893263158793bf92c80980585ff9"
-  integrity sha512-xDvep+I6nynsAu8GnFwcjAefRcfHjffYgOSFmpzzI8GJDQFCO/ceNx9+Ix+QdDMGM2pzf9xOxBs1RjtscgOeBg==
+"@kodus/kodus-proto@^2.1.2":
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/@kodus/kodus-proto/-/kodus-proto-2.1.2.tgz#b4335cfa653821559b62c86b350f8dcf2a629c7f"
+  integrity sha512-RA5qEcBugkFt63nPTFzw/AWqotAEEF0OsN+xlRTbIX0/+N8I6UnnPX8wOb7/+8MhhNkoXyv6Wyu7/tp/LtrhMA==
 
 "@kwsites/file-exists@^1.1.1":
   version "1.1.1"
@@ -5729,10 +5729,10 @@ tree-sitter-typescript@^0.23.2:
     node-gyp-build "^4.8.2"
     tree-sitter-javascript "^0.23.1"
 
-tree-sitter@^0.22.4:
-  version "0.22.4"
-  resolved "https://registry.yarnpkg.com/tree-sitter/-/tree-sitter-0.22.4.tgz#7d29547f663ff6f49ee8d1ac444e6fa169c72b77"
-  integrity sha512-usbHZP9/oxNsUY65MQUsduGRqDHQOou1cagUSwjhoSYAmSahjQDAVsh9s+SlZkn8X8+O1FULRGwHu7AFP3kjzg==
+tree-sitter@^0.25.0:
+  version "0.25.0"
+  resolved "https://registry.yarnpkg.com/tree-sitter/-/tree-sitter-0.25.0.tgz#d9d94ba00b501df49826c10c0f74037b890788eb"
+  integrity sha512-PGZZzFW63eElZJDe/b/R/LbsjDDYJa5UEjLZJB59RQsMX+fo0j54fqBPn1MGKav/QNa0JR0zBiVaikYDWCj5KQ==
   dependencies:
     node-addon-api "^8.3.0"
     node-gyp-build "^4.8.4"

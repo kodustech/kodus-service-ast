@@ -2,9 +2,9 @@ import { BaseParser } from '../base-parser';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries';
 import { Language, SyntaxNode } from 'tree-sitter';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import { CallChain, ChainType } from '@/core/domain/ast/types/parser';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class TypeScriptParser extends BaseParser {
     private static readonly language = TypeScriptLang as Language;
@@ -39,14 +39,14 @@ export class TypeScriptParser extends BaseParser {
         return TypeScriptParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        class_declaration: ScopeType.CLASS,
-        abstract_class_declaration: ScopeType.CLASS,
-        interface_declaration: ScopeType.INTERFACE,
-        enum_declaration: ScopeType.ENUM,
-        function_declaration: ScopeType.FUNCTION,
-        method_definition: ScopeType.METHOD,
-        variable_declarator: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        class_declaration: NodeType.NODE_TYPE_CLASS,
+        abstract_class_declaration: NodeType.NODE_TYPE_CLASS,
+        interface_declaration: NodeType.NODE_TYPE_INTERFACE,
+        enum_declaration: NodeType.NODE_TYPE_ENUM,
+        function_declaration: NodeType.NODE_TYPE_FUNCTION,
+        method_definition: NodeType.NODE_TYPE_FUNCTION,
+        variable_declarator: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override processChainNode(

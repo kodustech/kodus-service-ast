@@ -1,15 +1,11 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
-import { handleError } from '@/shared/utils/errors';
-import { GrpcInvalidArgumentException } from '@/shared/utils/grpc/exceptions';
 import {
-    GetGraphsRequest,
-    GetGraphsResponse,
-    RepositoryData,
-    GetGraphsResponseData as SerializedGraphs,
-} from '@kodus/kodus-proto/v2';
+    ASTDeserializer,
+    SerializedGetGraphsResponseData,
+} from '@kodus/kodus-proto/serialization/ast';
+import { GetGraphsRequest, GetGraphsResponseData } from '@kodus/kodus-proto/v2';
 import { Injectable } from '@nestjs/common';
-import { from, Observable } from 'rxjs';
 
 @Injectable()
 export class GetGraphsUseCase {
@@ -19,85 +15,73 @@ export class GetGraphsUseCase {
         private readonly logger: PinoLoggerService,
     ) {}
 
-    execute(request: GetGraphsRequest): Observable<GetGraphsResponse> {
-        const { baseRepo, headRepo } = request;
+    async execute(
+        request: GetGraphsRequest,
+        serialized: false,
+    ): Promise<GetGraphsResponseData | null>;
 
-        if (!baseRepo || !headRepo) {
-            throw new GrpcInvalidArgumentException(
-                'Both baseRepo and headRepo must be provided',
-            );
-        }
+    async execute(
+        request: GetGraphsRequest,
+        serialized: true,
+    ): Promise<SerializedGetGraphsResponseData | null>;
 
-        return from(this.handleRequest(request));
-    }
+    async execute(
+        request: GetGraphsRequest,
+        serialized: boolean,
+    ): Promise<GetGraphsResponseData | SerializedGetGraphsResponseData | null> {
+        const { headRepo } = request;
+        const fileName = `graphs`;
 
-    private async getGraphs(
-        repoData: RepositoryData,
-    ): Promise<SerializedGraphs> {
-        const fileName = 'graphs';
-
-        const graphs = await this.repositoryManagerService.readFile(
-            repoData,
-            fileName,
-        );
+        const graphs = await this.repositoryManagerService.readFile({
+            repoData: headRepo,
+            filePath: fileName,
+            inKodusDir: true,
+        });
 
         if (!graphs) {
             this.logger.warn({
-                message: `No graphs found for repository ${repoData.repositoryName}`,
+                message: `No graphs found for repository ${headRepo.repositoryName}`,
                 context: GetGraphsUseCase.name,
                 metadata: {
-                    request: JSON.stringify(repoData),
+                    request: JSON.stringify(headRepo),
                 },
+                serviceName: GetGraphsUseCase.name,
             });
             return null;
         }
 
         this.logger.log({
-            message: `Retrieved graphs for repository ${repoData.repositoryName}`,
+            message: `Retrieved graphs for repository ${headRepo.repositoryName}`,
             context: GetGraphsUseCase.name,
             metadata: {
-                request: JSON.stringify(repoData),
+                request: JSON.stringify(headRepo),
             },
+            serviceName: GetGraphsUseCase.name,
         });
 
-        return JSON.parse(graphs.toString('utf-8')) as SerializedGraphs;
-    }
-
-    private async *handleRequest(
-        request: GetGraphsRequest,
-    ): AsyncGenerator<GetGraphsResponse> {
-        try {
-            const headGraph = await this.getGraphs(request.headRepo);
-
-            yield* this.createChunkStream(headGraph);
-        } catch (error) {
-            this.logger.error({
-                message: 'Failed to get graphs',
+        const parsedGraphs = JSON.parse(
+            graphs.toString(),
+        ) as SerializedGetGraphsResponseData;
+        if (!parsedGraphs) {
+            this.logger.warn({
+                message: `Failed to parse graphs for repository ${headRepo.repositoryName}`,
                 context: GetGraphsUseCase.name,
-                error: handleError(error),
                 metadata: {
-                    request,
+                    request: JSON.stringify(headRepo),
                 },
+                serviceName: GetGraphsUseCase.name,
             });
-            throw error;
+            return null;
         }
-    }
 
-    private *createChunkStream(
-        result: any,
-        chunkSize = 1024 * 1024,
-    ): Generator<GetGraphsResponse> {
-        const jsonString = JSON.stringify(result);
-        const totalLength = jsonString.length;
-
-        for (let i = 0; i < totalLength; i += chunkSize) {
-            const chunk = jsonString.slice(i, i + chunkSize);
-            const isLast = i + chunkSize >= totalLength;
-
-            yield {
-                data: new TextEncoder().encode(chunk),
-                isLast,
-            };
+        const result = parsedGraphs;
+        if (serialized) {
+            return result;
         }
+
+        const deserialized =
+            ASTDeserializer.deserializeGetGraphsResponseData(parsedGraphs);
+
+        return deserialized;
     }
 }

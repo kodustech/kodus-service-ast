@@ -2,10 +2,10 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import * as CSharpLang from 'tree-sitter-c-sharp';
 import { cSharpQueries } from './csharp-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
 import { ParserQuery, QueryType } from '../query';
 import { findNamedChildByType } from '@/shared/utils/ast-helpers';
 import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class CSharpParser extends BaseParser {
     private static readonly language = CSharpLang as Language;
@@ -36,15 +36,15 @@ export class CSharpParser extends BaseParser {
         return CSharpParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        class_declaration: ScopeType.CLASS,
-        record_declaration: ScopeType.CLASS,
-        struct_declaration: ScopeType.CLASS,
-        interface_declaration: ScopeType.INTERFACE,
-        enum_declaration: ScopeType.ENUM,
-        constructor_declaration: ScopeType.METHOD,
-        method_declaration: ScopeType.METHOD,
-        variable_declarator: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        class_declaration: NodeType.NODE_TYPE_CLASS,
+        record_declaration: NodeType.NODE_TYPE_CLASS,
+        struct_declaration: NodeType.NODE_TYPE_CLASS,
+        interface_declaration: NodeType.NODE_TYPE_INTERFACE,
+        enum_declaration: NodeType.NODE_TYPE_ENUM,
+        constructor_declaration: NodeType.NODE_TYPE_FUNCTION,
+        method_declaration: NodeType.NODE_TYPE_FUNCTION,
+        variable_declarator: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override processChainNode(

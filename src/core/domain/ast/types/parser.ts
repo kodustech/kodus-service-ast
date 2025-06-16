@@ -1,51 +1,16 @@
-import { QueryType } from '@/core/infrastructure/adapters/services/ast/parsers/query';
-import { FileAnalysis, FunctionAnalysis, TypeAnalysis } from './code-graph';
-import { Range, SyntaxNode } from 'tree-sitter';
-
-export enum ScopeType {
-    FILE = 'file',
-    CLASS = 'class',
-    INTERFACE = 'interface',
-    ENUM = 'enum',
-    FUNCTION = 'function',
-    METHOD = 'method',
-}
-
-export type Scope = {
-    type: ScopeType;
-    name: string;
-};
-
-export const scopeTypeMap: Record<string, ScopeType> = Object.values(
-    ScopeType,
-).reduce(
-    (map, value) => {
-        map[value] = value;
-        return map;
-    },
-    {} as Record<string, ScopeType>,
-);
-
-/**
- * Details of a function call
- */
-export type Call = {
-    nodeId: number;
-    function: string;
-    file: string;
-    caller?: string;
-};
-
-export type AnalysisNode = {
-    text: string;
-    type: string;
-    queryType: QueryType;
-    id: number;
-    children?: AnalysisNode[];
-    position: Range;
-};
+import {
+    AnalysisNode,
+    Call,
+    FileAnalysis,
+    FunctionAnalysis,
+    Range,
+    Scope,
+    TypeAnalysis,
+} from '@kodus/kodus-proto/v2';
+import { SyntaxNode } from 'tree-sitter';
 
 export type ParseContext = {
+    filePath: string;
     fileDefines: Set<string>;
     fileImports: Set<string>;
     fileClassNames: Set<string>;
@@ -61,7 +26,6 @@ export type ParserAnalysis = {
     fileAnalysis: FileAnalysis;
     functions: Map<string, FunctionAnalysis>;
     types: Map<string, TypeAnalysis>;
-    analysisNodes: Map<number, AnalysisNode>;
 };
 
 export type ImportedSymbol = {
@@ -77,6 +41,7 @@ export type Method = {
     returnType: string | null;
     bodyNode: SyntaxNode | null;
     scope: Scope[];
+    position: Range;
 };
 
 export type MethodParameter = {

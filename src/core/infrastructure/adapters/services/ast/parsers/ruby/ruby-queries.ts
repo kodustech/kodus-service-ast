@@ -22,7 +22,7 @@ const classBodyQuery = () => `
 `;
 
 const importQuery: ParserQuery = {
-    type: QueryType.IMPORT_QUERY,
+    type: QueryType.IMPORT,
     query: `
 (call
     method: (identifier) @import.type
@@ -45,7 +45,7 @@ const importQuery: ParserQuery = {
 };
 
 const classQuery: ParserQuery = {
-    type: QueryType.CLASS_QUERY,
+    type: QueryType.CLASS,
     query: `
 (class
     name: (constant) @objName
@@ -61,7 +61,7 @@ const classQuery: ParserQuery = {
 };
 
 const functionQuery: ParserQuery = {
-    type: QueryType.FUNCTION_QUERY,
+    type: QueryType.FUNCTION,
     query: `
 (method
     name: (identifier) @funcName
@@ -86,7 +86,7 @@ const functionQuery: ParserQuery = {
 };
 
 const functionCallQuery: ParserQuery = {
-    type: QueryType.FUNCTION_CALL_QUERY,
+    type: QueryType.FUNCTION_CALL,
     query: `
 (call
     method: (identifier) @call.type
@@ -114,7 +114,7 @@ const functionCallQuery: ParserQuery = {
 };
 
 const functionParametersQuery: ParserQuery = {
-    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    type: QueryType.FUNCTION_PARAMETERS,
     query: `
 (_
     (
@@ -126,11 +126,11 @@ const functionParametersQuery: ParserQuery = {
 };
 
 export const rubyQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.IMPORT, importQuery],
 
-    [QueryType.CLASS_QUERY, classQuery],
+    [QueryType.CLASS, classQuery],
 
-    [QueryType.FUNCTION_QUERY, functionQuery],
-    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+    [QueryType.FUNCTION, functionQuery],
+    [QueryType.FUNCTION_CALL, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS, functionParametersQuery],
 ] as const);

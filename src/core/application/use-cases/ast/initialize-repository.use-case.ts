@@ -1,6 +1,5 @@
 import { CodeAnalyzerService } from '@/core/infrastructure/adapters/services/ast/code-analyzer.service';
 import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/ast/code-knowledge-graph.service';
-import { SerializerService } from '@/core/infrastructure/adapters/services/ast/serializer.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { handleError } from '@/shared/utils/errors';
@@ -12,10 +11,10 @@ import {
     InitializeRepositoryRequest,
     InitializeRepositoryResponse,
     RepositoryData,
-    CodeGraph as SerializedCodeGraph,
-    EnrichGraph as SerializedEnrichGraph,
-    GetGraphsResponseData as SerializedGraphs,
+    EnrichedGraph,
+    CodeGraph,
 } from '@kodus/kodus-proto/v2';
+import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 
@@ -25,7 +24,6 @@ export class InitializeRepositoryUseCase {
         private readonly repositoryManagerService: RepositoryManagerService,
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         private readonly codeAnalyzerService: CodeAnalyzerService,
-        private readonly serializerService: SerializerService,
 
         private readonly logger: PinoLoggerService,
     ) {}
@@ -58,22 +56,13 @@ export class InitializeRepositoryUseCase {
             const enrichedHeadGraph =
                 this.codeAnalyzerService.enrichGraph(headGraph);
 
-            const serializedHeadGraph =
-                this.serializerService.serializeCodeGraph(headGraph);
-
-            const serializedBaseGraph =
-                this.serializerService.serializeCodeGraph(baseGraph);
-
-            const serializedEnrichedGraph =
-                this.serializerService.serializeEnrichedGraph(
-                    enrichedHeadGraph,
-                );
-
             await this.storeGraphs(
                 headRepo,
-                serializedBaseGraph,
-                serializedHeadGraph,
-                serializedEnrichedGraph,
+                baseGraph,
+                baseDirPath,
+                headGraph,
+                headDirPath,
+                enrichedHeadGraph,
             );
 
             return {};
@@ -85,6 +74,7 @@ export class InitializeRepositoryUseCase {
                 metadata: {
                     request,
                 },
+                serviceName: InitializeRepositoryUseCase.name,
             });
 
             throw error;
@@ -92,8 +82,9 @@ export class InitializeRepositoryUseCase {
     }
 
     private async cloneRepo(repoData: RepositoryData): Promise<string> {
-        const repoDir =
-            await this.repositoryManagerService.gitCloneWithAuth(repoData);
+        const repoDir = await this.repositoryManagerService.gitCloneWithAuth({
+            repoData,
+        });
 
         if (!repoDir || repoDir.trim() === '') {
             this.logger.error({
@@ -102,6 +93,7 @@ export class InitializeRepositoryUseCase {
                 metadata: {
                     request: JSON.stringify(repoData),
                 },
+                serviceName: InitializeRepositoryUseCase.name,
             });
             throw new GrpcInternalException('Failed to clone repository');
         }
@@ -112,6 +104,7 @@ export class InitializeRepositoryUseCase {
             metadata: {
                 request: JSON.stringify(repoData),
             },
+            serviceName: InitializeRepositoryUseCase.name,
         });
 
         return path.resolve(repoDir);
@@ -119,21 +112,34 @@ export class InitializeRepositoryUseCase {
 
     private async storeGraphs(
         repoData: RepositoryData,
-        baseGraph: SerializedCodeGraph,
-        headGraph: SerializedCodeGraph,
-        enrichHeadGraph: SerializedEnrichGraph,
+        baseGraph: CodeGraph,
+        baseGraphDir: string,
+        headGraph: CodeGraph,
+        headGraphDir: string,
+        enrichHeadGraph: EnrichedGraph,
     ): Promise<void> {
-        const fileName = 'graphs';
-        const graphs: SerializedGraphs = {
-            baseGraph,
-            headGraph,
+        const fileName = `graphs`;
+        const graphs = ASTSerializer.serializeGetGraphsResponseData({
+            baseGraph: {
+                graph: baseGraph,
+                dir: baseGraphDir,
+            },
+            headGraph: {
+                graph: headGraph,
+                dir: headGraphDir,
+            },
             enrichHeadGraph,
-        };
+        });
 
         const graphsJson = JSON.stringify(graphs, null, 2);
         const data = Buffer.from(graphsJson, 'utf-8');
 
-        await this.repositoryManagerService.writeFile(repoData, fileName, data);
+        await this.repositoryManagerService.writeFile({
+            repoData,
+            filePath: fileName,
+            data: graphsJson,
+            inKodusDir: true,
+        });
 
         this.logger.log({
             message: `Stored graphs in ${fileName} for repository ${repoData.repositoryName}`,
@@ -141,6 +147,7 @@ export class InitializeRepositoryUseCase {
             metadata: {
                 filePath: path.join(repoData.repositoryName, fileName),
             },
+            serviceName: InitializeRepositoryUseCase.name,
         });
     }
 }

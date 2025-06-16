@@ -2,16 +2,15 @@ import { BaseParser } from '../base-parser';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries';
 import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
-import { TypeAnalysis } from '@/core/domain/ast/types/code-graph';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import {
     Method,
     ObjectProperties,
     ChainType,
     CallChain,
-    Scope,
-    ScopeType,
 } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope, TypeAnalysis } from '@kodus/kodus-proto/v2';
+import { appendOrUpdateElement } from '@/shared/utils/arrays';
 
 export class RubyParser extends BaseParser {
     private static readonly language = RubyLang as Language;
@@ -48,12 +47,12 @@ export class RubyParser extends BaseParser {
         return RubyParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        class: ScopeType.CLASS,
-        module: ScopeType.CLASS,
-        method: ScopeType.METHOD,
-        singleton_method: ScopeType.METHOD,
-        assignment: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        class: NodeType.NODE_TYPE_CLASS,
+        module: NodeType.NODE_TYPE_CLASS,
+        method: NodeType.NODE_TYPE_FUNCTION,
+        singleton_method: NodeType.NODE_TYPE_FUNCTION,
+        assignment: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override processExtraObjCapture(
@@ -95,7 +94,7 @@ export class RubyParser extends BaseParser {
 
         if (propertiesCalls.has(methodName)) {
             args.forEach((arg) => {
-                this.appendOrUpdateElement(objProps.properties, { name: arg });
+                appendOrUpdateElement(objProps.properties, { name: arg });
             });
         }
     }

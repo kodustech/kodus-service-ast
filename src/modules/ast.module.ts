@@ -4,21 +4,17 @@ import { CodeAnalyzerService } from '@/core/infrastructure/adapters/services/ast
 import { RepositoryModule } from './repository.module';
 import { ASTController } from '@/core/infrastructure/grpc/controllers/ast/ast.controller';
 import { UseCases } from '@/core/application/use-cases/ast';
-import { SerializerService } from '@/core/infrastructure/adapters/services/ast/serializer.service';
+import { DifferService } from '@/core/infrastructure/adapters/services/ast/differ.service';
 
 @Module({
     imports: [RepositoryModule],
     providers: [
         CodeKnowledgeGraphService,
         CodeAnalyzerService,
-        SerializerService,
+        DifferService,
         ...UseCases,
     ],
-    exports: [
-        CodeKnowledgeGraphService,
-        CodeAnalyzerService,
-        SerializerService,
-    ],
+    exports: [CodeKnowledgeGraphService, CodeAnalyzerService],
     controllers: [ASTController],
 })
 export class AstModule {}

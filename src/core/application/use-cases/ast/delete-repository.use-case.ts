@@ -41,13 +41,14 @@ export class DeleteRepositoryUseCase {
                 metadata: {
                     request,
                 },
+                serviceName: DeleteRepositoryUseCase.name,
             });
             throw error;
         }
     }
 
     private async deleteRepo(repoData: RepositoryData): Promise<void> {
-        await this.repositoryManagerService.deleteLocalRepository(repoData);
+        await this.repositoryManagerService.deleteLocalRepository({ repoData });
 
         this.logger.log({
             message: `Deleted repository ${repoData.repositoryName}`,
@@ -55,6 +56,7 @@ export class DeleteRepositoryUseCase {
             metadata: {
                 request: JSON.stringify(repoData),
             },
+            serviceName: DeleteRepositoryUseCase.name,
         });
     }
 }

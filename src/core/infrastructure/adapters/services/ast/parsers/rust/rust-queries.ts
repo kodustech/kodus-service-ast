@@ -1,7 +1,7 @@
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 
 const importQuery: ParserQuery = {
-    type: QueryType.IMPORT_QUERY,
+    type: QueryType.IMPORT,
     query: `
 (use_declaration
 	argument: (scoped_identifier
@@ -34,7 +34,7 @@ const importQuery: ParserQuery = {
 };
 
 const classQuery: ParserQuery = {
-    type: QueryType.CLASS_QUERY,
+    type: QueryType.CLASS,
     query: `
 (struct_item
 	name: (type_identifier) @objName
@@ -67,7 +67,7 @@ const classQuery: ParserQuery = {
 };
 
 const interfaceQuery: ParserQuery = {
-    type: QueryType.INTERFACE_QUERY,
+    type: QueryType.INTERFACE,
     query: `
 (trait_item
 	name: (_) @objName
@@ -97,7 +97,7 @@ const interfaceQuery: ParserQuery = {
 };
 
 const enumQuery: ParserQuery = {
-    type: QueryType.ENUM_QUERY,
+    type: QueryType.ENUM,
     query: `
 (enum_item
 	name: (type_identifier) @objName
@@ -115,7 +115,7 @@ const enumQuery: ParserQuery = {
 };
 
 const typeAliasQuery: ParserQuery = {
-    type: QueryType.TYPE_ALIAS_QUERY,
+    type: QueryType.TYPE_ALIAS,
     query: `
 (type_item
 	name: (type_identifier) @typeName
@@ -125,7 +125,7 @@ const typeAliasQuery: ParserQuery = {
 };
 
 const functionQuery: ParserQuery = {
-    type: QueryType.FUNCTION_QUERY,
+    type: QueryType.FUNCTION,
     query: `
 (function_item
 	name: (identifier) @funcName
@@ -137,7 +137,7 @@ const functionQuery: ParserQuery = {
 };
 
 const functionCallQuery: ParserQuery = {
-    type: QueryType.FUNCTION_CALL_QUERY,
+    type: QueryType.FUNCTION_CALL,
     query: `
 (call_expression
 	function: [
@@ -161,7 +161,7 @@ const functionCallQuery: ParserQuery = {
 };
 
 const functionParametersQuery: ParserQuery = {
-    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    type: QueryType.FUNCTION_PARAMETERS,
     query: `
 (parameters
 	(
@@ -181,15 +181,15 @@ const functionParametersQuery: ParserQuery = {
 };
 
 export const rustQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.IMPORT, importQuery],
 
-    [QueryType.CLASS_QUERY, classQuery],
-    [QueryType.INTERFACE_QUERY, interfaceQuery],
-    [QueryType.ENUM_QUERY, enumQuery],
+    [QueryType.CLASS, classQuery],
+    [QueryType.INTERFACE, interfaceQuery],
+    [QueryType.ENUM, enumQuery],
 
-    [QueryType.TYPE_ALIAS_QUERY, typeAliasQuery],
+    [QueryType.TYPE_ALIAS, typeAliasQuery],
 
-    [QueryType.FUNCTION_QUERY, functionQuery],
-    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+    [QueryType.FUNCTION, functionQuery],
+    [QueryType.FUNCTION_CALL, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS, functionParametersQuery],
 ] as const);

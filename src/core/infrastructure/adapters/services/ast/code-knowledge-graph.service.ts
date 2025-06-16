@@ -7,7 +7,7 @@ import {
     FileAnalysis,
     FunctionAnalysis,
     TypeAnalysis,
-} from '@/core/domain/ast/types/code-graph';
+} from '@kodus/kodus-proto/v2';
 
 import { Piscina } from 'piscina';
 import * as path from 'path';
@@ -61,12 +61,11 @@ export class CodeKnowledgeGraphService {
             throw new Error(`Root directory not found: ${rootDir}`);
         }
 
-        const result = {
+        const result: CodeGraph = {
             files: new Map<string, FileAnalysis>(),
             functions: new Map<string, FunctionAnalysis>(),
             types: new Map<string, TypeAnalysis>(),
-            failedFiles: [],
-        } as CodeGraph;
+        };
 
         const sourceFiles = await this.getAllSourceFiles(rootDir);
 
@@ -82,8 +81,8 @@ export class CodeKnowledgeGraphService {
             // 'integrationConfig.service.ts',
             // 'user.py',
             // 'example.rb',
-            'src/core/application/use-cases/codeReviewFeedback',
-            // 'src/core/application/use-cases/codeBase/php_project',
+            // 'src/core/application/use-cases/codeReviewFeedback',
+            // 'src/core/application/use-cases/codeBase/diff_test',
             // 'manimlib/utils/tex_file_writing.py',
             // 'update_kody_rules.js',
             // 'fooooooooooooooooooooooooooooooo',
@@ -102,6 +101,7 @@ export class CodeKnowledgeGraphService {
                 metadata: {
                     rootDir,
                 },
+                serviceName: CodeKnowledgeGraphService.name,
             });
             return result;
         }
@@ -162,12 +162,12 @@ export class CodeKnowledgeGraphService {
                                 ],
                             );
 
-                            const functionsMap =
+                            const functionsMap: Map<string, FunctionAnalysis> =
                                 analysis.functions instanceof Map
                                     ? analysis.functions
                                     : this.objectToMap(analysis.functions);
 
-                            const typesMap =
+                            const typesMap: Map<string, TypeAnalysis> =
                                 analysis.types instanceof Map
                                     ? analysis.types
                                     : this.objectToMap(analysis.types);
@@ -190,6 +190,7 @@ export class CodeKnowledgeGraphService {
                                     filePath,
                                     normalizedPath,
                                 },
+                                serviceName: CodeKnowledgeGraphService.name,
                             });
                             throw err;
                         }
@@ -205,20 +206,19 @@ export class CodeKnowledgeGraphService {
                         );
 
                         if (item.analysis.functions) {
-                            for (const [k, v] of (
-                                item.analysis.functions as Map<
-                                    string,
-                                    FunctionAnalysis
-                                >
-                            ).entries()) {
+                            for (const [
+                                k,
+                                v,
+                            ] of item.analysis.functions.entries()) {
                                 result.functions.set(k, v);
                             }
                         }
 
                         if (item.analysis.types) {
-                            for (const [k, v] of (
-                                item.analysis.types as Map<string, TypeAnalysis>
-                            ).entries()) {
+                            for (const [
+                                k,
+                                v,
+                            ] of item.analysis.types.entries()) {
                                 result.types.set(k, v);
                             }
                         }
@@ -230,6 +230,7 @@ export class CodeKnowledgeGraphService {
                             metadata: {
                                 resultItem,
                             },
+                            serviceName: CodeKnowledgeGraphService.name,
                         });
                     }
                 }

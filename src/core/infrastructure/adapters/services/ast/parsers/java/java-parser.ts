@@ -2,9 +2,9 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import { javaQueries } from './java-queries';
 import * as JavaLang from 'tree-sitter-java';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class JavaParser extends BaseParser {
     private static readonly language = JavaLang as Language;
@@ -35,13 +35,13 @@ export class JavaParser extends BaseParser {
         return JavaParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        class_declaration: ScopeType.CLASS,
-        interface_declaration: ScopeType.INTERFACE,
-        enum_declaration: ScopeType.ENUM,
-        method_declaration: ScopeType.METHOD,
-        constructor_declaration: ScopeType.METHOD,
-        variable_declarator: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        class_declaration: NodeType.NODE_TYPE_CLASS,
+        interface_declaration: NodeType.NODE_TYPE_INTERFACE,
+        enum_declaration: NodeType.NODE_TYPE_ENUM,
+        method_declaration: NodeType.NODE_TYPE_FUNCTION,
+        constructor_declaration: NodeType.NODE_TYPE_FUNCTION,
+        variable_declarator: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override processChainNode(

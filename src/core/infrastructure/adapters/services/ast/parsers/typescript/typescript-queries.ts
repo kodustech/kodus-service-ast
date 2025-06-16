@@ -1,4 +1,4 @@
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 
 const classAuxiliaryQuery = () => `
 	name: (type_identifier) @objName
@@ -60,7 +60,7 @@ const functionAxuliaryQuery = () => `
 `;
 
 const importQuery: ParserQuery = {
-    type: QueryType.IMPORT_QUERY,
+    type: QueryType.IMPORT,
     query: `
 (import_statement
 	(import_clause
@@ -100,7 +100,7 @@ const importQuery: ParserQuery = {
 };
 
 const classQuery: ParserQuery = {
-    type: QueryType.CLASS_QUERY,
+    type: QueryType.CLASS,
     query: `
 (class_declaration
 ${classAuxiliaryQuery()}
@@ -113,7 +113,7 @@ ${classAuxiliaryQuery()}
 };
 
 const interfaceQuery: ParserQuery = {
-    type: QueryType.INTERFACE_QUERY,
+    type: QueryType.INTERFACE,
     query: `
 (interface_declaration
 	name: (type_identifier) @objName
@@ -146,7 +146,7 @@ const interfaceQuery: ParserQuery = {
 };
 
 const enumQuery: ParserQuery = {
-    type: QueryType.ENUM_QUERY,
+    type: QueryType.ENUM,
     query: `
 (enum_declaration
 	name: (identifier) @objName
@@ -163,7 +163,7 @@ const enumQuery: ParserQuery = {
 };
 
 const typeAliasQuery: ParserQuery = {
-    type: QueryType.TYPE_ALIAS_QUERY,
+    type: QueryType.TYPE_ALIAS,
     query: `
 (type_alias_declaration
 	name: (type_identifier) @typeName
@@ -193,7 +193,7 @@ const typeAliasQuery: ParserQuery = {
 };
 
 const functionQuery: ParserQuery = {
-    type: QueryType.FUNCTION_QUERY,
+    type: QueryType.FUNCTION,
     query: `
 (function_declaration
 	name: (identifier) @funcName
@@ -215,7 +215,7 @@ const functionQuery: ParserQuery = {
 };
 
 const functionCallQuery: ParserQuery = {
-    type: QueryType.FUNCTION_CALL_QUERY,
+    type: QueryType.FUNCTION_CALL,
     query: `
 (call_expression
     function: (member_expression) @call
@@ -228,7 +228,7 @@ const functionCallQuery: ParserQuery = {
 };
 
 const functionParametersQuery: ParserQuery = {
-    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    type: QueryType.FUNCTION_PARAMETERS,
     query: `
 (formal_parameters
     (
@@ -245,15 +245,15 @@ const functionParametersQuery: ParserQuery = {
 };
 
 export const typeScriptQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.IMPORT, importQuery],
 
-    [QueryType.CLASS_QUERY, classQuery],
-    [QueryType.INTERFACE_QUERY, interfaceQuery],
-    [QueryType.ENUM_QUERY, enumQuery],
+    [QueryType.CLASS, classQuery],
+    [QueryType.INTERFACE, interfaceQuery],
+    [QueryType.ENUM, enumQuery],
 
-    [QueryType.TYPE_ALIAS_QUERY, typeAliasQuery],
+    [QueryType.TYPE_ALIAS, typeAliasQuery],
 
-    [QueryType.FUNCTION_QUERY, functionQuery],
-    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+    [QueryType.FUNCTION, functionQuery],
+    [QueryType.FUNCTION_CALL, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS, functionParametersQuery],
 ] as const);

@@ -1,18 +1,15 @@
-import {
-    FunctionAnalysis,
-    TypeAnalysis,
-} from '@/core/domain/ast/types/code-graph';
 import * as fs from 'fs';
 import { getParserByFilePath } from './parsers';
 import { BaseParser } from './parsers/base-parser';
+import { ParseContext, ParserAnalysis } from '@/core/domain/ast/types/parser';
+import { getLanguageResolver } from './resolvers';
+import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
 import {
     AnalysisNode,
     Call,
-    ParseContext,
-    ParserAnalysis,
-} from '@/core/domain/ast/types/parser';
-import { getLanguageResolver } from './resolvers';
-import { LanguageResolver } from '@/core/domain/ast/contracts/language-resolver.contract';
+    FunctionAnalysis,
+    TypeAnalysis,
+} from '@kodus/kodus-proto/v2';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;
@@ -45,6 +42,7 @@ export class SourceFileAnalyzer {
             }
 
             const context: ParseContext = {
+                filePath,
                 fileDefines: new Set<string>(),
                 fileImports: new Set<string>(),
                 fileClassNames: new Set<string>(),
@@ -112,10 +110,10 @@ export class SourceFileAnalyzer {
                     calls: context.fileCalls,
                     imports: normalizedImports,
                     className: Array.from(context.fileClassNames),
+                    nodes: context.analysisNodes,
                 },
                 functions: context.functions,
                 types: context.types,
-                analysisNodes: context.analysisNodes,
             };
         } catch (error) {
             console.error(`Error analyzing file ${filePath}:`, error);
@@ -141,10 +139,10 @@ export class SourceFileAnalyzer {
                 calls: [],
                 imports: [],
                 className: [],
+                nodes: new Map(),
             },
             functions: new Map(),
             types: new Map(),
-            analysisNodes: new Map<number, AnalysisNode>(),
         };
     }
 

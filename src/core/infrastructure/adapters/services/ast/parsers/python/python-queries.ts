@@ -1,7 +1,7 @@
 import { ParserQuery, QueryType } from '../query';
 
 const importQuery: ParserQuery = {
-    type: QueryType.IMPORT_QUERY,
+    type: QueryType.IMPORT,
     query: `
 (import_statement
 	(
@@ -37,7 +37,7 @@ const importQuery: ParserQuery = {
 };
 
 const classQuery: ParserQuery = {
-    type: QueryType.CLASS_QUERY,
+    type: QueryType.CLASS,
     query: `
 (class_definition
 	name: (identifier) @objName
@@ -70,7 +70,7 @@ const classQuery: ParserQuery = {
 };
 
 const functionQuery: ParserQuery = {
-    type: QueryType.FUNCTION_QUERY,
+    type: QueryType.FUNCTION,
     query: `
 (function_definition
     name: (identifier) @funcName
@@ -90,7 +90,7 @@ const functionQuery: ParserQuery = {
 };
 
 const functionCallQuery: ParserQuery = {
-    type: QueryType.FUNCTION_CALL_QUERY,
+    type: QueryType.FUNCTION_CALL,
     query: `
 (attribute
 	attribute: (identifier)
@@ -103,7 +103,7 @@ const functionCallQuery: ParserQuery = {
 };
 
 const functionParametersQuery: ParserQuery = {
-    type: QueryType.FUNCTION_PARAMETERS_QUERY,
+    type: QueryType.FUNCTION_PARAMETERS,
     query: `
 (parameters
     (
@@ -122,11 +122,11 @@ const functionParametersQuery: ParserQuery = {
 };
 
 export const pythonQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.IMPORT, importQuery],
 
-    [QueryType.CLASS_QUERY, classQuery],
+    [QueryType.CLASS, classQuery],
 
-    [QueryType.FUNCTION_QUERY, functionQuery],
-    [QueryType.FUNCTION_CALL_QUERY, functionCallQuery],
-    [QueryType.FUNCTION_PARAMETERS_QUERY, functionParametersQuery],
+    [QueryType.FUNCTION, functionQuery],
+    [QueryType.FUNCTION_CALL, functionCallQuery],
+    [QueryType.FUNCTION_PARAMETERS, functionParametersQuery],
 ] as const);

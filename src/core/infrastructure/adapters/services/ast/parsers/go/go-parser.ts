@@ -2,9 +2,9 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import * as GoLang from 'tree-sitter-go';
 import { goQueries } from './go-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import { CallChain } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class GoParser extends BaseParser {
     private static readonly language = GoLang as Language;
@@ -33,7 +33,7 @@ export class GoParser extends BaseParser {
         return GoParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {};
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {};
 
     protected processChainNode(node: SyntaxNode, chain: CallChain[]): boolean {
         throw new Error('Method not implemented.');

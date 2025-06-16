@@ -2,9 +2,9 @@ import { Language, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import * as RustLang from 'tree-sitter-rust';
 import { rustQueries } from './rust-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import { CallChain, ChainType } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class RustParser extends BaseParser {
     private static readonly language = RustLang as Language;
@@ -39,12 +39,12 @@ export class RustParser extends BaseParser {
         return RustParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        struct_item: ScopeType.CLASS,
-        impl_item: ScopeType.CLASS,
-        trait_item: ScopeType.INTERFACE,
-        enum_item: ScopeType.ENUM,
-        function_item: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        struct_item: NodeType.NODE_TYPE_CLASS,
+        impl_item: NodeType.NODE_TYPE_CLASS,
+        trait_item: NodeType.NODE_TYPE_INTERFACE,
+        enum_item: NodeType.NODE_TYPE_ENUM,
+        function_item: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override processChainNode(

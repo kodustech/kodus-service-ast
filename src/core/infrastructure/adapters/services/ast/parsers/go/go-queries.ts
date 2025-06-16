@@ -1,7 +1,7 @@
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 
 const importQuery: ParserQuery = {
-    type: QueryType.IMPORT_QUERY,
+    type: QueryType.IMPORT,
     query: `
 (import_spec
     path: (interpreted_string_literal) @origin
@@ -10,13 +10,13 @@ const importQuery: ParserQuery = {
 };
 
 const classQuery: ParserQuery = {
-    type: QueryType.CLASS_QUERY,
+    type: QueryType.CLASS,
     query: `
 `,
 };
 
 export const goQueries = new Map<QueryType, ParserQuery>([
-    [QueryType.IMPORT_QUERY, importQuery],
+    [QueryType.IMPORT, importQuery],
 
-    [QueryType.CLASS_QUERY, classQuery],
+    [QueryType.CLASS, classQuery],
 ] as const);

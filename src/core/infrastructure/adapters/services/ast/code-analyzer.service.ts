@@ -1,36 +1,38 @@
-import { CodeGraph, FileAnalysis } from '@/core/domain/ast/types/code-graph';
 import { Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service';
 import {
-    EnrichGraphNode,
-    EnrichGraphEdge,
-    EnrichGraph,
+    EnrichedGraphNode,
+    EnrichedGraphEdge,
+    EnrichedGraph,
     NodeType,
     RelationshipType,
-} from '@/core/domain/ast/types/encriched-graph';
+    CodeGraph,
+    FileAnalysis,
+} from '@kodus/kodus-proto/v2';
 
 @Injectable()
 export class CodeAnalyzerService {
-    private normalizedPathCache = new Map<string, string>();
-    private extractPathCache = new Map<
+    private normalizedPathCache: Map<string, string>;
+    private extractPathCache: Map<
         string,
         { filePath: string; identifier?: string }
-    >();
-    private addedNodes: Record<string, boolean> = {};
-    private relationshipKeys: Record<string, boolean> = {};
-    private nodes: EnrichGraphNode[] = [];
-    private relationships = new Map<string, EnrichGraphEdge>();
+    >;
+    private addedNodes: Set<number>;
+    private relationshipKeys: Record<string, boolean>;
+    private nodes: EnrichedGraphNode[];
+    private relationships: Map<string, EnrichedGraphEdge>;
 
     constructor(private readonly logger: PinoLoggerService) {}
 
-    enrichGraph(data: CodeGraph): EnrichGraph {
-        this.clearNormalizedPathCache();
-        this.clearExtractPathCache();
-
+    enrichGraph(data: CodeGraph): EnrichedGraph {
+        this.normalizedPathCache = new Map();
+        this.extractPathCache = new Map();
         this.nodes = [];
-        this.relationships.clear();
-        this.addedNodes = {};
+        this.relationships = new Map();
+        this.addedNodes = new Set();
         this.relationshipKeys = {};
+
+        this.processFiles(data);
 
         this.processTypes(data);
         this.processFunctions(data);
@@ -53,82 +55,95 @@ export class CodeAnalyzerService {
         this.extractPathCache.clear();
     }
 
+    private processFiles(data: CodeGraph) {
+        data.files.forEach((fileData, filePath) => {
+            const normalizedPath = this.normalizePath(filePath);
+
+            fileData.nodes.forEach((node) => {
+                this.addNode({
+                    id: node.id,
+                    name: node.name,
+                    file: normalizedPath.split('/').pop() || '',
+                    filePath: normalizedPath,
+                    position: node.position,
+                    type: node.type,
+                });
+            });
+        });
+    }
+
     private processTypes(data: CodeGraph) {
-        const normalizedTypes = new Map<
-            string,
-            {
-                name: string;
-                type: string;
-                file: string;
-                implements?: string[];
-                extends?: string[];
-                implementedBy?: string[];
-            }
-        >();
+        data.types.forEach((type) => {
+            const typeFilePath = this.normalizePath(type.file);
 
-        data.types.forEach((type, key) => {
-            if (
-                typeof type === 'object' &&
-                type.name &&
-                type.type &&
-                type.file
-            ) {
-                const normalizedKey = this.normalizePath(key);
-                normalizedTypes.set(normalizedKey, type);
+            type.implements?.forEach((iface) => {
+                const { filePath, identifier } =
+                    this.extractFilePathAndIdentifier(iface);
 
-                this.addNode(
-                    type.name,
-                    type.type === 'interface'
-                        ? NodeType.INTERFACE
-                        : NodeType.CLASS,
-                    type.file.split('/').pop() || '',
-                    type.file,
-                );
-
-                if (type.type === 'class') {
-                    type.implements?.forEach((iface: string) => {
-                        const { filePath, identifier } =
-                            this.extractFilePathAndIdentifier(iface);
-                        if (identifier && this.addedNodes[identifier]) {
-                            this.addRelationship(
-                                type.name,
-                                identifier,
-                                RelationshipType.IMPLEMENTS,
-                                type.file,
-                                filePath,
-                            );
-                        }
+                const node = this.findNode(identifier || iface, filePath);
+                if (!node) {
+                    this.logger.warn({
+                        message: `Node not found for interface ${iface} in file ${filePath}`,
+                        context: CodeAnalyzerService.name,
+                        metadata: {
+                            type: type.type,
+                            filePath,
+                            identifier,
+                        },
                     });
-
-                    type.extends?.forEach((baseClass: string) => {
-                        const { filePath, identifier } =
-                            this.extractFilePathAndIdentifier(baseClass);
-                        if (identifier && this.addedNodes[identifier]) {
-                            this.addRelationship(
-                                type.name,
-                                identifier,
-                                RelationshipType.EXTENDS,
-                                type.file,
-                                filePath,
-                            );
-                        }
-                    });
-                } else if (type.type === 'interface') {
-                    type.implementedBy?.forEach((cls: string) => {
-                        const { identifier } =
-                            this.extractFilePathAndIdentifier(cls);
-                        if (identifier && this.addedNodes[identifier]) {
-                            this.addRelationship(
-                                identifier,
-                                type.name,
-                                RelationshipType.IMPLEMENTED_BY,
-                                type.file,
-                                cls,
-                            );
-                        }
-                    });
+                    return;
                 }
-            }
+
+                this.addRelationship({
+                    from: type.nodeId,
+                    to: node.id,
+                    type: RelationshipType.RELATIONSHIP_TYPE_IMPLEMENTS,
+                    fromPath: typeFilePath,
+                    toPath: filePath,
+                });
+
+                this.addRelationship({
+                    from: node.id,
+                    to: type.nodeId,
+                    type: RelationshipType.RELATIONSHIP_TYPE_IMPLEMENTED_BY,
+                    fromPath: filePath,
+                    toPath: typeFilePath,
+                });
+            });
+
+            type.extends?.forEach((baseClass: string) => {
+                const { filePath, identifier } =
+                    this.extractFilePathAndIdentifier(baseClass);
+
+                const node = this.findNode(identifier || baseClass, filePath);
+                if (!node) {
+                    this.logger.warn({
+                        message: `Node not found for base class ${baseClass} in file ${filePath}`,
+                        context: CodeAnalyzerService.name,
+                        metadata: {
+                            type: type.type,
+                            filePath,
+                            identifier,
+                        },
+                    });
+                    return;
+                }
+                this.addRelationship({
+                    from: type.nodeId,
+                    to: node.id,
+                    type: RelationshipType.RELATIONSHIP_TYPE_EXTENDS,
+                    fromPath: typeFilePath,
+                    toPath: filePath,
+                });
+
+                this.addRelationship({
+                    from: node.id,
+                    to: type.nodeId,
+                    type: RelationshipType.RELATIONSHIP_TYPE_EXTENDED_BY,
+                    fromPath: filePath,
+                    toPath: typeFilePath,
+                });
+            });
         });
     }
 
@@ -136,12 +151,17 @@ export class CodeAnalyzerService {
         data.functions.forEach((func, funcKey) => {
             let className = func.className;
             let functionName = func.name;
-            const filePath = func.file;
+            const filePath = this.normalizePath(func.file);
 
             if (!className) {
                 className = this.inferClassName(filePath, data);
 
                 if (!className) {
+                    this.logger.warn({
+                        message: `Class name not found for ${funcKey}`,
+                        context: CodeAnalyzerService.name,
+                        metadata: { filePath, funcKey },
+                    });
                     return;
                 }
             }
@@ -152,73 +172,89 @@ export class CodeAnalyzerService {
 
                 functionName = methodName;
 
+                if (!functionName) {
+                    this.logger.warn({
+                        message: `Function name not found for ${funcKey}`,
+                        context: CodeAnalyzerService.name,
+                        metadata: { filePath, funcKey },
+                    });
+                    return;
+                }
+            }
+
+            const classNode = this.findNode(className, filePath);
+
+            if (!classNode) {
+                this.logger.warn({
+                    message: `Class node not found for ${className} in file ${filePath}`,
+                    context: CodeAnalyzerService.name,
+                    metadata: { className, filePath, funcKey },
+                });
                 return;
             }
 
-            const methodId = `${className}.${functionName}`;
+            this.addNode({
+                id: func.nodeId,
+                name: functionName,
+                file: filePath.split('/').pop() || '',
+                filePath: filePath,
+                position: func.position,
+                type: NodeType.NODE_TYPE_FUNCTION,
+            });
 
-            if (!this.addedNodes[methodId]) {
-                this.addNode(
-                    methodId,
-                    NodeType.METHOD,
-                    filePath.split('/').pop() || '',
-                    filePath,
-                );
-            }
-
-            if (this.addedNodes[methodId]) {
-                this.addRelationship(
-                    className,
-                    methodId,
-                    RelationshipType.HAS_METHOD,
-                    filePath,
-                    filePath,
-                );
-            }
+            this.addRelationship({
+                from: classNode.id,
+                to: func.nodeId,
+                type: RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
+                fromPath: classNode.filePath,
+                toPath: filePath,
+            });
         });
     }
 
     private processImports(data: CodeGraph) {
-        for (const [filePath, fileData] of data.files) {
-            this.processFileImports(filePath, fileData, data);
-        }
-    }
+        data.files.forEach((fileData, filePath) => {
+            const normalizedPath = this.normalizePath(filePath);
 
-    private processFileImports(
-        filePath: string,
-        fileData: FileAnalysis,
-        data: CodeGraph,
-    ) {
-        if (!fileData.imports || !fileData.imports.length) {
-            return;
-        }
+            if (!fileData.imports || !fileData.imports.length) {
+                return;
+            }
 
-        const normalizedFrom = this.normalizePath(filePath);
-        const className = fileData.className?.[0];
+            fileData.imports.forEach((importedFile) => {
+                const { filePath: importedFilePath, identifier } =
+                    this.extractFilePathAndIdentifier(importedFile);
 
-        const importedFileData = data.files.get(normalizedFrom);
-        if (importedFileData && importedFileData.className) {
-            const importedClassName = importedFileData.className[0];
+                const normalizedImportedPath =
+                    this.normalizePath(importedFilePath);
 
-            this.addRelationship(
-                className,
-                importedClassName,
-                RelationshipType.IMPORTS,
-                normalizedFrom,
-                normalizedFrom,
-            );
-        }
+                const node = this.findNode(
+                    identifier || importedFile,
+                    normalizedImportedPath,
+                );
+                if (!node) {
+                    this.logger.warn({
+                        message: `Node not found for imported identifier ${identifier || importedFile} in file ${normalizedImportedPath}`,
+                        context: CodeAnalyzerService.name,
+                        metadata: {
+                            filePath: normalizedPath,
+                            importedFile,
+                            identifier,
+                        },
+                    });
+                    return;
+                }
+            });
+        });
     }
 
     private processFunctionCalls(data: CodeGraph) {
         for (const [key, func] of data.functions.entries()) {
-            const { filePath } = this.extractFilePathAndIdentifier(key);
-
-            if (!func.className || !func.name) {
+            if (!func.nodeId || func.nodeId === -1) {
                 continue;
             }
 
-            const methodId = `${func.className}.${func.name}`;
+            const { filePath } = this.extractFilePathAndIdentifier(key);
+            const normalizedFilePath = this.normalizePath(filePath);
 
             for (const call of func.calls || []) {
                 if (!call.function || !call.file) {
@@ -227,22 +263,33 @@ export class CodeAnalyzerService {
 
                 const { filePath: calledFilePath } =
                     this.extractFilePathAndIdentifier(call.file);
+                const normalizedCalledFilePath =
+                    this.normalizePath(calledFilePath);
 
-                const calledId = this.findMethodId(
-                    call.file,
+                const calledNode = this.findNode(
                     call.function,
-                    data,
+                    normalizedCalledFilePath,
                 );
-
-                if (calledId) {
-                    this.addRelationship(
-                        methodId,
-                        calledId,
-                        RelationshipType.CALLS,
-                        filePath,
-                        calledFilePath,
-                    );
+                if (!calledNode) {
+                    this.logger.warn({
+                        message: `Called node not found for ${call.function} in file ${calledFilePath}`,
+                        context: CodeAnalyzerService.name,
+                        metadata: {
+                            function: call.function,
+                            filePath: normalizedFilePath,
+                            calledFilePath: normalizedCalledFilePath,
+                        },
+                    });
+                    continue;
                 }
+
+                this.addRelationship({
+                    from: func.nodeId,
+                    to: calledNode.id,
+                    type: RelationshipType.RELATIONSHIP_TYPE_CALLS,
+                    fromPath: normalizedFilePath,
+                    toPath: normalizedCalledFilePath,
+                });
 
                 const implMethod = this.findImplementation(
                     call.file,
@@ -250,13 +297,13 @@ export class CodeAnalyzerService {
                     data,
                 );
                 if (implMethod) {
-                    this.addRelationship(
-                        methodId,
-                        implMethod.id,
-                        RelationshipType.CALLS_IMPLEMENTATION,
-                        filePath,
-                        implMethod.filePath,
-                    );
+                    this.addRelationship({
+                        from: func.nodeId,
+                        to: implMethod.id,
+                        type: RelationshipType.RELATIONSHIP_TYPE_CALLS_IMPLEMENTATION,
+                        fromPath: normalizedFilePath,
+                        toPath: implMethod.filePath,
+                    });
                 }
             }
         }
@@ -265,21 +312,21 @@ export class CodeAnalyzerService {
     private processInheritance(data: CodeGraph) {
         data.types.forEach((type) => {
             if (
-                (type.type === 'class' && type.extends) ||
-                (type.type === 'interface' && type.extends)
+                (type.type === NodeType.NODE_TYPE_CLASS && type.extends) ||
+                (type.type === NodeType.NODE_TYPE_INTERFACE && type.extends)
             ) {
                 type.extends.forEach((baseClass: string) => {
                     if (this.addedNodes[type.name]) {
                         const { filePath, identifier } =
                             this.extractFilePathAndIdentifier(baseClass);
 
-                        this.addRelationship(
-                            type.name,
-                            identifier,
-                            RelationshipType.EXTENDS,
-                            type.file,
-                            filePath,
-                        );
+                        this.addRelationship({
+                            from: type.nodeId,
+                            to: type.nodeId,
+                            type: RelationshipType.RELATIONSHIP_TYPE_EXTENDS,
+                            fromPath: type.file,
+                            toPath: filePath,
+                        });
                     }
                 });
             }
@@ -297,18 +344,14 @@ export class CodeAnalyzerService {
         return normalized;
     }
 
-    private addNode(
-        id: string,
-        type: EnrichGraphNode['type'],
-        file: string,
-        filePath: string,
-    ) {
-        if (!id || id === 'undefined') {
+    private addNode(node: EnrichedGraphNode) {
+        if (!node || node.id === -1) {
             return;
         }
-        if (!this.addedNodes[id]) {
-            this.nodes.push({ id, type, file, filePath });
-            this.addedNodes[id] = true;
+
+        if (!this.addedNodes.has(node.id)) {
+            this.addedNodes.add(node.id);
+            this.nodes.push(node);
         }
     }
 
@@ -331,20 +374,17 @@ export class CodeAnalyzerService {
         return result;
     }
 
-    private addRelationship(
-        from: string,
-        to: string,
-        type: RelationshipType,
-        fromPath: string,
-        toPath: string,
-    ) {
-        if (!this.addedNodes[from] || !this.addedNodes[to]) {
+    private addRelationship(relationship: EnrichedGraphEdge) {
+        if (
+            !this.addedNodes.has(relationship.from) ||
+            !this.addedNodes.has(relationship.to)
+        ) {
             return;
         }
 
-        const key = `${from}:${to}:${type}`;
+        const key = `${relationship.from}:${relationship.to}:${relationship.type}`;
         if (!this.relationshipKeys[key]) {
-            this.relationships.set(key, { from, to, type, fromPath, toPath });
+            this.relationships.set(key, relationship);
             this.relationshipKeys[key] = true;
         }
     }
@@ -355,7 +395,10 @@ export class CodeAnalyzerService {
         }
 
         const foundClass = Array.from(data.types.values()).find(
-            (type) => type && type.file === filePath && type.type === 'class',
+            (type) =>
+                type &&
+                type.file === filePath &&
+                type.type === NodeType.NODE_TYPE_CLASS,
         ) as { name?: string } | undefined;
 
         return foundClass?.name || null;
@@ -392,13 +435,13 @@ export class CodeAnalyzerService {
         interfacePath: string,
         methodName: string,
         data: CodeGraph,
-    ): { id: string; filePath: string } | null {
+    ): { id: number; filePath: string } | null {
         const matchingClasses = Array.from(data.types.entries()).filter(
             ([, type]) =>
-                type.type === 'class' &&
+                type.type === NodeType.NODE_TYPE_CLASS &&
                 Array.isArray(type.implements) &&
                 type.implements.some((impl: string) =>
-                    impl.startsWith(`${interfacePath}:`),
+                    impl.startsWith(interfacePath),
                 ),
         );
 
@@ -406,7 +449,7 @@ export class CodeAnalyzerService {
             return null;
         }
 
-        const [, implClass] = matchingClasses[0] as [string, { name: string }];
+        const [, implClass] = matchingClasses[0];
 
         if (!implClass.name) {
             return null;
@@ -421,11 +464,22 @@ export class CodeAnalyzerService {
             return null;
         }
 
-        const [, func] = implMethodEntry as [string, { file: string }];
+        const [, func] = implMethodEntry;
+        const normalizedFilePath = this.normalizePath(func.file);
 
         return {
-            id: `${implClass.name}.${methodName}`,
-            filePath: func.file,
+            id: func.nodeId,
+            filePath: normalizedFilePath,
         };
+    }
+
+    private findNode(name: string, filePath: string): EnrichedGraphNode | null {
+        return (
+            this.nodes.find(
+                (node) =>
+                    node.name === name &&
+                    node.filePath === this.normalizePath(filePath),
+            ) || null
+        );
     }
 }

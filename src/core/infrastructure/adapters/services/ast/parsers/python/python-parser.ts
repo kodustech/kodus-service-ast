@@ -2,9 +2,9 @@ import { BaseParser } from '../base-parser';
 import { Language, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
 import { pythonQueries } from './python-queries';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class PythonParser extends BaseParser {
     private static readonly language = PythonLang as Language;
@@ -35,10 +35,10 @@ export class PythonParser extends BaseParser {
         return PythonParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        class_definition: ScopeType.CLASS,
-        function_definition: ScopeType.FUNCTION,
-        assignment: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        class_definition: NodeType.NODE_TYPE_CLASS,
+        function_definition: NodeType.NODE_TYPE_FUNCTION,
+        assignment: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override processChainNode(

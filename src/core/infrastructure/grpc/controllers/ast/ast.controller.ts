@@ -4,8 +4,8 @@ import {
     ASTAnalyzerServiceControllerMethods,
     DeleteRepositoryRequest,
     DeleteRepositoryResponse,
-    GetDiffRequest,
-    GetDiffResponse,
+    GetContentFromDiffRequest,
+    GetContentFromDiffResponse,
     GetGraphsRequest,
     GetGraphsResponse,
     InitializeRepositoryRequest,
@@ -15,6 +15,8 @@ import { Observable } from 'rxjs';
 import { InitializeRepositoryUseCase } from '@/core/application/use-cases/ast/initialize-repository.use-case';
 import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/delete-repository.use-case';
 import { GetGraphsUseCase } from '@/core/application/use-cases/ast/get-graphs.use-case';
+import { streamedResponse } from '@/shared/utils/grpc/streams';
+import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/get-content-diff.use-case';
 
 @Controller('ast')
 @ASTAnalyzerServiceControllerMethods()
@@ -23,6 +25,7 @@ export class ASTController implements ASTAnalyzerServiceController {
         private readonly initializeRepositoryUseCase: InitializeRepositoryUseCase,
         private readonly deleteRepositoryUseCase: DeleteRepositoryUseCase,
         private readonly getGraphsUseCase: GetGraphsUseCase,
+        private readonly getContentFromDiffUseCase: GetContentFromDiffUseCase,
     ) {}
 
     initializeRepository(
@@ -38,10 +41,16 @@ export class ASTController implements ASTAnalyzerServiceController {
     }
 
     getGraphs(request: GetGraphsRequest): Observable<GetGraphsResponse> {
-        return this.getGraphsUseCase.execute(request);
+        return streamedResponse(request, (req) =>
+            this.getGraphsUseCase.execute(req, true),
+        );
     }
 
-    getDiff(request: GetDiffRequest): Observable<GetDiffResponse> {
-        throw new Error('Method not implemented.');
+    getContentFromDiff(
+        request: GetContentFromDiffRequest,
+    ): Observable<GetContentFromDiffResponse> {
+        return streamedResponse(request, (req) =>
+            this.getContentFromDiffUseCase.execute(req),
+        );
     }
 }

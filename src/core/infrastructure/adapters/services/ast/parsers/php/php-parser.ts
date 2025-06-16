@@ -2,9 +2,9 @@ import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser';
 import { phpQueries } from './php-queries';
 import * as PhpLang from 'tree-sitter-php/php';
-import { Scope, ScopeType } from '@/core/domain/ast/types/parser';
-import { QueryType, ParserQuery } from '../query';
+import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/ast/types/parser';
+import { NodeType, Scope } from '@kodus/kodus-proto/v2';
 
 export class PhpParser extends BaseParser {
     private static readonly language = PhpLang as Language;
@@ -39,13 +39,13 @@ export class PhpParser extends BaseParser {
         return PhpParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, ScopeType> = {
-        class_declaration: ScopeType.CLASS,
-        interface_declaration: ScopeType.INTERFACE,
-        enum_declaration: ScopeType.ENUM,
-        function_definition: ScopeType.FUNCTION,
-        method_declaration: ScopeType.METHOD,
-        assignment_expression: ScopeType.FUNCTION,
+    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+        class_declaration: NodeType.NODE_TYPE_CLASS,
+        interface_declaration: NodeType.NODE_TYPE_INTERFACE,
+        enum_declaration: NodeType.NODE_TYPE_ENUM,
+        function_definition: NodeType.NODE_TYPE_FUNCTION,
+        method_declaration: NodeType.NODE_TYPE_FUNCTION,
+        assignment_expression: NodeType.NODE_TYPE_FUNCTION,
     };
 
     protected override getImportOriginName(

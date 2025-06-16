@@ -7,7 +7,6 @@ import {
     NodeType,
     RelationshipType,
     CodeGraph,
-    FileAnalysis,
 } from '@kodus/kodus-proto/v2';
 
 @Injectable()
@@ -39,7 +38,6 @@ export class CodeAnalyzerService {
         this.processImports(data);
 
         this.processFunctionCalls(data);
-        this.processInheritance(data);
 
         return {
             nodes: this.nodes,
@@ -243,6 +241,14 @@ export class CodeAnalyzerService {
                     });
                     return;
                 }
+
+                this.addRelationship({
+                    from: node.id,
+                    to: node.id,
+                    type: RelationshipType.RELATIONSHIP_TYPE_IMPORTS,
+                    fromPath: normalizedPath,
+                    toPath: normalizedImportedPath,
+                });
             });
         });
     }
@@ -307,30 +313,6 @@ export class CodeAnalyzerService {
                 }
             }
         }
-    }
-
-    private processInheritance(data: CodeGraph) {
-        data.types.forEach((type) => {
-            if (
-                (type.type === NodeType.NODE_TYPE_CLASS && type.extends) ||
-                (type.type === NodeType.NODE_TYPE_INTERFACE && type.extends)
-            ) {
-                type.extends.forEach((baseClass: string) => {
-                    if (this.addedNodes[type.name]) {
-                        const { filePath, identifier } =
-                            this.extractFilePathAndIdentifier(baseClass);
-
-                        this.addRelationship({
-                            from: type.nodeId,
-                            to: type.nodeId,
-                            type: RelationshipType.RELATIONSHIP_TYPE_EXTENDS,
-                            fromPath: type.file,
-                            toPath: filePath,
-                        });
-                    }
-                });
-            }
-        });
     }
 
     private normalizePath(path: string): string {

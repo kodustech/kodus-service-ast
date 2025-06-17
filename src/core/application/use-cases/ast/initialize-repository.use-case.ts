@@ -1,5 +1,5 @@
-import { CodeAnalyzerService } from '@/core/infrastructure/adapters/services/ast/code-analyzer.service';
-import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/ast/code-knowledge-graph.service';
+import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service';
+import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { handleError } from '@/shared/utils/errors';
@@ -23,7 +23,7 @@ export class InitializeRepositoryUseCase {
     constructor(
         private readonly repositoryManagerService: RepositoryManagerService,
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
-        private readonly codeAnalyzerService: CodeAnalyzerService,
+        private readonly codeAnalyzerService: GraphEnrichmentService,
 
         private readonly logger: PinoLoggerService,
     ) {}
@@ -132,7 +132,6 @@ export class InitializeRepositoryUseCase {
         });
 
         const graphsJson = JSON.stringify(graphs, null, 2);
-        const data = Buffer.from(graphsJson, 'utf-8');
 
         await this.repositoryManagerService.writeFile({
             repoData,

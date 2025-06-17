@@ -1,20 +1,21 @@
-import { Module } from '@nestjs/common';
-import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/ast/code-knowledge-graph.service';
-import { CodeAnalyzerService } from '@/core/infrastructure/adapters/services/ast/code-analyzer.service';
-import { RepositoryModule } from './repository.module';
-import { ASTController } from '@/core/infrastructure/grpc/controllers/ast/ast.controller';
 import { UseCases } from '@/core/application/use-cases/ast';
-import { DifferService } from '@/core/infrastructure/adapters/services/ast/differ.service';
+import { ASTController } from '@/core/infrastructure/grpc/controllers/ast/ast.controller';
+import { Module } from '@nestjs/common';
+import { EnrichmentModule } from './enrichment.module';
+import { RepositoryModule } from './repository.module';
+import { DiffModule } from './diff.module';
+import { ParsingModule } from './parsing.module';
 
 @Module({
-    imports: [RepositoryModule],
-    providers: [
-        CodeKnowledgeGraphService,
-        CodeAnalyzerService,
-        DifferService,
-        ...UseCases,
+    imports: [
+        ParsingModule,
+        EnrichmentModule,
+        RepositoryModule,
+        EnrichmentModule,
+        DiffModule,
     ],
-    exports: [CodeKnowledgeGraphService, CodeAnalyzerService],
+    providers: [...UseCases],
+    exports: [],
     controllers: [ASTController],
 })
-export class AstModule {}
+export class ASTModule {}

@@ -1,4 +1,4 @@
-import { DifferService } from '@/core/infrastructure/adapters/services/ast/differ.service';
+import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/diff/diff-analyzer.service';
 import { mockData } from './mock';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
@@ -17,14 +17,14 @@ describe('Diff', () => {
     const graphs =
         ASTDeserializer.deserializeGetGraphsResponseData(serialGraphs);
 
-    let differService: DifferService;
+    let differService: DiffAnalyzerService;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
-            providers: [DifferService, PinoLoggerService],
+            providers: [DiffAnalyzerService, PinoLoggerService],
         }).compile();
 
-        differService = module.get(DifferService);
+        differService = module.get(DiffAnalyzerService);
         if (!differService) {
             throw new Error('DifferService not found');
         }

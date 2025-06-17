@@ -1,4 +1,4 @@
-import { SupportedLanguage } from '@/core/domain/ast/types/supported-languages';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
 
 type FileDiff = {
     filePath: string;

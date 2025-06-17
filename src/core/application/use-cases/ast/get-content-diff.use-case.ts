@@ -1,4 +1,4 @@
-import { DifferService } from '@/core/infrastructure/adapters/services/ast/differ.service';
+import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/diff/diff-analyzer.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { GetContentFromDiffRequest } from '@kodus/kodus-proto/v2';
 import { GetGraphsUseCase } from './get-graphs.use-case';
@@ -10,7 +10,7 @@ import { Injectable } from '@nestjs/common';
 export class GetContentFromDiffUseCase {
     constructor(
         private readonly getGraphsUseCase: GetGraphsUseCase,
-        private readonly differService: DifferService,
+        private readonly differService: DiffAnalyzerService,
         private readonly repositoryManagerService: RepositoryManagerService,
         private readonly logger: PinoLoggerService,
     ) {}

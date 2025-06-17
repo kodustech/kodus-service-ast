@@ -147,8 +147,8 @@ export class DifferService {
                 message: `Failed to get relevant content`,
                 error: handleError(error),
                 metadata: {
-                    diff,
-                    content,
+                    diff: diff.slice(0, 100),
+                    content: content.slice(0, 100),
                     graphs: JSON.stringify(graphs).slice(0, 100),
                 },
                 serviceName: DifferService.name,

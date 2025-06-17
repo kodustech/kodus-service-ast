@@ -48,7 +48,10 @@ export class DeleteRepositoryUseCase {
     }
 
     private async deleteRepo(repoData: RepositoryData): Promise<void> {
-        await this.repositoryManagerService.deleteLocalRepository({ repoData });
+        await this.repositoryManagerService.deleteLocalRepository({
+            repoData,
+            keepKodusData: true,
+        });
 
         this.logger.log({
             message: `Deleted repository ${repoData.repositoryName}`,

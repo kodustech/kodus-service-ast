@@ -4,7 +4,9 @@ import { GetContentFromDiffRequest } from '@kodus/kodus-proto/v2';
 import { GetGraphsUseCase } from './get-graphs.use-case';
 import { handleError } from '@/shared/utils/errors';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class GetContentFromDiffUseCase {
     constructor(
         private readonly getGraphsUseCase: GetGraphsUseCase,

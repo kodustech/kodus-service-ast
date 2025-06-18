@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import { ExecutionContext, Injectable, LoggerService } from '@nestjs/common';
 import pino from 'pino';
 import { pid } from 'process';
 
@@ -21,7 +21,7 @@ const isProduction =
 const shouldPrettyPrint = (process.env.API_LOG_PRETTY || 'false') === 'true';
 
 @Injectable()
-export class PinoLoggerService {
+export class PinoLoggerService implements LoggerService {
     private baseLogger = pino({
         level: process.env.API_LOG_LEVEL || 'info',
         base: {

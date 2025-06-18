@@ -6,6 +6,9 @@ import { ASTModule } from './ast.module';
 import { DiffModule } from './diff.module';
 import { EnrichmentModule } from './enrichment.module';
 import { ParsingModule } from './parsing.module';
+import { LLMModule } from '@kodus/kodus-common/llm';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
+import { GraphAnalysisModule } from './graph-analysis.module';
 
 @Module({
     imports: [
@@ -16,6 +19,11 @@ import { ParsingModule } from './parsing.module';
         DiffModule,
         EnrichmentModule,
         ParsingModule,
+        GraphAnalysisModule,
+        LLMModule.forRoot({
+            logger: PinoLoggerService,
+            global: true,
+        }),
     ],
     providers: [],
     exports: [],

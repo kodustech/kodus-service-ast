@@ -1,12 +1,11 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
-import { handleError } from '@/shared/utils/errors';
 import { GrpcInvalidArgumentException } from '@/shared/utils/grpc/exceptions';
+import { RepositoryData } from '@kodus/kodus-proto/v2';
 import {
     DeleteRepositoryRequest,
     DeleteRepositoryResponse,
-    RepositoryData,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/v3';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -37,12 +36,13 @@ export class DeleteRepositoryUseCase {
             this.logger.error({
                 message: 'Failed to delete repository',
                 context: DeleteRepositoryUseCase.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     request,
                 },
                 serviceName: DeleteRepositoryUseCase.name,
             });
+
             throw error;
         }
     }

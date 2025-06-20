@@ -9,7 +9,6 @@ import {
     Range,
     RelationshipType,
 } from '@kodus/kodus-proto/v2';
-import { handleError } from '@/shared/utils/errors';
 import {
     ChangeResult,
     DiffHunk,
@@ -152,7 +151,7 @@ export class DiffAnalyzerService {
             this.logger.error({
                 context: DiffAnalyzerService.name,
                 message: `Failed to get relevant content`,
-                error: handleError(error),
+                error,
                 metadata: {
                     diff: diff.slice(0, 100),
                     content: content.slice(0, 100),

@@ -6,8 +6,8 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
-import { handleError, isError } from '@/shared/utils/errors';
 import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/v1';
+import { handleError } from '@/shared/utils/errors';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -34,7 +34,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error ensuring base directory exists',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: { baseDir: this.baseDir },
                 serviceName: RepositoryManagerService.name,
             });
@@ -152,9 +152,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 }
             }
         } catch (error) {
-            throw new Error(
-                `Invalid Git URL: ${isError(error) ? error.message : error}`,
-            );
+            throw new Error(`Invalid Git URL: ${handleError(error).message}`);
         }
     }
 
@@ -254,7 +252,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error cloning repository',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: { params: repoData, repoPath, cloneUrl },
                 serviceName: RepositoryManagerService.name,
             });
@@ -329,7 +327,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 message:
                     'Error while attempting to delete the local repository',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
                 },
@@ -430,7 +428,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error listing repository files',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
                     patterns,
@@ -475,7 +473,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error writing file',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
                     filePath,
@@ -519,7 +517,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error reading file',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
                     filePath,

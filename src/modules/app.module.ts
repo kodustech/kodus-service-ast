@@ -9,6 +9,7 @@ import { ParsingModule } from './parsing.module';
 import { LLMModule } from '@kodus/kodus-common/llm';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { GraphAnalysisModule } from './graph-analysis.module';
+import { TaskModule } from './task.module';
 
 @Module({
     imports: [
@@ -24,8 +25,10 @@ import { GraphAnalysisModule } from './graph-analysis.module';
             logger: PinoLoggerService,
             global: true,
         }),
+        TaskModule,
     ],
     providers: [],
     exports: [],
+    controllers: [],
 })
 export class AppModule {}

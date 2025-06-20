@@ -8,8 +8,6 @@ import {
     GrpcInvalidArgumentException,
 } from '@/shared/utils/grpc/exceptions';
 import {
-    InitializeRepositoryRequest,
-    InitializeRepositoryResponse,
     RepositoryData,
     EnrichedGraph,
     CodeGraph,
@@ -17,6 +15,8 @@ import {
 import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
+import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
+import { InitializeRepositoryRequest } from '@kodus/kodus-proto/v3';
 
 @Injectable()
 export class InitializeRepositoryUseCase {
@@ -25,12 +25,15 @@ export class InitializeRepositoryUseCase {
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         private readonly codeAnalyzerService: GraphEnrichmentService,
 
+        private readonly taskManagerService: TaskManagerService,
+
         private readonly logger: PinoLoggerService,
     ) {}
 
     async execute(
         request: InitializeRepositoryRequest,
-    ): Promise<InitializeRepositoryResponse> {
+        taskId?: string,
+    ): Promise<void> {
         const { baseRepo, headRepo } = request;
 
         if (!baseRepo || !headRepo) {
@@ -40,22 +43,29 @@ export class InitializeRepositoryUseCase {
         }
 
         try {
+            this.startTask(taskId, 'Cloning base repository');
             const baseDirPath = await this.cloneRepo(baseRepo);
+
+            this.updateTaskState(taskId, 'Cloning head repository');
             const headDirPath = await this.cloneRepo(headRepo);
 
+            this.updateTaskState(taskId, 'Building head graph');
             const headGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     headDirPath,
                 );
 
+            this.updateTaskState(taskId, 'Building base graph');
             const baseGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     baseDirPath,
                 );
 
+            this.updateTaskState(taskId, 'Building enriched head graph');
             const enrichedHeadGraph =
                 this.codeAnalyzerService.enrichGraph(headGraph);
 
+            this.updateTaskState(taskId, 'Storing graphs');
             await this.storeGraphs(
                 headRepo,
                 baseGraph,
@@ -65,19 +75,55 @@ export class InitializeRepositoryUseCase {
                 enrichedHeadGraph,
             );
 
-            return {};
+            this.completeTask(taskId, 'Repository initialized successfully');
+
+            return;
         } catch (error) {
             this.logger.error({
                 message: 'Failed to initialize repository',
                 context: InitializeRepositoryUseCase.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     request,
                 },
                 serviceName: InitializeRepositoryUseCase.name,
             });
 
+            this.failTask(
+                taskId,
+                handleError(error).message,
+                'Initialization failed',
+            );
+
             throw error;
+        }
+    }
+
+    private startTask(taskId: string | undefined, state?: string): void {
+        if (taskId) {
+            this.taskManagerService.startTask(taskId, state);
+        }
+    }
+
+    private updateTaskState(taskId: string | undefined, state?: string): void {
+        if (taskId) {
+            this.taskManagerService.updateTaskState(taskId, state);
+        }
+    }
+
+    private completeTask(taskId: string | undefined, state?: string): void {
+        if (taskId) {
+            this.taskManagerService.completeTask(taskId, state);
+        }
+    }
+
+    private failTask(
+        taskId: string | undefined,
+        error: string,
+        state?: string,
+    ): void {
+        if (taskId) {
+            this.taskManagerService.failTask(taskId, error, state);
         }
     }
 

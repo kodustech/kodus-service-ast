@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service';
-import { OrganizationAndTeamData } from '@kodus/kodus-common/types';
 import {
     EnrichedGraph,
     EnrichedGraphEdge,
@@ -10,7 +9,6 @@ import {
     RelationshipType,
 } from '@kodus/kodus-proto/v2';
 import * as path from 'path';
-import { handleError } from '@/shared/utils/errors';
 import {
     ChangeResult,
     FunctionResult,
@@ -24,6 +22,7 @@ import {
 import { DiffAnalyzerService } from '../diff/diff-analyzer.service';
 import { LLMModelProvider, PromptRunnerService } from '@kodus/kodus-common/llm';
 import { prompt_checkSimilarFunctions_system } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt';
+import { GetImpactAnalysisResponse } from '@kodus/kodus-proto/v3';
 
 @Injectable()
 export class GraphAnalyzerService {
@@ -33,11 +32,9 @@ export class GraphAnalyzerService {
         private readonly promptRunnerService: PromptRunnerService,
     ) {}
 
-    private analyzeCodeWithGraph(
+    analyzeCodeWithGraph(
         codeChunk: string,
         fileName: string,
-        organizationAndTeamData: OrganizationAndTeamData,
-        pullRequest: number,
         codeAnalysisAST: GetGraphsResponseData,
     ): ChangeResult {
         try {
@@ -72,10 +69,10 @@ export class GraphAnalyzerService {
                 message: `Error analyzing code with graph`,
                 context: GraphAnalyzerService.name,
                 metadata: {
-                    organizationAndTeamData,
-                    pullRequest,
+                    fileName,
+                    codeChunk,
                 },
-                error: handleError(error),
+                error,
             });
             throw error;
         }
@@ -103,12 +100,7 @@ export class GraphAnalyzerService {
     async generateImpactAnalysis(
         codeAnalysis: GetGraphsResponseData,
         functionsAffected: ChangeResult,
-        pullRequest: number,
-        organizationAndTeamData: OrganizationAndTeamData,
-    ): Promise<{
-        functionsAffectResult: FunctionsAffectResult[];
-        functionSimilarity: FunctionSimilarity[];
-    }> {
+    ): Promise<GetImpactAnalysisResponse[]> {
         try {
             const impactedNodes = this.computeImpactAnalysis(
                 codeAnalysis?.enrichHeadGraph,
@@ -118,33 +110,38 @@ export class GraphAnalyzerService {
             );
 
             const functionSimilarity = await this.checkFunctionSimilarity(
-                {
-                    organizationAndTeamData,
-                    pullRequest,
-                },
                 functionsAffected.added,
                 codeAnalysis.headGraph.graph.functions,
             );
 
-            const functionsAffectResult = this.buildFunctionsAffect(
+            const functionsAffect = this.buildFunctionsAffect(
                 impactedNodes,
                 codeAnalysis.baseGraph.graph.functions,
                 codeAnalysis.headGraph.graph.functions,
             );
 
-            return {
-                functionSimilarity,
-                functionsAffectResult,
-            };
+            const maxLength = Math.max(
+                functionSimilarity.length,
+                functionsAffect.length,
+            );
+            const impactAnalysisResults: GetImpactAnalysisResponse[] = [];
+
+            for (let i = 0; i < maxLength; i++) {
+                const functionSim = functionSimilarity[i] || null;
+                const functionsAffectResult = functionsAffect[i] || null;
+
+                impactAnalysisResults.push({
+                    functionSimilarity: functionSim,
+                    functionsAffect: functionsAffectResult,
+                });
+            }
+
+            return impactAnalysisResults;
         } catch (error) {
             this.logger.error({
                 message: `Error generating impact analysis`,
                 context: GraphAnalyzerService.name,
-                metadata: {
-                    organizationAndTeamData,
-                    pullRequest,
-                },
-                error: handleError(error),
+                error,
             });
             throw error;
         }
@@ -287,10 +284,6 @@ export class GraphAnalyzerService {
     }
 
     async checkFunctionSimilarity(
-        context: {
-            organizationAndTeamData: OrganizationAndTeamData;
-            pullRequest: any;
-        },
         addedFunctions: FunctionResult[],
         existingFunctions: Map<string, FunctionAnalysis>,
     ): Promise<FunctionSimilarity[]> {
@@ -320,7 +313,6 @@ export class GraphAnalyzerService {
             functionsResult.push({
                 functionName: addedFunction.fullName,
                 similarFunctions: await this.checkFunctionSimilarityWithLLM(
-                    context,
                     addedFunction,
                     candidateSimilarFunctions,
                 ),
@@ -666,10 +658,6 @@ export class GraphAnalyzerService {
     }
 
     private async checkFunctionSimilarityWithLLM(
-        context: {
-            organizationAndTeamData: OrganizationAndTeamData;
-            pullRequest: number;
-        },
         addedFunction: FunctionResult,
         existingFunctions: FunctionAnalysis[],
     ) {
@@ -695,12 +683,6 @@ export class GraphAnalyzerService {
             jsonMode: true,
             systemPromptFn: prompt_checkSimilarFunctions_system,
             userPromptFn: null,
-            metadata: {
-                organizationId:
-                    context?.organizationAndTeamData?.organizationId,
-                teamId: context?.organizationAndTeamData?.teamId,
-                pullRequestId: context?.pullRequest,
-            },
             payload: JSON.stringify(functions),
             runName: 'checkFunctionSimilarityWithLLM',
         });

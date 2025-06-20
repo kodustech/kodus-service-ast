@@ -1,10 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
+import { handleError } from '@/shared/utils/errors';
 import { ExecutionContext, Injectable, LoggerService } from '@nestjs/common';
 import pino from 'pino';
-import { pid } from 'process';
 
 type LogLevel = 'info' | 'error' | 'warn' | 'debug' | 'verbose';
 
@@ -12,7 +8,7 @@ interface LogArguments {
     message: string;
     context: ExecutionContext | string;
     serviceName?: string;
-    error?: Error;
+    error?: unknown;
     metadata?: Record<string, any>;
 }
 
@@ -48,15 +44,16 @@ export class PinoLoggerService implements LoggerService {
             level(label) {
                 return { level: label };
             },
-            log(object: any) {
+            log(object) {
                 if (isProduction && !shouldPrettyPrint) {
-                    // Cleaner log for production
                     return {
                         message: object.message,
                         serviceName: object.serviceName,
                         environment: object.environment,
                         error: object.error
-                            ? { message: object?.error?.message }
+                            ? {
+                                  message: (object.error as Error)?.message,
+                              }
                             : undefined,
                     };
                 }
@@ -79,7 +76,7 @@ export class PinoLoggerService implements LoggerService {
         try {
             const request = context.switchToHttp().getRequest<Request>();
             return request.url || 'unknown';
-        } catch (error) {
+        } catch {
             return 'unknown';
         }
     }
@@ -181,7 +178,6 @@ export class PinoLoggerService implements LoggerService {
 
         const contextStr = this.extractContextInfo(context);
 
-        // Now we are correctly calling `createChildLogger`
         const childLogger = this.createChildLogger(
             serviceName || 'UnknownService',
             contextStr,
@@ -189,8 +185,23 @@ export class PinoLoggerService implements LoggerService {
 
         const logObject = this.buildLogObject(serviceName, metadata, error);
 
-        // Using the `childLogger` to log the messages
-        childLogger[level](logObject, message);
+        switch (level) {
+            case 'info':
+                childLogger.info(logObject, message);
+                break;
+            case 'error':
+                childLogger.error(logObject, message);
+                break;
+            case 'warn':
+                childLogger.warn(logObject, message);
+                break;
+            case 'debug':
+                childLogger.debug(logObject, message);
+                break;
+            default:
+                childLogger.info(logObject, message);
+                break;
+        }
     }
 
     private shouldSkipLog(context: ExecutionContext | string) {
@@ -204,16 +215,14 @@ export class PinoLoggerService implements LoggerService {
     private buildLogObject(
         serviceName: string,
         metadata: Record<string, any>,
-        error?: Error,
+        error?: unknown,
     ) {
         return {
             environment: process.env.API_NODE_ENV || 'unknown',
             serviceName,
             ...metadata,
             metadata,
-            error: error
-                ? { message: error.message, stack: error.stack }
-                : undefined,
+            error: handleError(error),
         };
     }
 }

@@ -1,10 +1,10 @@
 import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/diff/diff-analyzer.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { GetContentFromDiffRequest } from '@kodus/kodus-proto/v2';
+import { GetContentFromDiffRequest } from '@kodus/kodus-proto/v3';
 import { GetGraphsUseCase } from './get-graphs.use-case';
-import { handleError } from '@/shared/utils/errors';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { Injectable } from '@nestjs/common';
+import { GrpcNotFoundException } from '@/shared/utils/grpc/exceptions';
 
 @Injectable()
 export class GetContentFromDiffUseCase {
@@ -22,7 +22,7 @@ export class GetContentFromDiffUseCase {
             const graphs = await this.getGraphsUseCase.execute(repoData, false);
 
             if (!graphs) {
-                this.logger.warn({
+                this.logger.error({
                     message: `No graphs found for repository ${repoData.headRepo.repositoryName}`,
                     context: GetContentFromDiffUseCase.name,
                     metadata: {
@@ -30,7 +30,10 @@ export class GetContentFromDiffUseCase {
                     },
                     serviceName: GetContentFromDiffUseCase.name,
                 });
-                return null;
+
+                throw new GrpcNotFoundException(
+                    'No graphs found for the provided repository',
+                );
             }
 
             const fileContent = await this.repositoryManagerService.readFile({
@@ -48,13 +51,14 @@ export class GetContentFromDiffUseCase {
             this.logger.error({
                 context: GetContentFromDiffUseCase.name,
                 message: `Failed to get content from diff`,
-                error: handleError(error),
+                error,
                 metadata: {
                     request,
                 },
                 serviceName: GetContentFromDiffUseCase.name,
             });
-            return null;
+
+            throw error;
         }
     }
 }

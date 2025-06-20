@@ -36,6 +36,7 @@
         "@nestjs/core": "^11.1.3",
         "@nestjs/microservices": "^11.1.3",
         "@nestjs/platform-express": "^11.1.3",
+        "@nestjs/schedule": "^6.0.0",
         "fast-xml-parser": "^5.2.5",
         "minimatch": "^10.0.2",
         "nestjs-pino": "^4.4.0",

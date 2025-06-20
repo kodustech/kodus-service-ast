@@ -1,10 +1,14 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import {
+    GrpcInternalException,
+    GrpcNotFoundException,
+} from '@/shared/utils/grpc/exceptions';
+import {
     ASTDeserializer,
     SerializedGetGraphsResponseData,
 } from '@kodus/kodus-proto/serialization/ast';
-import { GetGraphsRequest, GetGraphsResponseData } from '@kodus/kodus-proto/v2';
+import { GetGraphsRequest, GetGraphsResponseData } from '@kodus/kodus-proto/v3';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -39,7 +43,7 @@ export class GetGraphsUseCase {
         });
 
         if (!graphs) {
-            this.logger.warn({
+            this.logger.error({
                 message: `No graphs found for repository ${headRepo.repositoryName}`,
                 context: GetGraphsUseCase.name,
                 metadata: {
@@ -47,7 +51,9 @@ export class GetGraphsUseCase {
                 },
                 serviceName: GetGraphsUseCase.name,
             });
-            return null;
+            throw new GrpcNotFoundException(
+                `No graphs found for repository ${headRepo.repositoryName}`,
+            );
         }
 
         this.logger.log({
@@ -63,7 +69,7 @@ export class GetGraphsUseCase {
             graphs.toString(),
         ) as SerializedGetGraphsResponseData;
         if (!parsedGraphs) {
-            this.logger.warn({
+            this.logger.error({
                 message: `Failed to parse graphs for repository ${headRepo.repositoryName}`,
                 context: GetGraphsUseCase.name,
                 metadata: {
@@ -71,7 +77,9 @@ export class GetGraphsUseCase {
                 },
                 serviceName: GetGraphsUseCase.name,
             });
-            return null;
+            throw new GrpcInternalException(
+                `Failed to parse graphs for repository ${headRepo.repositoryName}`,
+            );
         }
 
         const result = parsedGraphs;

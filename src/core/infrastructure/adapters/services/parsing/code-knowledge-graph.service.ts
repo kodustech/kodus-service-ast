@@ -14,7 +14,6 @@ import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 import { ParserAnalysis } from '@/core/domain/parsing/types/parser';
 import { PinoLoggerService } from '../logger/pino.service';
-import { handleError } from '@/shared/utils/errors';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
@@ -197,18 +196,18 @@ export class CodeKnowledgeGraphService {
                                     types: typesMap,
                                 },
                             };
-                        } catch (err) {
+                        } catch (error) {
                             this.logger.error({
                                 message: 'Error processing file',
                                 context: CodeKnowledgeGraphService.name,
-                                error: handleError(err),
+                                error,
                                 metadata: {
                                     filePath,
                                     normalizedPath,
                                 },
                                 serviceName: CodeKnowledgeGraphService.name,
                             });
-                            throw err;
+                            throw error;
                         }
                     }),
                 );
@@ -242,7 +241,7 @@ export class CodeKnowledgeGraphService {
                         this.logger.warn({
                             message: 'Failed to process file',
                             context: CodeKnowledgeGraphService.name,
-                            error: handleError(resultItem.reason),
+                            error: resultItem.reason,
                             metadata: {
                                 resultItem,
                             },

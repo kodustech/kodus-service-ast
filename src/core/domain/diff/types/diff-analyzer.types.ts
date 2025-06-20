@@ -1,4 +1,4 @@
-import { FunctionAnalysis } from '@kodus/kodus-proto/v2';
+import { FunctionAnalysis, NodeType } from '@kodus/kodus-proto/v2';
 
 export interface ChangeResult {
     added: FunctionResult[];
@@ -56,7 +56,7 @@ export interface ComplexityAnalysis {
 export interface ImpactedNode {
     id: number;
     name: string;
-    type: string;
+    type: NodeType;
     severity: string;
     level: number;
     filePath: string;

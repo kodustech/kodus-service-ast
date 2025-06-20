@@ -578,10 +578,7 @@ export class GraphAnalyzerService {
         const impactByType: Record<string, number> = {};
 
         impactReport
-            .filter(
-                (impact) =>
-                    impact.type === (NodeType.NODE_TYPE_FUNCTION as string),
-            )
+            .filter((impact) => impact.type === NodeType.NODE_TYPE_FUNCTION)
             ?.forEach((node) => {
                 if (node.level > depth) {
                     return;

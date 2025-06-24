@@ -22,11 +22,11 @@ export class CodeKnowledgeGraphService {
 
     constructor(private readonly logger: PinoLoggerService) {
         const cpuCount = os.cpus().length;
-        const minThreads = Math.max(2, Math.floor(cpuCount * 0.5));
-        const maxThreads = cpuCount;
+        const minThreads = cpuCount - 1;
+        const maxThreads = cpuCount - 1;
         const idleTimeout = 30000;
         const maxQueue = 1000;
-        const concurrentTasksPerWorker = 2;
+        const concurrentTasksPerWorker = 1;
 
         this.piscina = new Piscina({
             filename: path.resolve(__dirname, 'worker/worker.js'),
@@ -35,11 +35,6 @@ export class CodeKnowledgeGraphService {
             idleTimeout,
             maxQueue,
             concurrentTasksPerWorker,
-            workerData: {
-                env: process.env.NODE_ENV,
-                cpuCount,
-                isProduction: process.env.NODE_ENV === 'production',
-            } as const,
         });
     }
 
@@ -66,6 +61,10 @@ export class CodeKnowledgeGraphService {
         rootDir: string,
         onProgress?: (processed: number, total: number) => void,
     ): Promise<CodeGraph> {
+        console.time('task-ms');
+        const t0 = performance.now();
+        const hr0 = process.hrtime();
+
         if (!rootDir || rootDir.trim() === '') {
             throw new Error(`Root directory can't be empty ${rootDir}`);
         }
@@ -125,7 +124,7 @@ export class CodeKnowledgeGraphService {
         console.log(`Analyzing ${rootDir} with ${totalFiles} files...`);
 
         const cpuCount = os.cpus().length;
-        const batchSize = Math.max(5, Math.min(cpuCount * 3, 30));
+        const batchSize = Math.max(7, Math.min(cpuCount * 5, 50));
         let processedCount = 0;
 
         const processBatches = async () => {
@@ -250,6 +249,9 @@ export class CodeKnowledgeGraphService {
                 }
 
                 processedCount += batchFiles.length;
+                console.log(
+                    `Processed ${processedCount} of ${totalFiles} files...`,
+                );
                 if (onProgress) {
                     onProgress(processedCount, totalFiles);
                 }
@@ -263,6 +265,11 @@ export class CodeKnowledgeGraphService {
         await processBatches();
 
         this.completeBidirectionalTypeRelations(result.types);
+
+        console.timeEnd('task-ms'); // ms via Date
+        console.log('perf_hooks:', (performance.now() - t0).toFixed(3) + ' ms');
+        const [s, ns] = process.hrtime(hr0);
+        console.log('hrtime:', (s * 1e3 + ns / 1e6).toFixed(3) + ' ms');
 
         return result;
     }

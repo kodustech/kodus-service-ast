@@ -29,13 +29,20 @@ import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resol
 import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver';
 
 export abstract class BaseParser {
+    private static parserByLang = new Map<string, Parser>();
+    private static queryCacheByLang = new Map<string, Map<QueryType, Query>>();
+
+    /* 1-B) Campos de **instância** (não readonly!)                       */
+    private parser!: Parser; // ← instância
+    private queries!: Map<QueryType, Query>;
+
     private readonly importPathResolver: LanguageResolver;
-    private readonly parser: Parser = new Parser();
+    // private parser: Parser = BaseParser.parser;
     private readonly context: ParseContext;
-    private readonly queries: Map<QueryType, Query> = new Map<
-        QueryType,
-        Query
-    >();
+    // private readonly queries: Map<QueryType, Query> = new Map<
+    //     QueryType,
+    //     Query
+    // >();
 
     protected abstract getLanguage(): Language;
     protected abstract getRawQueries(): Map<QueryType, ParserQuery>;
@@ -53,25 +60,52 @@ export abstract class BaseParser {
     }
 
     private setupParser(): void {
-        if (this.parser.getLanguage()) return;
+        const lang = this.getLanguage();
+        const id = lang.name;
 
-        const language = this.getLanguage();
-        if (!language) {
-            throw new Error('Language not set up');
+        let cached = BaseParser.parserByLang.get(id);
+        if (!cached) {
+            cached = new Parser();
+
+            cached.setLanguage(lang);
+            BaseParser.parserByLang.set(id, cached);
         }
-
-        this.parser.setLanguage(language);
+        this.parser = cached;
     }
 
+    /* 1-D) Reaproveita as Querys compiladas                              */
     private setupQueries(): void {
-        const queries = this.getRawQueries();
-        const language = this.getLanguage();
+        const id = this.getLanguage().name;
 
-        for (const [key, value] of queries.entries()) {
-            const query = new Query(language, value.query);
-            this.queries.set(key, query);
+        let qMap = BaseParser.queryCacheByLang.get(id);
+        if (!qMap) {
+            qMap = new Map<QueryType, Query>();
+            for (const [k, v] of this.getRawQueries()) {
+                qMap.set(k, new Query(this.getLanguage(), v.query));
+            }
+            BaseParser.queryCacheByLang.set(id, qMap);
         }
+        this.queries = qMap;
     }
+
+    /* ------------------------------------------------------------------ */
+    // public getParser(): Parser {
+    //     return this.parser;
+    // }
+
+    // protected getQuery(t: QueryType): Query | null {
+    //     return this.queries.get(t) ?? null;
+    // }
+
+    // private setupQueries(): void {
+    //     const queries = this.getRawQueries();
+    //     const language = this.getLanguage();
+
+    //     for (const [key, value] of queries.entries()) {
+    //         const query = new Query(language, value.query);
+    //         this.queries.set(key, query);
+    //     }
+    // }
 
     public getParser(): Parser {
         if (!this.parser) {

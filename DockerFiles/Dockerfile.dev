@@ -1,31 +1,21 @@
 FROM --platform=linux/amd64 node:22.14.0
 
-ENV NODE_ENV=development
-ENV NODE_OPTIONS=--max-old-space-size=4096
-ENV PORT=3002
-ENV API_HEALTH_PORT=5001
+ENV NODE_ENV=development \
+    NODE_OPTIONS=--max-old-space-size=4096 \
+    PORT=3002 \
+    API_HEALTH_PORT=5001 \
+    TREE_SITTER_SKIP_PREBUILD_DOWNLOAD=1 \
+    npm_config_build_from_source=true
 
 WORKDIR /usr/src/app
 
-# Instala dependências do sistema
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    git \
-    python3 \
-    make \
-    g++ \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates git python3 make g++ pkg-config \
+      && rm -rf /var/lib/apt/lists/*
 
-# Copia apenas os arquivos necessários para instalar as dependências
 COPY package.json yarn.lock ./
+RUN yarn install --network-timeout 600000 \
+ && npx --yes node-gyp rebuild -C node_modules/tree-sitter
 
-# Instala as dependências
-RUN yarn install --network-timeout 600000
-
-# Expõe as portas necessárias
 EXPOSE ${PORT} ${API_HEALTH_PORT} 9300
-
-# Comando para iniciar em modo de desenvolvimento
-CMD ["yarn", "start:dev"]
+CMD ["yarn","start:dev"]

@@ -6,6 +6,7 @@ import { DiffModule } from './diff.module';
 import { ParsingModule } from './parsing.module';
 import { TaskModule } from './task.module';
 import { UseCases } from '@/core/application/use-cases/ast';
+import { GraphAnalysisModule } from './graph-analysis.module';
 
 @Module({
     imports: [
@@ -15,9 +16,10 @@ import { UseCases } from '@/core/application/use-cases/ast';
         EnrichmentModule,
         DiffModule,
         TaskModule,
+        GraphAnalysisModule,
     ],
     providers: [...UseCases],
-    exports: [],
+    exports: [...UseCases],
     controllers: [ASTController],
 })
 export class ASTModule {}

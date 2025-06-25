@@ -22,7 +22,7 @@ export class GetImpactAnalysisUseCase {
 
     async execute(
         request: GetImpactAnalysisRequest,
-    ): Promise<GetImpactAnalysisResponse[]> {
+    ): Promise<GetImpactAnalysisResponse> {
         try {
             const { headRepo, baseRepo } = request;
 
@@ -64,7 +64,7 @@ export class GetImpactAnalysisUseCase {
                 impactAnalysis.toString('utf-8'),
             ) as {
                 analysisResult: ChangeResult;
-                impactAnalysis: GetImpactAnalysisResponse[];
+                impactAnalysis: GetImpactAnalysisResponse;
             };
 
             this.logger.log({
@@ -96,8 +96,32 @@ export class GetImpactAnalysisUseCase {
                 try {
                     const response = await this.execute(request);
 
-                    for (const item of response) {
-                        subscriber.next(item);
+                    const BATCH_SIZE = 10;
+
+                    const affectResults = response.functionsAffect;
+                    const similarityResults = response.functionSimilarity;
+
+                    for (let i = 0; i < affectResults.length; i += BATCH_SIZE) {
+                        const batch = affectResults.slice(i, i + BATCH_SIZE);
+                        subscriber.next({
+                            functionsAffect: batch,
+                            functionSimilarity: [],
+                        });
+                    }
+
+                    for (
+                        let i = 0;
+                        i < similarityResults.length;
+                        i += BATCH_SIZE
+                    ) {
+                        const batch = similarityResults.slice(
+                            i,
+                            i + BATCH_SIZE,
+                        );
+                        subscriber.next({
+                            functionsAffect: [],
+                            functionSimilarity: batch,
+                        });
                     }
 
                     subscriber.complete();

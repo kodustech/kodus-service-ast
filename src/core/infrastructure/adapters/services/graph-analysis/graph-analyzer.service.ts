@@ -100,7 +100,7 @@ export class GraphAnalyzerService {
     async generateImpactAnalysis(
         codeAnalysis: GetGraphsResponseData,
         functionsAffected: ChangeResult,
-    ): Promise<GetImpactAnalysisResponse[]> {
+    ): Promise<GetImpactAnalysisResponse> {
         try {
             const impactedNodes = this.computeImpactAnalysis(
                 codeAnalysis?.enrichHeadGraph,
@@ -120,23 +120,10 @@ export class GraphAnalyzerService {
                 codeAnalysis.headGraph.graph.functions,
             );
 
-            const maxLength = Math.max(
-                functionSimilarity.length,
-                functionsAffect.length,
-            );
-            const impactAnalysisResults: GetImpactAnalysisResponse[] = [];
-
-            for (let i = 0; i < maxLength; i++) {
-                const functionSim = functionSimilarity[i] || null;
-                const functionsAffectResult = functionsAffect[i] || null;
-
-                impactAnalysisResults.push({
-                    functionSimilarity: functionSim,
-                    functionsAffect: functionsAffectResult,
-                });
-            }
-
-            return impactAnalysisResults;
+            return {
+                functionsAffect,
+                functionSimilarity,
+            };
         } catch (error) {
             this.logger.error({
                 message: `Error generating impact analysis`,

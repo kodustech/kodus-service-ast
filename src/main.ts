@@ -42,10 +42,10 @@ async function bootstrap() {
         transport: Transport.GRPC,
         options: {
             url: `0.0.0.0:${grpcPort}`,
-            package: 'kodus.ast.v2',
+            package: 'kodus.ast.v3',
             protoPath: resolve(
                 cwd(),
-                'node_modules/@kodus/kodus-proto/kodus/ast/v2/analyzer.proto',
+                'node_modules/@kodus/kodus-proto/kodus/ast/v3/analyzer.proto',
             ),
             credentials: ServerCredentials.createInsecure(), // plaintext
             loader: {

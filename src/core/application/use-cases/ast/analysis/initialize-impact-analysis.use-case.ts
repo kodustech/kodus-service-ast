@@ -138,7 +138,7 @@ export class InitializeImpactAnalysisUseCase {
     private async storeImpactAnalysis(
         repoData: RepositoryData,
         analysisResult: ChangeResult,
-        impactAnalysis: GetImpactAnalysisResponse[],
+        impactAnalysis: GetImpactAnalysisResponse,
     ): Promise<void> {
         const fileName = `impact-analysis`;
         const data = {

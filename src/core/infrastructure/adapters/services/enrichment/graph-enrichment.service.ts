@@ -7,7 +7,7 @@ import {
     NodeType,
     RelationshipType,
     CodeGraph,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 
 @Injectable()
 export class GraphEnrichmentService {

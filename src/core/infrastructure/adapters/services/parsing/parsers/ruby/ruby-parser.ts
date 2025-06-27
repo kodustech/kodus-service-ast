@@ -9,7 +9,7 @@ import {
     ChainType,
     CallChain,
 } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope, TypeAnalysis } from '@kodus/kodus-proto/v2';
+import { NodeType, Scope, TypeAnalysis } from '@kodus/kodus-proto/ast/v2';
 import { appendOrUpdateElement } from '@/shared/utils/arrays';
 
 export class RubyParser extends BaseParser {

@@ -7,14 +7,14 @@ import {
 import {
     GetImpactAnalysisResponse,
     InitializeImpactAnalysisRequest,
-} from '@kodus/kodus-proto/v3';
+} from '@kodus/kodus-proto/ast';
 import { Injectable } from '@nestjs/common';
 import { GetGraphsUseCase } from '../graphs/get-graphs.use-case';
 import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service';
 import { handleError } from '@/shared/utils/errors';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types';
-import { RepositoryData } from '@kodus/kodus-proto/v2';
+import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
 
 @Injectable()
 export class InitializeImpactAnalysisUseCase {

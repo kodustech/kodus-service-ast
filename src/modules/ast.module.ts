@@ -17,6 +17,7 @@ import { GraphAnalysisModule } from './graph-analysis.module';
         DiffModule,
         TaskModule,
         GraphAnalysisModule,
+        TaskModule,
     ],
     providers: [...UseCases],
     exports: [...UseCases],

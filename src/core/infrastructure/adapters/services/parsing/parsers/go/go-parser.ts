@@ -4,7 +4,7 @@ import * as GoLang from 'tree-sitter-go';
 import { goQueries } from './go-queries';
 import { ParserQuery, QueryType } from '../query';
 import { CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/v2';
+import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
 
 export class GoParser extends BaseParser {
     private static readonly language = GoLang as Language;

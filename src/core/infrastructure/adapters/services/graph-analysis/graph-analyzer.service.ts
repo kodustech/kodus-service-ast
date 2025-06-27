@@ -7,7 +7,7 @@ import {
     GetGraphsResponseData,
     NodeType,
     RelationshipType,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 import * as path from 'path';
 import {
     ChangeResult,
@@ -22,7 +22,7 @@ import {
 import { DiffAnalyzerService } from '../diff/diff-analyzer.service';
 import { LLMModelProvider, PromptRunnerService } from '@kodus/kodus-common/llm';
 import { prompt_checkSimilarFunctions_system } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt';
-import { GetImpactAnalysisResponse } from '@kodus/kodus-proto/v3';
+import { GetImpactAnalysisResponse } from '@kodus/kodus-proto/ast';
 
 @Injectable()
 export class GraphAnalyzerService {

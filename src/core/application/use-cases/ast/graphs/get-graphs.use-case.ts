@@ -4,12 +4,15 @@ import {
     GrpcInternalException,
     GrpcNotFoundException,
 } from '@/shared/utils/grpc/exceptions';
+import { Injectable } from '@nestjs/common';
 import {
     ASTDeserializer,
     SerializedGetGraphsResponseData,
 } from '@kodus/kodus-proto/serialization/ast';
-import { GetGraphsRequest, GetGraphsResponseData } from '@kodus/kodus-proto/v3';
-import { Injectable } from '@nestjs/common';
+import {
+    GetGraphsRequest,
+    GetGraphsResponseData,
+} from '@kodus/kodus-proto/ast/v2';
 
 @Injectable()
 export class GetGraphsUseCase {

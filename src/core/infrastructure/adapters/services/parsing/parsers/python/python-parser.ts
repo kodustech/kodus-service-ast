@@ -4,7 +4,7 @@ import * as PythonLang from 'tree-sitter-python';
 import { pythonQueries } from './python-queries';
 import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/v2';
+import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
 
 export class PythonParser extends BaseParser {
     private static readonly language = PythonLang as Language;

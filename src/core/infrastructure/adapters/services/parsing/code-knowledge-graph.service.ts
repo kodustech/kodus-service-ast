@@ -7,17 +7,17 @@ import {
     FileAnalysis,
     FunctionAnalysis,
     TypeAnalysis,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 
 import { Piscina } from 'piscina';
 import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
-import { ParserAnalysis } from '@/core/domain/parsing/types/parser';
 import { PinoLoggerService } from '../logger/pino.service';
+import { WorkerInput, WorkerOutput } from './worker/worker';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
-    private piscina: Piscina;
+    private piscina: Piscina<WorkerInput, WorkerOutput>;
 
     constructor(private readonly logger: PinoLoggerService) {
         const cpuCount = os.cpus().length;
@@ -58,7 +58,7 @@ export class CodeKnowledgeGraphService {
 
     public async buildGraphProgressively(
         rootDir: string,
-        onProgress?: (processed: number, total: number) => void,
+        filePaths: string[],
     ): Promise<CodeGraph> {
         console.time('task-ms');
         const t0 = performance.now();
@@ -82,29 +82,10 @@ export class CodeKnowledgeGraphService {
 
         const sourceFiles = await this.getAllSourceFiles(rootDir);
 
-        const filterCriteria: string[] = [
-            // 'get-reactions.use-case.ts',
-            // 'save-feedback.use-case.ts',
-            // 'codeReviewFeedback.controller.ts',
-            // 'index.type.ts',
-            // 'runCodeReview.use-case.ts',
-            // 'codeManagement.service.ts',
-            // 'integration-config.service.contracts.ts',
-            // 'integration-config.repository.contracts.ts',
-            // 'integrationConfig.service.ts',
-            // 'user.py',
-            // 'example.rb',
-            // 'src/core/application/use-cases/codeReviewFeedback',
-            // 'src/core/application/use-cases/codeBase/diff_test',
-            // 'src/core/application/use-cases/codeBase/php_project',
-            // 'manimlib/utils/tex_file_writing.py',
-            // 'update_kody_rules.js',
-            // 'fooooooooooooooooooooooooooooooo',
-        ];
         const filteredFiles =
-            filterCriteria.length > 0
+            filePaths.length > 0
                 ? sourceFiles.filter((file) =>
-                      filterCriteria.some((keyword) => file.includes(keyword)),
+                      filePaths.some((keyword) => file.includes(keyword)),
                   )
                 : sourceFiles;
 
@@ -125,145 +106,100 @@ export class CodeKnowledgeGraphService {
 
         const cpuCount = os.cpus().length;
         const batchSize = Math.max(7, Math.min(cpuCount * 5, 50));
-        let processedCount = 0;
 
-        const processBatches = async () => {
-            for (let i = 0; i < totalFiles; i += batchSize) {
-                const batchFiles = filteredFiles.slice(
-                    i,
-                    Math.min(i + batchSize, totalFiles),
-                );
+        const batches = Array.from(
+            { length: Math.ceil(totalFiles / batchSize) },
+            (_, i) => filteredFiles.slice(i * batchSize, (i + 1) * batchSize),
+        );
 
-                const batchResults = await Promise.allSettled(
-                    batchFiles.map(async (filePath) => {
-                        const normalizedPath = this.getNormalizedPath(
+        const processBatch = async (batchFiles: string[]) => {
+            try {
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error(`Timeout while processing batch`));
+                    }, 60000);
+                });
+
+                const analysis = await Promise.race([
+                    this.piscina.run(
+                        {
                             rootDir,
-                            filePath,
-                        );
-                        try {
-                            const timeoutPromise = new Promise<never>(
-                                (_, reject) => {
-                                    setTimeout(() => {
-                                        reject(
-                                            new Error(
-                                                `Timeout while processing ${filePath}`,
-                                            ),
-                                        );
-                                    }, 60000);
-                                },
-                            );
+                            batch: batchFiles,
+                        },
+                        { name: 'analyzeBatch' },
+                    ),
+                    timeoutPromise,
+                ]);
 
-                            const analysis = await Promise.race<ParserAnalysis>(
-                                [
-                                    this.piscina.run(
-                                        {
-                                            rootDir,
-                                            filePath,
-                                            normalizedPath,
-                                        },
-                                        { name: 'analyze' },
-                                    ),
-                                    // new SourceFileAnalyzer().analyzeSourceFile(
-                                    //     // path.join(
-                                    //     //     rootDir,
-                                    //     //     'src/core/application/use-cases/codeBase/php_project',
-                                    //     // ),
-                                    //     rootDir,
-                                    //     filePath,
-                                    //     normalizedPath,
-                                    // ),
-                                    timeoutPromise,
-                                ],
-                            );
-
-                            const functionsMap: Map<string, FunctionAnalysis> =
-                                analysis.functions instanceof Map
-                                    ? analysis.functions
-                                    : this.objectToMap(analysis.functions);
-
-                            const typesMap: Map<string, TypeAnalysis> =
-                                analysis.types instanceof Map
-                                    ? analysis.types
-                                    : this.objectToMap(analysis.types);
-
-                            return {
-                                filePath,
-                                normalizedPath,
-                                analysis: {
-                                    fileAnalysis: analysis.fileAnalysis,
-                                    functions: functionsMap,
-                                    types: typesMap,
-                                },
-                            };
-                        } catch (error) {
-                            this.logger.error({
-                                message: 'Error processing file',
-                                context: CodeKnowledgeGraphService.name,
-                                error,
-                                metadata: {
-                                    filePath,
-                                    normalizedPath,
-                                },
-                                serviceName: CodeKnowledgeGraphService.name,
-                            });
-                            throw error;
-                        }
-                    }),
-                );
-
-                for (const resultItem of batchResults) {
-                    if (resultItem.status === 'fulfilled') {
-                        const item = resultItem.value;
-                        result.files.set(
-                            item.normalizedPath,
-                            item.analysis.fileAnalysis,
-                        );
-
-                        if (item.analysis.functions) {
-                            for (const [
-                                k,
-                                v,
-                            ] of item.analysis.functions.entries()) {
-                                result.functions.set(k, v);
-                            }
-                        }
-
-                        if (item.analysis.types) {
-                            for (const [
-                                k,
-                                v,
-                            ] of item.analysis.types.entries()) {
-                                result.types.set(k, v);
-                            }
-                        }
-                    } else {
-                        this.logger.warn({
-                            message: 'Failed to process file',
-                            context: CodeKnowledgeGraphService.name,
-                            error: resultItem.reason,
-                            metadata: {
-                                resultItem,
-                            },
-                            serviceName: CodeKnowledgeGraphService.name,
-                        });
-                    }
-                }
-
-                processedCount += batchFiles.length;
-                console.log(
-                    `Processed ${processedCount} of ${totalFiles} files...`,
-                );
-                if (onProgress) {
-                    onProgress(processedCount, totalFiles);
-                }
-
-                if (global.gc && i % (batchSize * 5) === 0) {
-                    global.gc();
-                }
+                return analysis;
+            } catch (error) {
+                this.logger.error({
+                    message: 'Error processing batch',
+                    context: CodeKnowledgeGraphService.name,
+                    error,
+                    metadata: {
+                        batchFiles,
+                    },
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+                throw error;
             }
         };
 
-        await processBatches();
+        const batchResults = await Promise.allSettled(
+            batches.map((batchFiles) => processBatch(batchFiles)),
+        );
+
+        batchResults.forEach((resultItem, index) => {
+            if (resultItem.status === 'fulfilled') {
+                const item = resultItem.value;
+                item.files.forEach((file) => {
+                    result.files.set(
+                        file.normalizedPath,
+                        file.analysis.fileAnalysis,
+                    );
+
+                    if (file.analysis.functions) {
+                        for (const [
+                            k,
+                            v,
+                        ] of file.analysis.functions.entries()) {
+                            result.functions.set(k, v);
+                        }
+                    }
+
+                    if (file.analysis.types) {
+                        for (const [k, v] of file.analysis.types.entries()) {
+                            result.types.set(k, v);
+                        }
+                    }
+                });
+
+                item.errors.forEach((error) => {
+                    this.logger.warn({
+                        message: 'Error in batch processing',
+                        context: CodeKnowledgeGraphService.name,
+                        error,
+                        metadata: {
+                            index,
+                            batchFiles: batches[index],
+                        },
+                        serviceName: CodeKnowledgeGraphService.name,
+                    });
+                });
+            } else {
+                this.logger.warn({
+                    message: 'Failed to process batch',
+                    context: CodeKnowledgeGraphService.name,
+                    error: resultItem.reason,
+                    metadata: {
+                        index,
+                        batchFiles: batches[index],
+                    },
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            }
+        });
 
         this.completeBidirectionalTypeRelations(result.types);
 
@@ -319,9 +255,5 @@ export class CodeKnowledgeGraphService {
             });
         }
         return map;
-    }
-
-    private getNormalizedPath(rootDir: string, filePath: string): string {
-        return path.resolve(rootDir, filePath).replace(/\\/g, '/');
     }
 }

@@ -1,4 +1,4 @@
-import { StreamedResponse } from '@kodus/kodus-proto/v2';
+import { StreamedResponse } from '@kodus/kodus-proto/ast/v2';
 import { from, Observable } from 'rxjs';
 
 type primitive = string | number | boolean | null | undefined;

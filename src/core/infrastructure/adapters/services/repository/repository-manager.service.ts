@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
-import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/v1';
+import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/ast/v2';
 import { handleError } from '@/shared/utils/errors';
 
 @Injectable()

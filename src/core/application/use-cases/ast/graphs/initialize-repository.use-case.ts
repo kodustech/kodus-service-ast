@@ -11,12 +11,12 @@ import {
     RepositoryData,
     EnrichedGraph,
     CodeGraph,
-} from '@kodus/kodus-proto/v2';
-import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
+} from '@kodus/kodus-proto/ast/v2';
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
-import { InitializeRepositoryRequest } from '@kodus/kodus-proto/v3';
+import { InitializeRepositoryRequest } from '@kodus/kodus-proto/ast';
+import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
 
 @Injectable()
 export class InitializeRepositoryUseCase {
@@ -34,7 +34,7 @@ export class InitializeRepositoryUseCase {
         request: InitializeRepositoryRequest,
         taskId?: string,
     ): Promise<void> {
-        const { baseRepo, headRepo } = request;
+        const { baseRepo, headRepo, filePaths = [] } = request;
 
         if (!baseRepo || !headRepo) {
             throw new GrpcInvalidArgumentException(
@@ -53,12 +53,14 @@ export class InitializeRepositoryUseCase {
             const headGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     headDirPath,
+                    filePaths,
                 );
 
             this.updateTaskState(taskId, 'Building base graph');
             const baseGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     baseDirPath,
+                    filePaths,
                 );
 
             this.updateTaskState(taskId, 'Building enriched head graph');

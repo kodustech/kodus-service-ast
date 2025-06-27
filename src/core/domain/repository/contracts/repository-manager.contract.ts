@@ -1,4 +1,4 @@
-import { RepositoryData } from '@kodus/kodus-proto/v1';
+import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
 
 export interface IRepositoryManager {
     gitCloneWithAuth(params: { repoData: RepositoryData }): Promise<string>;

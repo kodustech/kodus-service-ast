@@ -1,6 +1,6 @@
 import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/diff/diff-analyzer.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { GetContentFromDiffRequest } from '@kodus/kodus-proto/v3';
+import { GetContentFromDiffRequest } from '@kodus/kodus-proto/ast';
 import { GetGraphsUseCase } from './get-graphs.use-case';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { Injectable } from '@nestjs/common';

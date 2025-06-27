@@ -6,7 +6,8 @@ services:
             context: .
             dockerfile: DockerFiles/Dockerfile.dev
         ports:
-            - ${API_PORT}:${API_PORT}
+            - ${API_AST_PORT}:${API_AST_PORT}
+            - ${API_TASK_PORT}:${API_TASK_PORT}
             - 5001:5001
             - 9300:9300
         env_file:
@@ -14,7 +15,6 @@ services:
         restart: unless-stopped
         volumes:
             - .:/usr/src/app
-            - /usr/src/app/node_modules
         networks:
             - kodus-backend-services
 

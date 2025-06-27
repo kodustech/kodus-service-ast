@@ -12,7 +12,7 @@ import {
     Call,
     FunctionAnalysis,
     TypeAnalysis,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;

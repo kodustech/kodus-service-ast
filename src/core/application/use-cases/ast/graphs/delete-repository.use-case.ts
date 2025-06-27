@@ -1,11 +1,11 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { GrpcInvalidArgumentException } from '@/shared/utils/grpc/exceptions';
-import { RepositoryData } from '@kodus/kodus-proto/v2';
+import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
 import {
     DeleteRepositoryRequest,
     DeleteRepositoryResponse,
-} from '@kodus/kodus-proto/v3';
+} from '@kodus/kodus-proto/ast';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

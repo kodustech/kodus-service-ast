@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service';
 import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract';
-import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/v3';
+import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/task';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
+import { SerializeDateToTimeStamp } from '@kodus/kodus-proto/serialization';
 import {
     deepMerge,
     DeepPartial,
@@ -26,7 +26,7 @@ export class TaskManagerService implements ITaskManagerService {
             priority = TaskPriority.TASK_PRIORITY_MEDIUM;
 
         const taskId = crypto.randomUUID();
-        const timestamp = ASTSerializer.dateToTimestamp(new Date());
+        const timestamp = SerializeDateToTimeStamp(new Date());
 
         const newTask: Task = {
             id: taskId,
@@ -59,7 +59,7 @@ export class TaskManagerService implements ITaskManagerService {
         task: Task,
         updates: DeepPartial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>,
     ): void {
-        const updatedAt = ASTSerializer.dateToTimestamp(new Date());
+        const updatedAt = SerializeDateToTimeStamp(new Date());
 
         const updatedTask: Task = {
             id: task.id,
@@ -690,7 +690,7 @@ export class TaskManagerService implements ITaskManagerService {
         });
 
         const now = new Date();
-        const threshold = ASTSerializer.dateToTimestamp(
+        const threshold = SerializeDateToTimeStamp(
             new Date(now.getTime() - 8 * 60 * 60 * 1000),
         ); // 8 hours ago
 

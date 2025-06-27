@@ -6,7 +6,7 @@ import {
     Range,
     Scope,
     TypeAnalysis,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 import { SyntaxNode } from 'tree-sitter';
 
 export type ParseContext = {

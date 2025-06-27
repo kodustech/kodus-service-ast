@@ -13,18 +13,30 @@ import { PinoLoggerService } from './core/infrastructure/adapters/services/logge
 
 async function bootstrap() {
     const containerName = getEnvVariableOrExit('CONTAINER_NAME');
-    const grpcPort = getEnvVariableAsNumberOrExit('API_PORT'); // 3002
-    const healthPort = getEnvVariableAsNumberOrExit('API_HEALTH_PORT'); // 5001
+    const grpcASTPort = getEnvVariableAsNumberOrExit('API_AST_PORT');
+    const grpcTaskPort = getEnvVariableAsNumberOrExit('API_TASK_PORT');
+    const healthPort = getEnvVariableAsNumberOrExit('API_HEALTH_PORT');
 
     /* ------------ validação simples de intervalo ---------------- */
-    for (const [name, value] of Object.entries({ grpcPort, healthPort })) {
+    for (const [name, value] of Object.entries({
+        grpcASTPort,
+        grpcTaskPort,
+        healthPort,
+    })) {
         if (value < 1 || value > 65535) {
-            console.error(`${name} deve estar entre 1 e 65535`);
+            console.error(`${name} must be a value between 1 and 65535`);
             process.exit(1);
         }
     }
-    if (grpcPort === healthPort) {
-        console.error('API_PORT e API_HEALTH_PORT não podem ser iguais');
+
+    if (
+        grpcASTPort === healthPort ||
+        grpcTaskPort === healthPort ||
+        grpcASTPort === grpcTaskPort
+    ) {
+        console.error(
+            'API_AST_PORT, API_TASK_PORT and API_HEALTH_PORT cannot be the same',
+        );
         process.exit(1);
     }
     /* ------------------------------------------------------------ */
@@ -41,11 +53,27 @@ async function bootstrap() {
     app.connectMicroservice<MicroserviceOptions>({
         transport: Transport.GRPC,
         options: {
-            url: `0.0.0.0:${grpcPort}`,
+            url: `0.0.0.0:${grpcASTPort}`,
             package: 'kodus.ast.v3',
             protoPath: resolve(
                 cwd(),
                 'node_modules/@kodus/kodus-proto/kodus/ast/v3/analyzer.proto',
+            ),
+            credentials: ServerCredentials.createInsecure(), // plaintext
+            loader: {
+                includeDirs: [join(cwd(), 'node_modules/@kodus/kodus-proto')],
+            },
+        },
+    });
+
+    app.connectMicroservice<MicroserviceOptions>({
+        transport: Transport.GRPC,
+        options: {
+            url: `0.0.0.0:${grpcTaskPort}`,
+            package: 'kodus.task.v1',
+            protoPath: resolve(
+                cwd(),
+                'node_modules/@kodus/kodus-proto/kodus/task/v1/manager.proto',
             ),
             credentials: ServerCredentials.createInsecure(), // plaintext
             loader: {
@@ -60,7 +88,8 @@ async function bootstrap() {
 
     await app.startAllMicroservices();
     console.log(`HTTP health => ${containerName}:${healthPort}`);
-    console.log(`gRPC        => ${containerName}:${grpcPort}`);
+    console.log(`gRPC AST    => ${containerName}:${grpcASTPort}`);
+    console.log(`gRPC Task   => ${containerName}:${grpcTaskPort}`);
 
     /* 4. Avise PM2 que o processo está pronto (wait_ready) */
     if (typeof process.send === 'function') {

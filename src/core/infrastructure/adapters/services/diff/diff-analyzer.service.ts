@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service';
 import {
+    EnrichedGraphEdge,
     EnrichedGraphNode,
     FunctionAnalysis,
     GetGraphsResponseData,
@@ -8,14 +9,14 @@ import {
     Point,
     Range,
     RelationshipType,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 import {
     ChangeResult,
     DiffHunk,
     ExtendedFunctionInfo,
 } from '@/core/domain/diff/types/diff-analyzer.types';
 import * as path from 'path';
-
+import { parsePatch } from 'diff';
 @Injectable()
 export class DiffAnalyzerService {
     constructor(private readonly logger: PinoLoggerService) {}
@@ -48,105 +49,44 @@ export class DiffAnalyzerService {
                 return null;
             }
 
-            const fileDefinitions = graphs.enrichHeadGraph.nodes.filter(
-                (node) => node.filePath.includes(filePath),
-            );
-
-            if (fileDefinitions.length === 0) {
+            const fileNodes = this.getFileNodes(graphs, filePath);
+            if (fileNodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
-                    message: `No file definitions found for ${filePath}`,
-                    metadata: { diff, content, graphs },
+                    message: `No file nodes found for ${filePath}`,
+                    metadata: { diff, content, graphs, filePath },
                     serviceName: DiffAnalyzerService.name,
                 });
                 return null;
             }
 
-            const inRangeDefinitions = fileDefinitions.filter((def) => {
-                return ranges.some((range) => {
-                    return (
-                        def.position.startIndex <= range.startIndex &&
-                        def.position.endIndex >= range.endIndex
-                    );
-                });
-            });
-
-            if (inRangeDefinitions.length === 0) {
+            const nodes = this.getNodesForRanges(fileNodes, ranges);
+            if (nodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
-                    message: `No definitions in range found for ${filePath}`,
-                    metadata: { diff, content, graphs },
+                    message: `No nodes found for ranges`,
+                    metadata: { diff, content, graphs, filePath },
                     serviceName: DiffAnalyzerService.name,
                 });
                 return null;
             }
 
-            const closestNode = inRangeDefinitions.reduce(
-                (smallest, current) => {
-                    const currentRange = {
-                        startIndex: current.position.startIndex,
-                        endIndex: current.position.endIndex,
-                    };
-                    const smallestRange = {
-                        startIndex: smallest.position.startIndex,
-                        endIndex: smallest.position.endIndex,
-                    };
-                    return currentRange.endIndex - currentRange.startIndex <
-                        smallestRange.endIndex - smallestRange.startIndex
-                        ? current
-                        : smallest;
-                },
-                inRangeDefinitions[0],
-            );
-
-            const relations = graphs.enrichHeadGraph.relationships.filter(
-                (relation) =>
-                    relation.to === closestNode.id &&
-                    (relation.type ===
-                        RelationshipType.RELATIONSHIP_TYPE_CALLS ||
-                        relation.type ===
-                            RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD),
-            );
-            const relatedNodes = relations.map(
-                (relation) =>
-                    graphs.enrichHeadGraph.nodes.find(
-                        (node) => node.id === relation.from,
-                    ) || null,
-            );
-
-            const classNode = relatedNodes.find(
-                (node) => node?.type === NodeType.NODE_TYPE_CLASS,
-            );
-
-            const callers = relatedNodes.filter(
-                (node) => node?.type === NodeType.NODE_TYPE_FUNCTION,
-            );
-
-            const classMethodRelations =
-                graphs.enrichHeadGraph.relationships.filter(
-                    (relation) =>
-                        relation.from === classNode?.id &&
-                        relation.to !== closestNode.id &&
-                        relation.type ===
-                            RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
+            const nodesValues = Array.from(nodes.values());
+            for (const node of nodesValues) {
+                const relatedNodes = this.getRelatedNodes(
+                    fileNodes,
+                    graphs.enrichHeadGraph.relationships,
+                    node,
                 );
 
-            const classMethods = classMethodRelations.map((relation) => {
-                return (
-                    graphs.enrichHeadGraph.nodes.find(
-                        (node) => node.id === relation.to,
-                    ) || null
-                );
-            });
+                relatedNodes.forEach((relatedNode) => {
+                    nodes.push(relatedNode);
+                });
+            }
 
-            const rangesToInclude = this.getRanges(
-                closestNode,
-                classNode,
-                classMethods,
-                callers,
-            );
+            const finalRanges = this.getRanges(nodes);
 
-            return this.contentFromRanges(content, rangesToInclude);
+            return this.contentFromRanges(content, finalRanges);
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
@@ -177,26 +117,33 @@ export class DiffAnalyzerService {
         return trimmedSlices.join('\n\n');
     }
 
-    private getRanges(
-        target: EnrichedGraphNode,
-        classNode: EnrichedGraphNode,
-        classMethods: EnrichedGraphNode[],
-        callers: EnrichedGraphNode[],
-    ): Range[] {
-        // 1. Get class range (unchanged)
-        const classRange = classNode.position;
-
-        // 2. Carve out non-caller methods *inside* class, but keep outer class intact
-        const nonCallerMethods = classMethods.filter(
-            (method) =>
-                method.name !== 'constructor' &&
-                !callers.some((caller) => caller.name === method.name),
+    private getRanges(nodes: EnrichedGraphNode[]): Range[] {
+        const resultRanges = Array.from(
+            new Map(nodes.map((node) => [node.id, node.position])).values(),
         );
 
-        // 3. Remove only the method ranges, not the whole class body
-        let resultRanges: Range[] = [classRange];
-        for (const method of nonCallerMethods) {
-            resultRanges = this.diffRange(resultRanges, method.position);
+        if (resultRanges.length < 2) return resultRanges;
+
+        const sortedRanges = resultRanges.sort(
+            (a, b) => a.startIndex - b.startIndex || a.endIndex - b.endIndex,
+        );
+
+        const mergedRanges: Range[] = [];
+        let currentRange = sortedRanges[0];
+
+        for (let i = 1; i < sortedRanges.length; i++) {
+            const nextRange = sortedRanges[i];
+
+            // Check if ranges overlap or are contiguous
+            if (nextRange.startIndex <= currentRange.endIndex + 1) {
+                // Merge ranges
+                currentRange.endIndex = nextRange.endIndex;
+                currentRange.endPosition = nextRange.endPosition;
+            } else {
+                // No overlap, push the current range and start a new one
+                mergedRanges.push(currentRange);
+                currentRange = nextRange;
+            }
         }
 
         return resultRanges;
@@ -239,83 +186,108 @@ export class DiffAnalyzerService {
         return result;
     }
 
-    private getFilename(diff: string): string {
-        const match = diff.match(/diff --git a\/(.*?) b\//);
-        if (match && match[1]) {
-            return match[1];
+    /**
+     * Given a diff and the content of the new file, it outputs the line ranges
+     * for only the lines that were added.
+     * @param diff The unified diff string.
+     * @param fileContent The content of the file after the changes.
+     * @returns An array of Range objects representing the added line ranges.
+     */
+    private getModifiedRanges(diff: string, fileContent: string): Range[] {
+        // The file content of the new file split into lines.
+        const fileLines = fileContent.split('\n');
+        // The first [0] element is the parsed diff for the first file in the patch.
+        const hunks = parsePatch(diff)[0]?.hunks ?? [];
+
+        const modifiedRanges: Range[] = [];
+
+        for (const hunk of hunks) {
+            // Keep track of the current line number in the *new* file.
+            // Hunk line numbers are 1-based, so we convert to 0-based for array access.
+            let currentNewLineNumber = hunk.newStart - 1;
+
+            // Tracks the start line of a contiguous block of added lines.
+            // Set to -1 when not in a block.
+            let blockStartLine = -1;
+
+            // Pad the hunk lines with a sentinel value to handle blocks at the very end.
+            const hunkLines = [...hunk.lines, ''];
+
+            for (const line of hunkLines) {
+                const lineIsAddition = line.startsWith('+');
+                const lineIsDeletion = line.startsWith('-');
+
+                if (lineIsAddition && blockStartLine === -1) {
+                    // Start of a new contiguous block of additions.
+                    blockStartLine = currentNewLineNumber;
+                } else if (!lineIsAddition && blockStartLine !== -1) {
+                    // End of a contiguous block. The block ended on the *previous* line.
+                    const blockEndLine = currentNewLineNumber - 1;
+                    const range = this.calculateRangeFromLines(
+                        blockStartLine,
+                        blockEndLine,
+                        fileLines,
+                    );
+                    if (range) {
+                        modifiedRanges.push(range);
+                    }
+                    // Reset for the next block.
+                    blockStartLine = -1;
+                }
+
+                // Deletions don't exist in the new file, so they don't increment the new line number.
+                if (!lineIsDeletion) {
+                    currentNewLineNumber++;
+                }
+            }
         }
-        throw new Error('Filename not found in diff');
+
+        return modifiedRanges;
     }
 
-    private getModifiedRanges(diff: string, fileContent: string): Range[] {
-        const ranges: Range[] = [];
-        const fileLines = fileContent.split('\n');
+    /**
+     * Helper to calculate a Range object from start and end line numbers.
+     * @param startLine 0-based start line index.
+     * @param endLine 0-based end line index.
+     * @param lines The lines of the file content.
+     * @returns A Range object.
+     */
+    private calculateRangeFromLines(
+        startLine: number,
+        endLine: number,
+        lines: string[],
+    ): Range | undefined {
+        if (startLine > endLine || startLine < 0 || endLine >= lines.length) {
+            return undefined;
+        }
 
-        // Precompute line start indices for mapping row/column to absolute index
-        const lineStartIndices = fileLines.reduce<number[]>(
-            (acc, line, idx) => {
-                if (idx === 0) acc.push(0);
-                else acc.push(acc[idx - 1] + line.length + 1);
-                return acc;
-            },
-            [],
-        );
+        let startIndex = 0;
+        for (let i = 0; i < startLine; i++) {
+            startIndex += lines[i].length + 1; // +1 for the newline character
+        }
 
-        // Helper: given absolute index, find row/column
-        const indexToPos = (index: number): Point => {
-            // binary search over lineStartIndices
-            let low = 0;
-            let high = lineStartIndices.length - 1;
-            while (low <= high) {
-                const mid = Math.floor((low + high) / 2);
-                const start = lineStartIndices[mid];
-                const nextStart =
-                    mid + 1 < lineStartIndices.length
-                        ? lineStartIndices[mid + 1]
-                        : Infinity;
-                if (index < start) {
-                    high = mid - 1;
-                } else if (index >= nextStart) {
-                    low = mid + 1;
-                } else {
-                    return { row: mid, column: index - start };
-                }
-            }
-            return { row: 0, column: index };
+        let endIndex = startIndex;
+        for (let i = startLine; i <= endLine; i++) {
+            // Add line length. Add newline character except for the very last line of the file.
+            endIndex += lines[i].length + (i < lines.length - 1 ? 1 : 0);
+        }
+
+        const startPosition: Point = {
+            row: startLine,
+            column: 0,
         };
 
-        const diffLines = diff.split('\n');
-        let lastSearchIndex = 0;
-        for (let i = 0; i < diffLines.length; i++) {
-            const header = diffLines[i].match(/^@@.*\+(\d+)(?:,(\d+))? @@/);
-            if (!header) continue;
-            i++;
-            while (i < diffLines.length && !diffLines[i].startsWith('@@')) {
-                const line = diffLines[i];
-                if (line.startsWith('+')) {
-                    const text = line.slice(1);
-                    // Find the added text in the fileContent starting from lastSearchIndex
-                    const startIndex = fileContent.indexOf(
-                        text,
-                        lastSearchIndex,
-                    );
-                    if (startIndex !== -1) {
-                        const endIndex = startIndex + text.length;
-                        const startPos = indexToPos(startIndex - 1);
-                        const endPos = indexToPos(endIndex - 1);
-                        ranges.push({
-                            startIndex: startIndex - 1,
-                            endIndex: endIndex - 1,
-                            startPosition: startPos,
-                            endPosition: endPos,
-                        });
-                        lastSearchIndex = endIndex;
-                    }
-                }
-                i++;
-            }
-        }
-        return ranges;
+        const endPosition: Point = {
+            row: endLine,
+            column: lines[endLine].length,
+        };
+
+        return {
+            startIndex,
+            endIndex,
+            startPosition,
+            endPosition,
+        };
     }
 
     analyzeDiff(
@@ -494,5 +466,115 @@ export class DiffAnalyzerService {
             .some((line) => line.startsWith('+') || line.startsWith('-'));
 
         return isOverlapping && hasRealChanges;
+    }
+
+    private getFileNodes(
+        graphs: GetGraphsResponseData,
+        filePath: string,
+    ): EnrichedGraphNode[] {
+        if (!graphs || !graphs.enrichHeadGraph) {
+            this.logger.warn({
+                context: DiffAnalyzerService.name,
+                message: `Graphs not provided or invalid`,
+                metadata: { filePath },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return [];
+        }
+
+        return graphs.enrichHeadGraph.nodes.filter((node) =>
+            node.filePath.includes(filePath),
+        );
+    }
+
+    private getNodesForRanges(
+        fileNodes: EnrichedGraphNode[],
+        ranges: Range[],
+    ): EnrichedGraphNode[] {
+        const nodesInRange = fileNodes.filter((def) => {
+            return ranges.some((range) => {
+                return (
+                    def.position.startIndex <= range.startIndex &&
+                    def.position.endIndex >= range.endIndex
+                );
+            });
+        });
+
+        return nodesInRange;
+    }
+
+    private getClosestNodeForRange(
+        nodes: EnrichedGraphNode[],
+        range: Range,
+    ): EnrichedGraphNode | null {
+        if (nodes.length === 0 || !range) {
+            this.logger.warn({
+                context: DiffAnalyzerService.name,
+                message: `No nodes or range provided`,
+                metadata: { nodes, range },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return null;
+        }
+
+        const overlappingNodes = nodes.filter((node) => {
+            const nodeStart = node.position.startIndex;
+            const nodeEnd = node.position.endIndex;
+
+            return nodeEnd >= range.startIndex && nodeStart <= range.endIndex;
+        });
+
+        if (overlappingNodes.length === 0) {
+            return null;
+        }
+
+        const closestNode = overlappingNodes.reduce((min, curr) => {
+            const minSize = min.position.endIndex - min.position.startIndex;
+            const currSize = curr.position.endIndex - curr.position.startIndex;
+
+            return currSize < minSize ? curr : min;
+        }, overlappingNodes[0]);
+        return closestNode;
+    }
+
+    private readonly nodeTypeRelationships: Partial<
+        Record<NodeType, RelationshipType[]>
+    > = {
+        [NodeType.NODE_TYPE_FUNCTION]: [
+            RelationshipType.RELATIONSHIP_TYPE_CALLS,
+            RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
+        ],
+    };
+
+    private getRelatedNodes(
+        fileNodes: EnrichedGraphNode[],
+        relations: EnrichedGraphEdge[],
+        node: EnrichedGraphNode,
+    ): EnrichedGraphNode[] {
+        if (!fileNodes || !relations || !node) {
+            this.logger.warn({
+                context: DiffAnalyzerService.name,
+                message: `Invalid input for getting related nodes`,
+                metadata: { fileNodes, relations, node },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return [];
+        }
+
+        const relatedNodes = relations
+            .filter(
+                (relation) =>
+                    relation.to === node.id &&
+                    this.nodeTypeRelationships[node.type]?.includes(
+                        relation.type,
+                    ),
+            )
+            .map(
+                (relation) =>
+                    fileNodes.find((n) => n.id === relation.from) || null,
+            )
+            .filter((n) => n !== null);
+
+        return relatedNodes;
     }
 }

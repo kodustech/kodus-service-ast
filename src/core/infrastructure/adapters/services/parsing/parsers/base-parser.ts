@@ -22,27 +22,21 @@ import {
     TypeAnalysis,
     NodeType,
     Range,
-} from '@kodus/kodus-proto/v2';
+} from '@kodus/kodus-proto/ast/v2';
 import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 import { appendOrUpdateElement, findLastIndexOf } from '@/shared/utils/arrays';
 import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
 import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver';
 
 export abstract class BaseParser {
-    private static parserByLang = new Map<string, Parser>();
-    private static queryCacheByLang = new Map<string, Map<QueryType, Query>>();
+    private static readonly parserByLang = new Map<string, Parser>();
+    private static readonly queryCacheByLang = new Map<
+        string,
+        Map<QueryType, Query>
+    >();
 
-    /* 1-B) Campos de **instância** (não readonly!)                       */
-    private parser!: Parser; // ← instância
-    private queries!: Map<QueryType, Query>;
-
-    private readonly importPathResolver: LanguageResolver;
-    // private parser: Parser = BaseParser.parser;
-    private readonly context: ParseContext;
-    // private readonly queries: Map<QueryType, Query> = new Map<
-    //     QueryType,
-    //     Query
-    // >();
+    private parser: Parser;
+    private queries: Map<QueryType, Query>;
 
     protected abstract getLanguage(): Language;
     protected abstract getRawQueries(): Map<QueryType, ParserQuery>;
@@ -51,12 +45,12 @@ export abstract class BaseParser {
     protected abstract getValidMemberTypes(): Set<string>;
     protected abstract getValidFunctionTypes(): Set<string>;
 
-    constructor(importPathResolver: LanguageResolver, context: ParseContext) {
+    constructor(
+        private readonly importPathResolver: LanguageResolver,
+        private readonly context: ParseContext,
+    ) {
         this.setupParser();
         this.setupQueries();
-
-        this.importPathResolver = importPathResolver;
-        this.context = context;
     }
 
     private setupParser(): void {
@@ -73,7 +67,6 @@ export abstract class BaseParser {
         this.parser = cached;
     }
 
-    /* 1-D) Reaproveita as Querys compiladas                              */
     private setupQueries(): void {
         const id = this.getLanguage().name;
 
@@ -87,25 +80,6 @@ export abstract class BaseParser {
         }
         this.queries = qMap;
     }
-
-    /* ------------------------------------------------------------------ */
-    // public getParser(): Parser {
-    //     return this.parser;
-    // }
-
-    // protected getQuery(t: QueryType): Query | null {
-    //     return this.queries.get(t) ?? null;
-    // }
-
-    // private setupQueries(): void {
-    //     const queries = this.getRawQueries();
-    //     const language = this.getLanguage();
-
-    //     for (const [key, value] of queries.entries()) {
-    //         const query = new Query(language, value.query);
-    //         this.queries.set(key, query);
-    //     }
-    // }
 
     public getParser(): Parser {
         if (!this.parser) {

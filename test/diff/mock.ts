@@ -13,13 +13,73 @@ type MockData = {
 
 export const mockData: Partial<MockData> = {
     typescript: [
+        //         {
+        //             filePath: 'src/core/application/use-cases/codeBase/diff_test/b.ts',
+        //             diff: `
+        // diff --git a/src/core/application/use-cases/codeBase/diff_test/a.ts b/src/core/application/use-cases/codeBase/diff_test/b.ts
+        // index 1f66838e6..9e86d0b4b 100644
+        // --- a/src/core/application/use-cases/codeBase/diff_test/a.ts
+        // +++ b/src/core/application/use-cases/codeBase/diff_test/b.ts
+        // @@ -9,6 +9,7 @@ class Foo {
+        //      }
+
+        //      foo() {
+        // +        console.log('foo called');
+        //          console.log('Hello, world!');
+        //      }
+        // `,
+        //             content: `class Foo {
+        //     private _privateProperty: string;
+
+        //     constructor(
+        //         privateProperty: string,
+        //         private readonly anotherProperty?: string,
+        //     ) {
+        //         this._privateProperty = privateProperty;
+        //     }
+
+        //     foo() {
+        //         console.log('foo called');
+        //         console.log('Hello, world!');
+        //     }
+
+        //     baz() {
+        //         console.log('baz called');
+        //     }
+
+        //     bar() {
+        //         this.foo();
+        //         console.log('Goodbye, world!');
+        //     }
+        // }`,
+        //             expected: `class Foo {
+        //     private _privateProperty: string;
+
+        //     constructor(
+        //         privateProperty: string,
+        //         private readonly anotherProperty?: string,
+        //     ) {
+        //         this._privateProperty = privateProperty;
+        //     }
+
+        //     foo() {
+        //         console.log('foo called');
+        //         console.log('Hello, world!');
+        //     }
+
+        //     bar() {
+        //         this.foo();
+        //         console.log('Goodbye, world!');
+        //     }
+        // }`,
+        //         },
         {
             filePath: 'src/core/application/use-cases/codeBase/diff_test/b.ts',
             diff: `
-diff --git a/src/core/application/use-cases/codeBase/diff_test/a.ts b/src/core/application/use-cases/codeBase/diff_test/b.ts
-index 1f66838e6..9e86d0b4b 100644
---- a/src/core/application/use-cases/codeBase/diff_test/a.ts
-+++ b/src/core/application/use-cases/codeBase/diff_test/b.ts
+diff --git a/a.ts b/b.ts
+index 1f66838e6..a4f14aef3 100644
+--- a/a.ts
++++ b/b.ts
 @@ -9,6 +9,7 @@ class Foo {
      }
 
@@ -27,6 +87,14 @@ index 1f66838e6..9e86d0b4b 100644
 +        console.log('foo called');
          console.log('Hello, world!');
      }
+
+@@ -19,5 +20,6 @@ class Foo {
+     bar() {
+         this.foo();
+         console.log('Goodbye, world!');
++        console.log('bar called');
+     }
+ }
 `,
             content: `class Foo {
     private _privateProperty: string;
@@ -50,28 +118,11 @@ index 1f66838e6..9e86d0b4b 100644
     bar() {
         this.foo();
         console.log('Goodbye, world!');
+        console.log('bar called');
     }
-}`,
-            expected: `class Foo {
-    private _privateProperty: string;
-
-    constructor(
-        privateProperty: string,
-        private readonly anotherProperty?: string,
-    ) {
-        this._privateProperty = privateProperty;
-    }
-
-    foo() {
-        console.log('foo called');
-        console.log('Hello, world!');
-    }
-
-    bar() {
-        this.foo();
-        console.log('Goodbye, world!');
-    }
-}`,
+}
+`,
+            expected: `class Foo {`,
         },
     ],
 };

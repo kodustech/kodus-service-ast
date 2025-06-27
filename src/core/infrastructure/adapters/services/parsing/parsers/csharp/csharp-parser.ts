@@ -5,7 +5,7 @@ import { cSharpQueries } from './csharp-queries';
 import { ParserQuery, QueryType } from '../query';
 import { findNamedChildByType } from '@/shared/utils/ast-helpers';
 import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/v2';
+import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
 
 export class CSharpParser extends BaseParser {
     private static readonly language = CSharpLang as Language;

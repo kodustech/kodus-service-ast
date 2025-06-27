@@ -8,7 +8,7 @@ import {
 import {
     GetImpactAnalysisRequest,
     GetImpactAnalysisResponse,
-} from '@kodus/kodus-proto/v3';
+} from '@kodus/kodus-proto/ast';
 import { Injectable } from '@nestjs/common';
 import { Observable } from 'rxjs';
 

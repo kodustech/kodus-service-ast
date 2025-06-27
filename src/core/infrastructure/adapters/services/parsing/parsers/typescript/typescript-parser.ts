@@ -4,7 +4,7 @@ import { typeScriptQueries } from './typescript-queries';
 import { Language, SyntaxNode } from 'tree-sitter';
 import { ParserQuery, QueryType } from '../query';
 import { CallChain, ChainType } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/v2';
+import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
 
 export class TypeScriptParser extends BaseParser {
     private static readonly language = TypeScriptLang as Language;

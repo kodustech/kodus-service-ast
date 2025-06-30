@@ -169,14 +169,10 @@ export abstract class BaseParser {
         const originNode = originCapture.node;
 
         this.addChildSyntaxNodeToNode(parentNode, originNode);
-        return this.getImportOriginName(originNode, match);
+        return this.getImportOriginName(originNode);
     }
 
-    protected getImportOriginName(
-        node: SyntaxNode,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        match?: QueryMatch | null,
-    ): string | null {
+    protected getImportOriginName(node: SyntaxNode): string | null {
         return node ? node.text : null;
     }
 

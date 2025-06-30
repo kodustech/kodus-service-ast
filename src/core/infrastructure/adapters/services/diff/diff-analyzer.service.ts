@@ -17,6 +17,12 @@ import {
 } from '@/core/domain/diff/types/diff-analyzer.types';
 import * as path from 'path';
 import { parsePatch } from 'diff';
+
+enum RelatedNodeDirection {
+    TO,
+    FROM,
+}
+
 @Injectable()
 export class DiffAnalyzerService {
     constructor(private readonly logger: PinoLoggerService) {}
@@ -27,12 +33,21 @@ export class DiffAnalyzerService {
         content: string,
         graphs: GetGraphsResponseData,
     ): string {
+        const metadata = {
+            filePath: filePath || 'unknown',
+            diff: diff ? diff.slice(0, 100) : 'no diff provided',
+            content: content ? content.slice(0, 100) : 'no content provided',
+            graphs: graphs
+                ? JSON.stringify(graphs).slice(0, 100)
+                : 'no graphs provided',
+        };
+
         try {
             if (!content || !graphs) {
-                this.logger.warn({
+                this.logger.error({
                     context: DiffAnalyzerService.name,
                     message: `Content or graphs not provided`,
-                    metadata: { diff, content, graphs },
+                    metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
                 return null;
@@ -43,7 +58,7 @@ export class DiffAnalyzerService {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
                     message: `No relevant ranges found in diff`,
-                    metadata: { diff, content, graphs },
+                    metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
                 return null;
@@ -54,7 +69,7 @@ export class DiffAnalyzerService {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
                     message: `No file nodes found for ${filePath}`,
-                    metadata: { diff, content, graphs, filePath },
+                    metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
                 return null;
@@ -65,38 +80,36 @@ export class DiffAnalyzerService {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
                     message: `No nodes found for ranges`,
-                    metadata: { diff, content, graphs, filePath },
+                    metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
                 return null;
             }
 
-            const nodesValues = Array.from(nodes.values());
-            for (const node of nodesValues) {
+            const relationships = graphs.enrichHeadGraph.relationships;
+            const withRelated = nodes.flatMap((node) => {
                 const relatedNodes = this.getRelatedNodes(
                     fileNodes,
-                    graphs.enrichHeadGraph.relationships,
+                    relationships,
                     node,
                 );
 
-                relatedNodes.forEach((relatedNode) => {
-                    nodes.push(relatedNode);
-                });
-            }
+                return [...relatedNodes, node];
+            });
 
-            const finalRanges = this.getRanges(nodes);
+            const nodesRanges = withRelated.flatMap((node) =>
+                this.getNodeRanges(node, fileNodes, relationships),
+            );
 
-            return this.contentFromRanges(content, finalRanges);
+            const mergedRanges = this.mergeRanges(nodesRanges);
+
+            return this.contentFromRanges(content, mergedRanges);
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
                 message: `Failed to get relevant content`,
                 error,
-                metadata: {
-                    diff: diff.slice(0, 100),
-                    content: content.slice(0, 100),
-                    graphs: JSON.stringify(graphs).slice(0, 100),
-                },
+                metadata,
                 serviceName: DiffAnalyzerService.name,
             });
             return null;
@@ -107,7 +120,7 @@ export class DiffAnalyzerService {
         const sorted = [...ranges].sort((a, b) => a.startIndex - b.startIndex);
 
         const slices = sorted.map((r) =>
-            content.trim().substring(r.startIndex, r.endIndex),
+            content.substring(r.startIndex, r.endIndex + 1),
         );
 
         const trimmedSlices = slices.map((slice) =>
@@ -117,19 +130,57 @@ export class DiffAnalyzerService {
         return trimmedSlices.join('\n\n');
     }
 
-    private getRanges(nodes: EnrichedGraphNode[]): Range[] {
-        const resultRanges = Array.from(
-            new Map(nodes.map((node) => [node.id, node.position])).values(),
-        );
+    private getNodeRanges(
+        node: EnrichedGraphNode,
+        fileNodes: EnrichedGraphNode[],
+        relationships: EnrichedGraphEdge[],
+    ): Range[] {
+        switch (node.type) {
+            case NodeType.NODE_TYPE_CLASS: {
+                const classRange = node.position;
 
-        if (resultRanges.length < 2) return resultRanges;
+                // Find all methods related to this class
+                const methods = this.getRelatedNodes(
+                    fileNodes,
+                    relationships,
+                    node,
+                    {
+                        direction: RelatedNodeDirection.FROM,
+                        nodeTypeFilter: [NodeType.NODE_TYPE_FUNCTION],
+                    },
+                );
 
-        const sortedRanges = resultRanges.sort(
+                // Filter out the constructor method
+                const noConstructor = methods.filter(
+                    (m) => m.name !== 'constructor',
+                );
+
+                // Merge the ranges of all methods except the constructor
+                const ranges = noConstructor.map((m) => m.position);
+                const mergedRanges = this.mergeRanges(ranges);
+
+                // Remove the methods ranges from the class range
+                const finalRanges = this.diffRanges([classRange], mergedRanges);
+
+                // Return class range with only the constructor, fields, etc.
+                return finalRanges;
+            }
+            default: {
+                return [node.position];
+            }
+        }
+    }
+
+    private mergeRanges(ranges: Range[]): Range[] {
+        if (ranges.length < 2) return ranges;
+
+        // Sort ranges by startIndex, then by endIndex
+        const sortedRanges = [...ranges].sort(
             (a, b) => a.startIndex - b.startIndex || a.endIndex - b.endIndex,
         );
 
         const mergedRanges: Range[] = [];
-        let currentRange = sortedRanges[0];
+        let currentRange = { ...sortedRanges[0] };
 
         for (let i = 1; i < sortedRanges.length; i++) {
             const nextRange = sortedRanges[i];
@@ -137,7 +188,10 @@ export class DiffAnalyzerService {
             // Check if ranges overlap or are contiguous
             if (nextRange.startIndex <= currentRange.endIndex + 1) {
                 // Merge ranges
-                currentRange.endIndex = nextRange.endIndex;
+                currentRange.endIndex = Math.max(
+                    currentRange.endIndex,
+                    nextRange.endIndex,
+                );
                 currentRange.endPosition = nextRange.endPosition;
             } else {
                 // No overlap, push the current range and start a new one
@@ -146,41 +200,56 @@ export class DiffAnalyzerService {
             }
         }
 
-        return resultRanges;
+        mergedRanges.push(currentRange);
+
+        return mergedRanges;
     }
 
-    private diffRange(ranges: Range[], subtract: Range): Range[] {
+    private diffRanges(ranges: Range[], subtract: Range[]): Range[] {
         const result: Range[] = [];
 
         for (const range of ranges) {
-            // No overlap
-            if (
-                subtract.endIndex <= range.startIndex ||
-                subtract.startIndex >= range.endIndex
-            ) {
-                result.push(range);
-                continue;
+            let pieces: Range[] = [range];
+
+            for (const sub of subtract) {
+                pieces = pieces.flatMap((p) => {
+                    // no overlap
+                    if (
+                        sub.endIndex < p.startIndex ||
+                        sub.startIndex > p.endIndex
+                    ) {
+                        return [p];
+                    }
+
+                    const out: Range[] = [];
+
+                    // left piece
+                    if (sub.startIndex > p.startIndex) {
+                        out.push({
+                            startIndex: p.startIndex,
+                            endIndex: sub.startIndex - 1,
+                            startPosition: p.startPosition,
+                            endPosition: sub.startPosition,
+                        });
+                    }
+
+                    // right piece
+                    if (sub.endIndex < p.endIndex) {
+                        out.push({
+                            startIndex: sub.endIndex + 1,
+                            endIndex: p.endIndex,
+                            startPosition: sub.endPosition,
+                            endPosition: p.endPosition,
+                        });
+                    }
+
+                    return out;
+                });
+
+                if (pieces.length === 0) break;
             }
 
-            // Left piece
-            if (subtract.startIndex > range.startIndex) {
-                result.push({
-                    startIndex: range.startIndex,
-                    endIndex: subtract.startIndex - 1,
-                    startPosition: range.startPosition,
-                    endPosition: subtract.startPosition,
-                });
-            }
-
-            // Right piece
-            if (subtract.endIndex < range.endIndex) {
-                result.push({
-                    startIndex: subtract.endIndex + 1,
-                    endIndex: range.endIndex,
-                    startPosition: subtract.endPosition,
-                    endPosition: range.endPosition,
-                });
-            }
+            result.push(...pieces);
         }
 
         return result;
@@ -544,12 +613,23 @@ export class DiffAnalyzerService {
             RelationshipType.RELATIONSHIP_TYPE_CALLS,
             RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
         ],
+        [NodeType.NODE_TYPE_CLASS]: [
+            RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
+            RelationshipType.RELATIONSHIP_TYPE_EXTENDS,
+            RelationshipType.RELATIONSHIP_TYPE_IMPLEMENTS,
+            RelationshipType.RELATIONSHIP_TYPE_IMPLEMENTED_BY,
+            RelationshipType.RELATIONSHIP_TYPE_EXTENDED_BY,
+        ],
     };
 
     private getRelatedNodes(
         fileNodes: EnrichedGraphNode[],
         relations: EnrichedGraphEdge[],
         node: EnrichedGraphNode,
+        options?: {
+            direction?: RelatedNodeDirection;
+            nodeTypeFilter?: NodeType[];
+        },
     ): EnrichedGraphNode[] {
         if (!fileNodes || !relations || !node) {
             this.logger.warn({
@@ -561,19 +641,46 @@ export class DiffAnalyzerService {
             return [];
         }
 
+        const { direction = RelatedNodeDirection.TO, nodeTypeFilter = [] } =
+            options ?? {};
+
         const relatedNodes = relations
-            .filter(
-                (relation) =>
-                    relation.to === node.id &&
-                    this.nodeTypeRelationships[node.type]?.includes(
-                        relation.type,
-                    ),
-            )
-            .map(
-                (relation) =>
-                    fileNodes.find((n) => n.id === relation.from) || null,
-            )
-            .filter((n) => n !== null);
+            .filter((relation) => {
+                // filter relations based on direction and type
+                const isToRelation =
+                    direction === RelatedNodeDirection.TO &&
+                    relation.to === node.id;
+
+                const isFromRelation =
+                    direction === RelatedNodeDirection.FROM &&
+                    relation.from === node.id;
+
+                const isValidRelationType = this.nodeTypeRelationships[
+                    node.type
+                ]?.includes(relation.type);
+
+                return (isToRelation || isFromRelation) && isValidRelationType;
+            })
+            .map((relation) => {
+                // map the relations to the related nodes
+                const relatedNodeId =
+                    direction === RelatedNodeDirection.TO
+                        ? relation.from
+                        : relation.to;
+
+                // find the related node in the file nodes
+                const relatedNode = fileNodes.find(
+                    (n) => n.id === relatedNodeId,
+                );
+
+                return relatedNode || null;
+            })
+            .filter((n) => {
+                // filter out null nodes and apply node type filter
+                if (!n) return false;
+                if (nodeTypeFilter.length === 0) return true;
+                return nodeTypeFilter.includes(n.type);
+            });
 
         return relatedNodes;
     }

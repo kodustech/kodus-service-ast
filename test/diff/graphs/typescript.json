@@ -1,0 +1,2707 @@
+{
+  "baseGraph": {
+    "graph": {
+      "files": {},
+      "functions": {},
+      "types": {}
+    },
+    "dir": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/main"
+  },
+  "headGraph": {
+    "graph": {
+      "files": {
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts": {
+          "defines": [
+            "constructor",
+            "foo",
+            "baz",
+            "bar",
+            "Foo"
+          ],
+          "calls": [
+            {
+              "nodeId": 124313136403344,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136582736,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136504368,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313136481424,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "console"
+            }
+          ],
+          "imports": [],
+          "className": [
+            "Foo"
+          ],
+          "nodes": {
+            "124313136546896": {
+              "id": 124313136546896,
+              "name": "Foo",
+              "type": 3,
+              "text": "class Foo {\n    private _privateProperty: string;\n\n    constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }\n\n    foo() {\n        console.log(\"Hello, world!\");\n    }\n\n    baz() {\n        console.log(\"baz called\");\n    }\n\n    bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }\n}",
+              "position": {
+                "endIndex": 405,
+                "startIndex": 0,
+                "startPosition": {
+                  "row": 0,
+                  "column": 0
+                },
+                "endPosition": {
+                  "row": 22,
+                  "column": 1
+                }
+              },
+              "children": []
+            },
+            "124313136589888": {
+              "id": 124313136589888,
+              "name": "constructor",
+              "type": 7,
+              "text": "constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }",
+              "position": {
+                "endIndex": 213,
+                "startIndex": 55,
+                "startPosition": {
+                  "row": 3,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 8,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313134734640,
+                  "name": "",
+                  "type": 7,
+                  "text": "constructor",
+                  "position": {
+                    "endIndex": 66,
+                    "startIndex": 55,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 3,
+                      "column": 15
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136587616,
+                  "name": "",
+                  "type": 7,
+                  "text": "(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    )",
+                  "position": {
+                    "endIndex": 156,
+                    "startIndex": 66,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 15
+                    },
+                    "endPosition": {
+                      "row": 6,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136531728,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this._privateProperty = privateProperty;\n    }",
+                  "position": {
+                    "endIndex": 213,
+                    "startIndex": 157,
+                    "startPosition": {
+                      "row": 6,
+                      "column": 6
+                    },
+                    "endPosition": {
+                      "row": 8,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313134842176": {
+              "id": 124313134842176,
+              "name": "foo",
+              "type": 7,
+              "text": "foo() {\n        console.log(\"Hello, world!\");\n    }",
+              "position": {
+                "endIndex": 270,
+                "startIndex": 219,
+                "startPosition": {
+                  "row": 10,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 12,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136590944,
+                  "name": "",
+                  "type": 7,
+                  "text": "foo",
+                  "position": {
+                    "endIndex": 222,
+                    "startIndex": 219,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136512496,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 224,
+                    "startIndex": 222,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136404480,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        console.log(\"Hello, world!\");\n    }",
+                  "position": {
+                    "endIndex": 270,
+                    "startIndex": 225,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 12,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136503632": {
+              "id": 124313136503632,
+              "name": "baz",
+              "type": 7,
+              "text": "baz() {\n        console.log(\"baz called\");\n    }",
+              "position": {
+                "endIndex": 324,
+                "startIndex": 276,
+                "startPosition": {
+                  "row": 14,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 16,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136404576,
+                  "name": "",
+                  "type": 7,
+                  "text": "baz",
+                  "position": {
+                    "endIndex": 279,
+                    "startIndex": 276,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 14,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313134842288,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 281,
+                    "startIndex": 279,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 14,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136503536,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        console.log(\"baz called\");\n    }",
+                  "position": {
+                    "endIndex": 324,
+                    "startIndex": 282,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 16,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136523968": {
+              "id": 124313136523968,
+              "name": "bar",
+              "type": 7,
+              "text": "bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }",
+              "position": {
+                "endIndex": 403,
+                "startIndex": 330,
+                "startPosition": {
+                  "row": 18,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 21,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136503856,
+                  "name": "",
+                  "type": 7,
+                  "text": "bar",
+                  "position": {
+                    "endIndex": 333,
+                    "startIndex": 330,
+                    "startPosition": {
+                      "row": 18,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 18,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136504064,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 335,
+                    "startIndex": 333,
+                    "startPosition": {
+                      "row": 18,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 18,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136523872,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }",
+                  "position": {
+                    "endIndex": 403,
+                    "startIndex": 336,
+                    "startPosition": {
+                      "row": 18,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 21,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts": {
+          "defines": [
+            "constructor",
+            "foo",
+            "baz",
+            "bar",
+            "Foo"
+          ],
+          "calls": [
+            {
+              "nodeId": 124313136635872,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136637200,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136639504,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136641696,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313136642720,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136644160,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            }
+          ],
+          "imports": [],
+          "className": [
+            "Foo"
+          ],
+          "nodes": {
+            "124313136646288": {
+              "id": 124313136646288,
+              "name": "Foo",
+              "type": 3,
+              "text": "class Foo {\n    private _privateProperty: string;\n\n    constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }\n\n    foo() {\n        console.log(\"foo called\");\n        console.log(\"Hello, world!\");\n    }\n\n    baz() {\n        console.log(\"baz called\");\n    }\n\n    bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n        console.log(\"bar called\");\n    }\n}",
+              "position": {
+                "endIndex": 475,
+                "startIndex": 0,
+                "startPosition": {
+                  "row": 0,
+                  "column": 0
+                },
+                "endPosition": {
+                  "row": 24,
+                  "column": 1
+                }
+              },
+              "children": []
+            },
+            "124313136635136": {
+              "id": 124313136635136,
+              "name": "constructor",
+              "type": 7,
+              "text": "constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }",
+              "position": {
+                "endIndex": 213,
+                "startIndex": 55,
+                "startPosition": {
+                  "row": 3,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 8,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136632032,
+                  "name": "",
+                  "type": 7,
+                  "text": "constructor",
+                  "position": {
+                    "endIndex": 66,
+                    "startIndex": 55,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 3,
+                      "column": 15
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136633888,
+                  "name": "",
+                  "type": 7,
+                  "text": "(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    )",
+                  "position": {
+                    "endIndex": 156,
+                    "startIndex": 66,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 15
+                    },
+                    "endPosition": {
+                      "row": 6,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136635040,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this._privateProperty = privateProperty;\n    }",
+                  "position": {
+                    "endIndex": 213,
+                    "startIndex": 157,
+                    "startPosition": {
+                      "row": 6,
+                      "column": 6
+                    },
+                    "endPosition": {
+                      "row": 8,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136638768": {
+              "id": 124313136638768,
+              "name": "foo",
+              "type": 7,
+              "text": "foo() {\n        console.log(\"foo called\");\n        console.log(\"Hello, world!\");\n    }",
+              "position": {
+                "endIndex": 305,
+                "startIndex": 219,
+                "startPosition": {
+                  "row": 10,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 13,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136635360,
+                  "name": "",
+                  "type": 7,
+                  "text": "foo",
+                  "position": {
+                    "endIndex": 222,
+                    "startIndex": 219,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136635568,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 224,
+                    "startIndex": 222,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136638672,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        console.log(\"foo called\");\n        console.log(\"Hello, world!\");\n    }",
+                  "position": {
+                    "endIndex": 305,
+                    "startIndex": 225,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 13,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136640960": {
+              "id": 124313136640960,
+              "name": "baz",
+              "type": 7,
+              "text": "baz() {\n        console.log(\"baz called\");\n    }",
+              "position": {
+                "endIndex": 359,
+                "startIndex": 311,
+                "startPosition": {
+                  "row": 15,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 17,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136638992,
+                  "name": "",
+                  "type": 7,
+                  "text": "baz",
+                  "position": {
+                    "endIndex": 314,
+                    "startIndex": 311,
+                    "startPosition": {
+                      "row": 15,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 15,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136639200,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 316,
+                    "startIndex": 314,
+                    "startPosition": {
+                      "row": 15,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 15,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136640864,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        console.log(\"baz called\");\n    }",
+                  "position": {
+                    "endIndex": 359,
+                    "startIndex": 317,
+                    "startPosition": {
+                      "row": 15,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 17,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136645728": {
+              "id": 124313136645728,
+              "name": "bar",
+              "type": 7,
+              "text": "bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n        console.log(\"bar called\");\n    }",
+              "position": {
+                "endIndex": 473,
+                "startIndex": 365,
+                "startPosition": {
+                  "row": 19,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 23,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136641184,
+                  "name": "",
+                  "type": 7,
+                  "text": "bar",
+                  "position": {
+                    "endIndex": 368,
+                    "startIndex": 365,
+                    "startPosition": {
+                      "row": 19,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 19,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136641392,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 370,
+                    "startIndex": 368,
+                    "startPosition": {
+                      "row": 19,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 19,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136645632,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n        console.log(\"bar called\");\n    }",
+                  "position": {
+                    "endIndex": 473,
+                    "startIndex": 371,
+                    "startPosition": {
+                      "row": 19,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 23,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts": {
+          "defines": [
+            "constructor",
+            "foo",
+            "bar",
+            "Foo"
+          ],
+          "calls": [
+            {
+              "nodeId": 124313136963392,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136965584,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313136966608,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136969344,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "console"
+            }
+          ],
+          "imports": [],
+          "className": [
+            "Foo"
+          ],
+          "nodes": {
+            "124313136968736": {
+              "id": 124313136968736,
+              "name": "Foo",
+              "type": 3,
+              "text": "class Foo {\n    private _privateProperty: string;\n\n    constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }\n\n    foo() {\n        console.log(\"Hello, world!\");\n    }\n\n    bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }\n}",
+              "position": {
+                "endIndex": 351,
+                "startIndex": 0,
+                "startPosition": {
+                  "row": 0,
+                  "column": 0
+                },
+                "endPosition": {
+                  "row": 18,
+                  "column": 1
+                }
+              },
+              "children": []
+            },
+            "124313136962528": {
+              "id": 124313136962528,
+              "name": "constructor",
+              "type": 7,
+              "text": "constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }",
+              "position": {
+                "endIndex": 213,
+                "startIndex": 55,
+                "startPosition": {
+                  "row": 3,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 8,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136959424,
+                  "name": "",
+                  "type": 7,
+                  "text": "constructor",
+                  "position": {
+                    "endIndex": 66,
+                    "startIndex": 55,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 3,
+                      "column": 15
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136961280,
+                  "name": "",
+                  "type": 7,
+                  "text": "(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    )",
+                  "position": {
+                    "endIndex": 156,
+                    "startIndex": 66,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 15
+                    },
+                    "endPosition": {
+                      "row": 6,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136962432,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this._privateProperty = privateProperty;\n    }",
+                  "position": {
+                    "endIndex": 213,
+                    "startIndex": 157,
+                    "startPosition": {
+                      "row": 6,
+                      "column": 6
+                    },
+                    "endPosition": {
+                      "row": 8,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136964848": {
+              "id": 124313136964848,
+              "name": "foo",
+              "type": 7,
+              "text": "foo() {\n        console.log(\"Hello, world!\");\n    }",
+              "position": {
+                "endIndex": 270,
+                "startIndex": 219,
+                "startPosition": {
+                  "row": 10,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 12,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136962752,
+                  "name": "",
+                  "type": 7,
+                  "text": "foo",
+                  "position": {
+                    "endIndex": 222,
+                    "startIndex": 219,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136962960,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 224,
+                    "startIndex": 222,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136964752,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        console.log(\"Hello, world!\");\n    }",
+                  "position": {
+                    "endIndex": 270,
+                    "startIndex": 225,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 12,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136968176": {
+              "id": 124313136968176,
+              "name": "bar",
+              "type": 7,
+              "text": "bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }",
+              "position": {
+                "endIndex": 349,
+                "startIndex": 276,
+                "startPosition": {
+                  "row": 14,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 17,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136965072,
+                  "name": "",
+                  "type": 7,
+                  "text": "bar",
+                  "position": {
+                    "endIndex": 279,
+                    "startIndex": 276,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 14,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136965280,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 281,
+                    "startIndex": 279,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 14,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136968080,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }",
+                  "position": {
+                    "endIndex": 349,
+                    "startIndex": 282,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 17,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313136970816": {
+              "id": 124313136970816,
+              "name": "baz",
+              "type": 7,
+              "text": "function baz() {\n    console.log(\"baz called\");\n}",
+              "position": {
+                "endIndex": 402,
+                "startIndex": 353,
+                "startPosition": {
+                  "row": 20,
+                  "column": 0
+                },
+                "endPosition": {
+                  "row": 22,
+                  "column": 1
+                }
+              },
+              "children": [
+                {
+                  "id": 124313136970696,
+                  "name": "",
+                  "type": 7,
+                  "text": "baz",
+                  "position": {
+                    "endIndex": 365,
+                    "startIndex": 362,
+                    "startPosition": {
+                      "row": 20,
+                      "column": 9
+                    },
+                    "endPosition": {
+                      "row": 20,
+                      "column": 12
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136969040,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 367,
+                    "startIndex": 365,
+                    "startPosition": {
+                      "row": 20,
+                      "column": 12
+                    },
+                    "endPosition": {
+                      "row": 20,
+                      "column": 14
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313136970712,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n    console.log(\"baz called\");\n}",
+                  "position": {
+                    "endIndex": 402,
+                    "startIndex": 368,
+                    "startPosition": {
+                      "row": 20,
+                      "column": 15
+                    },
+                    "endPosition": {
+                      "row": 22,
+                      "column": 1
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts": {
+          "defines": [
+            "constructor",
+            "foo",
+            "bar",
+            "Foo"
+          ],
+          "calls": [
+            {
+              "nodeId": 124313148781968,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313148784160,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313148785184,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313148787920,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313148789248,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            }
+          ],
+          "imports": [],
+          "className": [
+            "Foo"
+          ],
+          "nodes": {
+            "124313148787312": {
+              "id": 124313148787312,
+              "name": "Foo",
+              "type": 3,
+              "text": "class Foo {\n    private _privateProperty: string;\n\n    constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }\n\n    foo() {\n        console.log(\"Hello, world!\");\n    }\n\n    bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }\n}",
+              "position": {
+                "endIndex": 351,
+                "startIndex": 0,
+                "startPosition": {
+                  "row": 0,
+                  "column": 0
+                },
+                "endPosition": {
+                  "row": 18,
+                  "column": 1
+                }
+              },
+              "children": []
+            },
+            "124313137032688": {
+              "id": 124313137032688,
+              "name": "constructor",
+              "type": 7,
+              "text": "constructor(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    ) {\n        this._privateProperty = privateProperty;\n    }",
+              "position": {
+                "endIndex": 213,
+                "startIndex": 55,
+                "startPosition": {
+                  "row": 3,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 8,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313137037936,
+                  "name": "",
+                  "type": 7,
+                  "text": "constructor",
+                  "position": {
+                    "endIndex": 66,
+                    "startIndex": 55,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 3,
+                      "column": 15
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313137031440,
+                  "name": "",
+                  "type": 7,
+                  "text": "(\n        privateProperty: string,\n        private readonly anotherProperty?: string\n    )",
+                  "position": {
+                    "endIndex": 156,
+                    "startIndex": 66,
+                    "startPosition": {
+                      "row": 3,
+                      "column": 15
+                    },
+                    "endPosition": {
+                      "row": 6,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313137032592,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this._privateProperty = privateProperty;\n    }",
+                  "position": {
+                    "endIndex": 213,
+                    "startIndex": 157,
+                    "startPosition": {
+                      "row": 6,
+                      "column": 6
+                    },
+                    "endPosition": {
+                      "row": 8,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313148783424": {
+              "id": 124313148783424,
+              "name": "foo",
+              "type": 7,
+              "text": "foo() {\n        console.log(\"Hello, world!\");\n    }",
+              "position": {
+                "endIndex": 270,
+                "startIndex": 219,
+                "startPosition": {
+                  "row": 10,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 12,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313137032912,
+                  "name": "",
+                  "type": 7,
+                  "text": "foo",
+                  "position": {
+                    "endIndex": 222,
+                    "startIndex": 219,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313137033120,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 224,
+                    "startIndex": 222,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 10,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313148783328,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        console.log(\"Hello, world!\");\n    }",
+                  "position": {
+                    "endIndex": 270,
+                    "startIndex": 225,
+                    "startPosition": {
+                      "row": 10,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 12,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313148786752": {
+              "id": 124313148786752,
+              "name": "bar",
+              "type": 7,
+              "text": "bar() {\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }",
+              "position": {
+                "endIndex": 349,
+                "startIndex": 276,
+                "startPosition": {
+                  "row": 14,
+                  "column": 4
+                },
+                "endPosition": {
+                  "row": 17,
+                  "column": 5
+                }
+              },
+              "children": [
+                {
+                  "id": 124313148783648,
+                  "name": "",
+                  "type": 7,
+                  "text": "bar",
+                  "position": {
+                    "endIndex": 279,
+                    "startIndex": 276,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 4
+                    },
+                    "endPosition": {
+                      "row": 14,
+                      "column": 7
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313148783856,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 281,
+                    "startIndex": 279,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 7
+                    },
+                    "endPosition": {
+                      "row": 14,
+                      "column": 9
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313148786656,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }",
+                  "position": {
+                    "endIndex": 349,
+                    "startIndex": 282,
+                    "startPosition": {
+                      "row": 14,
+                      "column": 10
+                    },
+                    "endPosition": {
+                      "row": 17,
+                      "column": 5
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            "124313148790832": {
+              "id": 124313148790832,
+              "name": "baz",
+              "type": 7,
+              "text": "function baz() {\n    console.log(\"baz called\");\n    console.log(\"baz baz baz\");\n}",
+              "position": {
+                "endIndex": 434,
+                "startIndex": 353,
+                "startPosition": {
+                  "row": 20,
+                  "column": 0
+                },
+                "endPosition": {
+                  "row": 23,
+                  "column": 1
+                }
+              },
+              "children": [
+                {
+                  "id": 124313148790712,
+                  "name": "",
+                  "type": 7,
+                  "text": "baz",
+                  "position": {
+                    "endIndex": 365,
+                    "startIndex": 362,
+                    "startPosition": {
+                      "row": 20,
+                      "column": 9
+                    },
+                    "endPosition": {
+                      "row": 20,
+                      "column": 12
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313148787616,
+                  "name": "",
+                  "type": 7,
+                  "text": "()",
+                  "position": {
+                    "endIndex": 367,
+                    "startIndex": 365,
+                    "startPosition": {
+                      "row": 20,
+                      "column": 12
+                    },
+                    "endPosition": {
+                      "row": 20,
+                      "column": 14
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "id": 124313148790728,
+                  "name": "",
+                  "type": 7,
+                  "text": "{\n    console.log(\"baz called\");\n    console.log(\"baz baz baz\");\n}",
+                  "position": {
+                    "endIndex": 434,
+                    "startIndex": 368,
+                    "startPosition": {
+                      "row": 20,
+                      "column": 15
+                    },
+                    "endPosition": {
+                      "row": 23,
+                      "column": 1
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      },
+      "functions": {
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts::Foo::constructor": {
+          "nodeId": 124313136589888,
+          "position": {
+            "endIndex": 213,
+            "startIndex": 55,
+            "startPosition": {
+              "row": 3,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 8,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+          "name": "constructor",
+          "params": [
+            "privateProperty",
+            "anotherProperty"
+          ],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [],
+          "className": "Foo",
+          "startLine": 7,
+          "endLine": 9,
+          "functionHash": "statement_block({,expression_statement(assignment_expression(member_expression(this,.,property_identifier),=,IDENTIFIER),;),})",
+          "signatureHash": "d89b7b009ece61cce74095b31d2a60c8c8c63ab2c3e670495a26a89434baea17",
+          "fullText": "{\n        this._privateProperty = privateProperty;\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts::Foo::foo": {
+          "nodeId": 124313134842176,
+          "position": {
+            "endIndex": 270,
+            "startIndex": 219,
+            "startPosition": {
+              "row": 10,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 12,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+          "name": "foo",
+          "params": [],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136403344,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 11,
+          "endLine": 13,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        console.log(\"Hello, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts::Foo::baz": {
+          "nodeId": 124313136503632,
+          "position": {
+            "endIndex": 324,
+            "startIndex": 276,
+            "startPosition": {
+              "row": 14,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 16,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+          "name": "baz",
+          "params": [],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136582736,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 15,
+          "endLine": 17,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        console.log(\"baz called\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts::Foo::bar": {
+          "nodeId": 124313136523968,
+          "position": {
+            "endIndex": 403,
+            "startIndex": 330,
+            "startPosition": {
+              "row": 18,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 21,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+          "name": "bar",
+          "params": [],
+          "lines": 4,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136504368,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313136481424,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 19,
+          "endLine": 22,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(this,.,property_identifier),arguments((,))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts::Foo::constructor": {
+          "nodeId": 124313136635136,
+          "position": {
+            "endIndex": 213,
+            "startIndex": 55,
+            "startPosition": {
+              "row": 3,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 8,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+          "name": "constructor",
+          "params": [
+            "privateProperty",
+            "anotherProperty"
+          ],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [],
+          "className": "Foo",
+          "startLine": 7,
+          "endLine": 9,
+          "functionHash": "statement_block({,expression_statement(assignment_expression(member_expression(this,.,property_identifier),=,IDENTIFIER),;),})",
+          "signatureHash": "d89b7b009ece61cce74095b31d2a60c8c8c63ab2c3e670495a26a89434baea17",
+          "fullText": "{\n        this._privateProperty = privateProperty;\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts::Foo::foo": {
+          "nodeId": 124313136638768,
+          "position": {
+            "endIndex": 305,
+            "startIndex": 219,
+            "startPosition": {
+              "row": 10,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 13,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+          "name": "foo",
+          "params": [],
+          "lines": 4,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136635872,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136637200,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 11,
+          "endLine": 14,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        console.log(\"foo called\");\n        console.log(\"Hello, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts::Foo::baz": {
+          "nodeId": 124313136640960,
+          "position": {
+            "endIndex": 359,
+            "startIndex": 311,
+            "startPosition": {
+              "row": 15,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 17,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+          "name": "baz",
+          "params": [],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136639504,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 16,
+          "endLine": 18,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        console.log(\"baz called\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts::Foo::bar": {
+          "nodeId": 124313136645728,
+          "position": {
+            "endIndex": 473,
+            "startIndex": 365,
+            "startPosition": {
+              "row": 19,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 23,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+          "name": "bar",
+          "params": [],
+          "lines": 5,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136641696,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313136642720,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313136644160,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 20,
+          "endLine": 24,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(this,.,property_identifier),arguments((,))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n        console.log(\"bar called\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts::Foo::constructor": {
+          "nodeId": 124313136962528,
+          "position": {
+            "endIndex": 213,
+            "startIndex": 55,
+            "startPosition": {
+              "row": 3,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 8,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+          "name": "constructor",
+          "params": [
+            "privateProperty",
+            "anotherProperty"
+          ],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [],
+          "className": "Foo",
+          "startLine": 7,
+          "endLine": 9,
+          "functionHash": "statement_block({,expression_statement(assignment_expression(member_expression(this,.,property_identifier),=,IDENTIFIER),;),})",
+          "signatureHash": "d89b7b009ece61cce74095b31d2a60c8c8c63ab2c3e670495a26a89434baea17",
+          "fullText": "{\n        this._privateProperty = privateProperty;\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts::Foo::foo": {
+          "nodeId": 124313136964848,
+          "position": {
+            "endIndex": 270,
+            "startIndex": 219,
+            "startPosition": {
+              "row": 10,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 12,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+          "name": "foo",
+          "params": [],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136963392,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 11,
+          "endLine": 13,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        console.log(\"Hello, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts::Foo::bar": {
+          "nodeId": 124313136968176,
+          "position": {
+            "endIndex": 349,
+            "startIndex": 276,
+            "startPosition": {
+              "row": 14,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 17,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+          "name": "bar",
+          "params": [],
+          "lines": 4,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136965584,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313136966608,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 15,
+          "endLine": 18,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(this,.,property_identifier),arguments((,))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts::baz": {
+          "nodeId": 124313136970816,
+          "position": {
+            "endIndex": 402,
+            "startIndex": 353,
+            "startPosition": {
+              "row": 20,
+              "column": 0
+            },
+            "endPosition": {
+              "row": 22,
+              "column": 1
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+          "name": "baz",
+          "params": [],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313136969344,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "",
+          "startLine": 21,
+          "endLine": 23,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n    console.log(\"baz called\");\n}"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts::Foo::constructor": {
+          "nodeId": 124313137032688,
+          "position": {
+            "endIndex": 213,
+            "startIndex": 55,
+            "startPosition": {
+              "row": 3,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 8,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+          "name": "constructor",
+          "params": [
+            "privateProperty",
+            "anotherProperty"
+          ],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [],
+          "className": "Foo",
+          "startLine": 7,
+          "endLine": 9,
+          "functionHash": "statement_block({,expression_statement(assignment_expression(member_expression(this,.,property_identifier),=,IDENTIFIER),;),})",
+          "signatureHash": "d89b7b009ece61cce74095b31d2a60c8c8c63ab2c3e670495a26a89434baea17",
+          "fullText": "{\n        this._privateProperty = privateProperty;\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts::Foo::foo": {
+          "nodeId": 124313148783424,
+          "position": {
+            "endIndex": 270,
+            "startIndex": 219,
+            "startPosition": {
+              "row": 10,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 12,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+          "name": "foo",
+          "params": [],
+          "lines": 3,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313148781968,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 11,
+          "endLine": 13,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        console.log(\"Hello, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts::Foo::bar": {
+          "nodeId": 124313148786752,
+          "position": {
+            "endIndex": 349,
+            "startIndex": 276,
+            "startPosition": {
+              "row": 14,
+              "column": 4
+            },
+            "endPosition": {
+              "row": 17,
+              "column": 5
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+          "name": "bar",
+          "params": [],
+          "lines": 4,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313148784160,
+              "function": "foo",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "this"
+            },
+            {
+              "nodeId": 124313148785184,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "Foo",
+          "startLine": 15,
+          "endLine": 18,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(this,.,property_identifier),arguments((,))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n        this.foo();\n        console.log(\"Goodbye, world!\");\n    }"
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts::baz": {
+          "nodeId": 124313148790832,
+          "position": {
+            "endIndex": 434,
+            "startIndex": 353,
+            "startPosition": {
+              "row": 20,
+              "column": 0
+            },
+            "endPosition": {
+              "row": 23,
+              "column": 1
+            }
+          },
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+          "name": "baz",
+          "params": [],
+          "lines": 4,
+          "returnType": "unknown",
+          "calls": [
+            {
+              "nodeId": 124313148787920,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            },
+            {
+              "nodeId": 124313148789248,
+              "function": "log",
+              "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+              "caller": "console"
+            }
+          ],
+          "className": "",
+          "startLine": 21,
+          "endLine": 24,
+          "functionHash": "statement_block({,expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),expression_statement(call_expression(member_expression(IDENTIFIER,.,property_identifier),arguments((,string(\",string_fragment,\"),))),;),})",
+          "signatureHash": "4873088a41dfaa6b866822ce032ec9f8c09dc3dd3be46901dfa6d0087addf686",
+          "fullText": "{\n    console.log(\"baz called\");\n    console.log(\"baz baz baz\");\n}"
+        }
+      },
+      "types": {
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts::Foo": {
+          "nodeId": 124313136546896,
+          "position": {
+            "startIndex": 0,
+            "endIndex": 405,
+            "startPosition": {
+              "row": 0,
+              "column": 0
+            },
+            "endPosition": {
+              "row": 22,
+              "column": 1
+            }
+          },
+          "name": "Foo",
+          "extends": [],
+          "implements": [],
+          "fields": {},
+          "extendedBy": [],
+          "implementedBy": [],
+          "scope": [
+            {
+              "name": "Foo",
+              "type": 3
+            }
+          ],
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+          "type": 3
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts::Foo": {
+          "nodeId": 124313136646288,
+          "position": {
+            "startIndex": 0,
+            "endIndex": 475,
+            "startPosition": {
+              "row": 0,
+              "column": 0
+            },
+            "endPosition": {
+              "row": 24,
+              "column": 1
+            }
+          },
+          "name": "Foo",
+          "extends": [],
+          "implements": [],
+          "fields": {},
+          "extendedBy": [],
+          "implementedBy": [],
+          "scope": [
+            {
+              "name": "Foo",
+              "type": 3
+            }
+          ],
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+          "type": 3
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts::Foo": {
+          "nodeId": 124313136968736,
+          "position": {
+            "startIndex": 0,
+            "endIndex": 351,
+            "startPosition": {
+              "row": 0,
+              "column": 0
+            },
+            "endPosition": {
+              "row": 18,
+              "column": 1
+            }
+          },
+          "name": "Foo",
+          "extends": [],
+          "implements": [],
+          "fields": {},
+          "extendedBy": [],
+          "implementedBy": [],
+          "scope": [
+            {
+              "name": "Foo",
+              "type": 3
+            }
+          ],
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+          "type": 3
+        },
+        "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts::Foo": {
+          "nodeId": 124313148787312,
+          "position": {
+            "startIndex": 0,
+            "endIndex": 351,
+            "startPosition": {
+              "row": 0,
+              "column": 0
+            },
+            "endPosition": {
+              "row": 18,
+              "column": 1
+            }
+          },
+          "name": "Foo",
+          "extends": [],
+          "implements": [],
+          "fields": {},
+          "extendedBy": [],
+          "implementedBy": [],
+          "scope": [
+            {
+              "name": "Foo",
+              "type": 3
+            }
+          ],
+          "file": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+          "type": 3
+        }
+      }
+    },
+    "dir": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff"
+  },
+  "enrichHeadGraph": {
+    "nodes": [
+      {
+        "id": 124313136546896,
+        "name": "Foo",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "position": {
+          "endIndex": 405,
+          "startIndex": 0,
+          "startPosition": {
+            "row": 0,
+            "column": 0
+          },
+          "endPosition": {
+            "row": 22,
+            "column": 1
+          }
+        },
+        "type": 3
+      },
+      {
+        "id": 124313136589888,
+        "name": "constructor",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "position": {
+          "endIndex": 213,
+          "startIndex": 55,
+          "startPosition": {
+            "row": 3,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 8,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313134842176,
+        "name": "foo",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "position": {
+          "endIndex": 270,
+          "startIndex": 219,
+          "startPosition": {
+            "row": 10,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 12,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136503632,
+        "name": "baz",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "position": {
+          "endIndex": 324,
+          "startIndex": 276,
+          "startPosition": {
+            "row": 14,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 16,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136523968,
+        "name": "bar",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "position": {
+          "endIndex": 403,
+          "startIndex": 330,
+          "startPosition": {
+            "row": 18,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 21,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136646288,
+        "name": "Foo",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "position": {
+          "endIndex": 475,
+          "startIndex": 0,
+          "startPosition": {
+            "row": 0,
+            "column": 0
+          },
+          "endPosition": {
+            "row": 24,
+            "column": 1
+          }
+        },
+        "type": 3
+      },
+      {
+        "id": 124313136635136,
+        "name": "constructor",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "position": {
+          "endIndex": 213,
+          "startIndex": 55,
+          "startPosition": {
+            "row": 3,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 8,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136638768,
+        "name": "foo",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "position": {
+          "endIndex": 305,
+          "startIndex": 219,
+          "startPosition": {
+            "row": 10,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 13,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136640960,
+        "name": "baz",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "position": {
+          "endIndex": 359,
+          "startIndex": 311,
+          "startPosition": {
+            "row": 15,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 17,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136645728,
+        "name": "bar",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "position": {
+          "endIndex": 473,
+          "startIndex": 365,
+          "startPosition": {
+            "row": 19,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 23,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136968736,
+        "name": "Foo",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "position": {
+          "endIndex": 351,
+          "startIndex": 0,
+          "startPosition": {
+            "row": 0,
+            "column": 0
+          },
+          "endPosition": {
+            "row": 18,
+            "column": 1
+          }
+        },
+        "type": 3
+      },
+      {
+        "id": 124313136962528,
+        "name": "constructor",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "position": {
+          "endIndex": 213,
+          "startIndex": 55,
+          "startPosition": {
+            "row": 3,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 8,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136964848,
+        "name": "foo",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "position": {
+          "endIndex": 270,
+          "startIndex": 219,
+          "startPosition": {
+            "row": 10,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 12,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136968176,
+        "name": "bar",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "position": {
+          "endIndex": 349,
+          "startIndex": 276,
+          "startPosition": {
+            "row": 14,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 17,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313136970816,
+        "name": "baz",
+        "file": "a.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "position": {
+          "endIndex": 402,
+          "startIndex": 353,
+          "startPosition": {
+            "row": 20,
+            "column": 0
+          },
+          "endPosition": {
+            "row": 22,
+            "column": 1
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313148787312,
+        "name": "Foo",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "position": {
+          "endIndex": 351,
+          "startIndex": 0,
+          "startPosition": {
+            "row": 0,
+            "column": 0
+          },
+          "endPosition": {
+            "row": 18,
+            "column": 1
+          }
+        },
+        "type": 3
+      },
+      {
+        "id": 124313137032688,
+        "name": "constructor",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "position": {
+          "endIndex": 213,
+          "startIndex": 55,
+          "startPosition": {
+            "row": 3,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 8,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313148783424,
+        "name": "foo",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "position": {
+          "endIndex": 270,
+          "startIndex": 219,
+          "startPosition": {
+            "row": 10,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 12,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313148786752,
+        "name": "bar",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "position": {
+          "endIndex": 349,
+          "startIndex": 276,
+          "startPosition": {
+            "row": 14,
+            "column": 4
+          },
+          "endPosition": {
+            "row": 17,
+            "column": 5
+          }
+        },
+        "type": 7
+      },
+      {
+        "id": 124313148790832,
+        "name": "baz",
+        "file": "b.ts",
+        "filePath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "position": {
+          "endIndex": 434,
+          "startIndex": 353,
+          "startPosition": {
+            "row": 20,
+            "column": 0
+          },
+          "endPosition": {
+            "row": 23,
+            "column": 1
+          }
+        },
+        "type": 7
+      }
+    ],
+    "relationships": [
+      {
+        "from": 124313136546896,
+        "to": 124313136589888,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts"
+      },
+      {
+        "from": 124313136546896,
+        "to": 124313134842176,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts"
+      },
+      {
+        "from": 124313136546896,
+        "to": 124313136503632,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts"
+      },
+      {
+        "from": 124313136546896,
+        "to": 124313136523968,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts"
+      },
+      {
+        "from": 124313136646288,
+        "to": 124313136635136,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts"
+      },
+      {
+        "from": 124313136646288,
+        "to": 124313136638768,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts"
+      },
+      {
+        "from": 124313136646288,
+        "to": 124313136640960,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts"
+      },
+      {
+        "from": 124313136646288,
+        "to": 124313136645728,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts"
+      },
+      {
+        "from": 124313136968736,
+        "to": 124313136962528,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts"
+      },
+      {
+        "from": 124313136968736,
+        "to": 124313136964848,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts"
+      },
+      {
+        "from": 124313136968736,
+        "to": 124313136968176,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts"
+      },
+      {
+        "from": 124313148787312,
+        "to": 124313137032688,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts"
+      },
+      {
+        "from": 124313148787312,
+        "to": 124313148783424,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts"
+      },
+      {
+        "from": 124313148787312,
+        "to": 124313148786752,
+        "type": 3,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts"
+      },
+      {
+        "from": 124313136523968,
+        "to": 124313134842176,
+        "type": 1,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/a.ts"
+      },
+      {
+        "from": 124313136645728,
+        "to": 124313136638768,
+        "type": 1,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts"
+      },
+      {
+        "from": 124313136968176,
+        "to": 124313136964848,
+        "type": 1,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/a.ts"
+      },
+      {
+        "from": 124313148786752,
+        "to": 124313148783424,
+        "type": 1,
+        "fromPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts",
+        "toPath": "/tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts"
+      }
+    ]
+  }
+}

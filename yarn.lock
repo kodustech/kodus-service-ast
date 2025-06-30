@@ -1536,8 +1536,10 @@
     rxjs "^7.8.2"
     tslib "^2.8.1"
 
-"@kodus/kodus-proto@file:.yalc/@kodus/kodus-proto":
-  version "2.1.2"
+"@kodus/kodus-proto@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@kodus/kodus-proto/-/kodus-proto-3.0.0.tgz#aecdea796c243aacda94d640a238c1fbc5c508e0"
+  integrity sha512-PQmPlhKIJ2CayO0L0vOt8DsQfxoQq+++OXkaODYN93yaqouNTJ7scLq+vUYAj0lPn15j3dmQmtg9q15gkEFrQg==
 
 "@kwsites/file-exists@^1.1.1":
   version "1.1.1"

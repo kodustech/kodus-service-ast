@@ -147,22 +147,9 @@ export class GraphEnrichmentService {
 
     private processFunctions(data: CodeGraph) {
         data.functions.forEach((func, funcKey) => {
-            let className = func.className;
+            const className = func.className;
             let functionName = func.name;
             const filePath = this.normalizePath(func.file);
-
-            if (!className) {
-                className = this.inferClassName(filePath, data);
-
-                if (!className) {
-                    this.logger.warn({
-                        message: `Class name not found for ${funcKey}`,
-                        context: GraphEnrichmentService.name,
-                        metadata: { filePath, funcKey },
-                    });
-                    return;
-                }
-            }
 
             if (!functionName) {
                 const { identifier: methodName } =
@@ -180,17 +167,6 @@ export class GraphEnrichmentService {
                 }
             }
 
-            const classNode = this.findNode(className, filePath);
-
-            if (!classNode) {
-                this.logger.warn({
-                    message: `Class node not found for ${className} in file ${filePath}`,
-                    context: GraphEnrichmentService.name,
-                    metadata: { className, filePath, funcKey },
-                });
-                return;
-            }
-
             this.addNode({
                 id: func.nodeId,
                 name: functionName,
@@ -200,13 +176,17 @@ export class GraphEnrichmentService {
                 type: NodeType.NODE_TYPE_FUNCTION,
             });
 
-            this.addRelationship({
-                from: classNode.id,
-                to: func.nodeId,
-                type: RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
-                fromPath: classNode.filePath,
-                toPath: filePath,
-            });
+            const classNode = this.findNode(className, filePath);
+
+            if (classNode) {
+                this.addRelationship({
+                    from: classNode.id,
+                    to: func.nodeId,
+                    type: RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD,
+                    fromPath: classNode.filePath,
+                    toPath: filePath,
+                });
+            }
         });
     }
 

@@ -52,18 +52,20 @@ export class JavaParser extends BaseParser {
             case 'method_invocation': {
                 const name = node.childForFieldName('name');
                 const object = node.childForFieldName('object');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(object, ChainType.MEMBER, chain, node.id);
-                this.addToChain(name, ChainType.FUNCTION, chain, node.id);
+                this.addToChain(object, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(name, ChainType.FUNCTION, chain, nodeId);
 
                 return true;
             }
             case 'field_access': {
                 const object = node.childForFieldName('object');
                 const field = node.childForFieldName('field');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(object, ChainType.MEMBER, chain, node.id);
-                this.addToChain(field, ChainType.MEMBER, chain, node.id);
+                this.addToChain(object, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(field, ChainType.MEMBER, chain, nodeId);
 
                 return true;
             }

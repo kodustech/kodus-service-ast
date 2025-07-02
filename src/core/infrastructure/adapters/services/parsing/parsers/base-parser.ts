@@ -27,6 +27,7 @@ import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
 import { appendOrUpdateElement, findLastIndexOf } from '@/shared/utils/arrays';
 import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
 import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver';
+import { nanoid } from 'nanoid';
 
 export abstract class BaseParser {
     private static readonly parserByLang = new Map<string, Parser>();
@@ -189,7 +190,7 @@ export abstract class BaseParser {
             switch (captureName) {
                 case 'symbol': {
                     appendOrUpdateElement(imported, {
-                        nodeId: capture.node.id,
+                        nodeId: this.mapNodeId(capture.node),
                         symbol: nodeText,
                     });
                     break;
@@ -206,13 +207,13 @@ export abstract class BaseParser {
         }
 
         if (imported.length === 0) {
-            let nodeId = -1;
+            let nodeId = '';
             let alias: string | null = null;
             const aliasCapture = captures.find(
                 (capture) => capture.name === 'alias',
             );
             if (aliasCapture) {
-                nodeId = aliasCapture.node.id;
+                nodeId = this.mapNodeId(aliasCapture.node);
                 alias = aliasCapture.node.text;
             }
             imported.push({
@@ -230,7 +231,7 @@ export abstract class BaseParser {
                 (capture) => capture.name === 'alias',
             );
             first.symbol = '*';
-            first.nodeId = aliasCapture.node.id;
+            first.nodeId = this.mapNodeId(aliasCapture.node);
         }
 
         return imported;
@@ -241,7 +242,7 @@ export abstract class BaseParser {
         normalizedPath: string,
     ): void {
         for (const { nodeId, symbol, alias } of imported) {
-            this.context.importedMapping.set(nodeId.toString(), symbol);
+            this.context.importedMapping.set(nodeId, symbol);
             this.context.importedMapping.set(symbol, normalizedPath);
             if (alias) {
                 this.context.importedMapping.set(alias, symbol);
@@ -301,7 +302,7 @@ export abstract class BaseParser {
         type: QueryType,
     ): TypeAnalysis {
         const objAnalysis: TypeAnalysis = {
-            nodeId: -1,
+            nodeId: '',
             position: null,
             name: '',
             extends: [],
@@ -354,7 +355,7 @@ export abstract class BaseParser {
                     objAnalysis.type,
                 );
                 this.registerAnalysisNode(analysisNode);
-                objAnalysis.nodeId = node.id;
+                objAnalysis.nodeId = this.mapNodeId(node);
                 objAnalysis.position = this.getNodeRange(node);
                 break;
             }
@@ -386,7 +387,7 @@ export abstract class BaseParser {
             }
             case 'objProperty': {
                 appendOrUpdateElement(objProps.properties, {
-                    nodeId: node.id,
+                    nodeId: this.mapNodeId(node),
                     name: text,
                 });
                 break;
@@ -471,7 +472,7 @@ export abstract class BaseParser {
         if (!node || !node.id) return;
 
         methods.push({
-            nodeId: node.id,
+            nodeId: this.mapNodeId(node),
             name: node.text,
             params: [],
             returnType: null,
@@ -493,7 +494,7 @@ export abstract class BaseParser {
                 switch (capture.name) {
                     case 'funcParamName': {
                         appendOrUpdateElement(method.params, {
-                            nodeId: capture.node.id,
+                            nodeId: this.mapNodeId(capture.node),
                             name: capture.node.text,
                         });
                         break;
@@ -586,7 +587,7 @@ export abstract class BaseParser {
             if (captures.length === 0) continue;
 
             const method: Method = {
-                nodeId: -1,
+                nodeId: '',
                 name: '',
                 params: [],
                 returnType: null,
@@ -673,7 +674,7 @@ export abstract class BaseParser {
                     NodeType.NODE_TYPE_FUNCTION,
                 );
                 this.registerAnalysisNode(analysisNode);
-                method.nodeId = node.id;
+                method.nodeId = this.mapNodeId(node);
                 method.position = this.getNodeRange(node);
                 break;
             }
@@ -737,7 +738,21 @@ export abstract class BaseParser {
                 if (!chain || chain.length === 0) continue;
 
                 let caller = this.getSelfAccessReference();
-                let targetFile = absolutePath;
+                let targetFile: string;
+
+                if (chain.length === 1) {
+                    targetFile = this.resolveTargetFile(
+                        chain[0].name,
+                        absolutePath,
+                        scope,
+                    );
+                } else {
+                    targetFile = this.resolveTargetFile(
+                        caller,
+                        absolutePath,
+                        scope,
+                    );
+                }
 
                 for (const { name, type, nodeId } of chain) {
                     if (type === ChainType.FUNCTION) {
@@ -777,7 +792,7 @@ export abstract class BaseParser {
             if (captures.length === 0) continue;
 
             const typeAnalysis: TypeAnalysis = {
-                nodeId: -1,
+                nodeId: '',
                 position: null,
                 name: '',
                 extends: [],
@@ -803,7 +818,7 @@ export abstract class BaseParser {
                             NodeType.NODE_TYPE_TYPE_ALIAS,
                         );
                         this.registerAnalysisNode(analysisNode);
-                        typeAnalysis.nodeId = node.id;
+                        typeAnalysis.nodeId = this.mapNodeId(node);
                         typeAnalysis.position = this.getNodeRange(node);
                         break;
                     }
@@ -904,7 +919,7 @@ export abstract class BaseParser {
         field: SyntaxNode | null,
         type: ChainType,
         chain: CallChain[],
-        nodeId: number,
+        nodeId: string,
     ) {
         if (!field) return;
 
@@ -984,7 +999,7 @@ export abstract class BaseParser {
     ): AnalysisNode | null {
         if (!node) return null;
         const newNode = {
-            id: node.id,
+            id: this.mapNodeId(node),
             name: name || '',
             type,
             text: node.text,
@@ -1029,7 +1044,7 @@ export abstract class BaseParser {
             parent.children = [];
         }
 
-        if (parent.id === child.id) return null;
+        if (parent.id === this.mapNodeId(child)) return null;
 
         const childNode = this.newAnalysisNode(child, type, name);
         if (childNode) {
@@ -1048,12 +1063,30 @@ export abstract class BaseParser {
         this.context.analysisNodes.set(node.id, node);
     }
 
-    private getNodeRange(node: SyntaxNode): Range {
+    protected getNodeRange(node: SyntaxNode): Range {
         return {
             startIndex: node.startIndex,
             endIndex: node.endIndex,
             startPosition: node.startPosition,
             endPosition: node.endPosition,
         };
+    }
+
+    protected mapNodeId(node: SyntaxNode): string {
+        if (!node || !node.id) {
+            throw new Error('Node ID is not set');
+        }
+
+        const existingId = this.context.nodeIdMap.get(node.id);
+        if (existingId) {
+            return existingId;
+        }
+
+        const newId = nanoid();
+
+        this.context.nodeIdMap.set(node.id, newId);
+        this.context.idMap.set(newId, node.id);
+
+        return newId;
     }
 }

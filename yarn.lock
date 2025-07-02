@@ -1536,10 +1536,8 @@
     rxjs "^7.8.2"
     tslib "^2.8.1"
 
-"@kodus/kodus-proto@^3.0.0":
+"@kodus/kodus-proto@file:.yalc/@kodus/kodus-proto":
   version "3.0.0"
-  resolved "https://registry.yarnpkg.com/@kodus/kodus-proto/-/kodus-proto-3.0.0.tgz#aecdea796c243aacda94d640a238c1fbc5c508e0"
-  integrity sha512-PQmPlhKIJ2CayO0L0vOt8DsQfxoQq+++OXkaODYN93yaqouNTJ7scLq+vUYAj0lPn15j3dmQmtg9q15gkEFrQg==
 
 "@kwsites/file-exists@^1.1.1":
   version "1.1.1"
@@ -6241,6 +6239,11 @@ mute-stream@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-2.0.0.tgz#a5446fc0c512b71c83c44d908d5c7b7b4c493b2b"
   integrity sha512-WWdIxpyjEn+FhQJQQv9aQAYlHoNVdzIzUySNV1gHUPDSdZJ3yZn7pAAbQcV7B56Mvu881q9FZV+0Vx2xC44VWA==
+
+nanoid@^5.1.5:
+  version "5.1.5"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-5.1.5.tgz#f7597f9d9054eb4da9548cdd53ca70f1790e87de"
+  integrity sha512-Ir/+ZpE9fDsNH0hQ3C68uyThDXzYcim2EqcZ8zn8Chtt1iylPT9xXJB0kPCnqzgcEGikO9RxSrh63MsmVCU7Fw==
 
 napi-postinstall@^0.2.4:
   version "0.2.4"

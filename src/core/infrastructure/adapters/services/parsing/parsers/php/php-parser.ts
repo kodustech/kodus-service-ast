@@ -82,9 +82,10 @@ export class PhpParser extends BaseParser {
             case 'member_access_expression': {
                 const object = node.childForFieldName('object');
                 const name = node.childForFieldName('name');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(object, ChainType.MEMBER, chain, node.id);
-                this.addToChain(name, ChainType.MEMBER, chain, node.id);
+                this.addToChain(object, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(name, ChainType.MEMBER, chain, nodeId);
 
                 return true;
             }
@@ -92,16 +93,18 @@ export class PhpParser extends BaseParser {
             case 'member_call_expression': {
                 const object = node.childForFieldName('object');
                 const name = node.childForFieldName('name');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(object, ChainType.MEMBER, chain, node.id);
-                this.addToChain(name, ChainType.FUNCTION, chain, node.id);
+                this.addToChain(object, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(name, ChainType.FUNCTION, chain, nodeId);
 
                 return true;
             }
             case 'function_call_expression': {
                 const func = node.childForFieldName('function');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(func, ChainType.FUNCTION, chain, node.id);
+                this.addToChain(func, ChainType.FUNCTION, chain, nodeId);
 
                 return true;
             }
@@ -109,18 +112,20 @@ export class PhpParser extends BaseParser {
             case 'class_constant_access_expression': {
                 const scope = node.childForFieldName('scope');
                 const name = node.childForFieldName('name');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(scope, ChainType.MEMBER, chain, node.id);
-                this.addToChain(name, ChainType.MEMBER, chain, node.id);
+                this.addToChain(scope, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(name, ChainType.MEMBER, chain, nodeId);
 
                 return true;
             }
             case 'scoped_call_expression': {
                 const scope = node.childForFieldName('scope');
                 const name = node.childForFieldName('name');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(scope, ChainType.MEMBER, chain, node.id);
-                this.addToChain(name, ChainType.FUNCTION, chain, node.id);
+                this.addToChain(scope, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(name, ChainType.FUNCTION, chain, nodeId);
 
                 return true;
             }

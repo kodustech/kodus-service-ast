@@ -200,13 +200,13 @@ export class GraphAnalyzerService {
      */
     dfs(
         graph: EnrichedGraph,
-        startNodeId: number,
+        startNodeId: string,
         direction: 'both' | 'forward' | 'backward' = 'both',
         allowedTypes: RelationshipType[] = Array.from(
             new Set(graph.relationships.map((rel) => rel.type)),
         ),
-    ): number[] {
-        const visited = new Set<number>();
+    ): string[] {
+        const visited = new Set<string>();
         this.dfsHelper(graph, startNodeId, visited, direction, allowedTypes);
         return Array.from(visited); // Converte Set para Array antes de retornar
     }
@@ -216,8 +216,8 @@ export class GraphAnalyzerService {
      */
     private dfsHelper(
         graph: EnrichedGraph,
-        currentNode: number,
-        visited: Set<number>,
+        currentNode: string,
+        visited: Set<string>,
         direction: 'both' | 'forward' | 'backward',
         allowedTypes: RelationshipType[],
     ) {
@@ -249,11 +249,11 @@ export class GraphAnalyzerService {
      */
     private getNextNode(
         edge: EnrichedGraphEdge,
-        currentNode: number,
+        currentNode: string,
         direction: 'both' | 'forward' | 'backward',
-        visited: Set<number>,
+        visited: Set<string>,
         allowedTypes: RelationshipType[],
-    ): number | null {
+    ): string | null {
         const isForward =
             direction !== 'backward' &&
             edge.from === currentNode &&
@@ -467,8 +467,8 @@ export class GraphAnalyzerService {
      */
     traceImpactPropagation(
         graph: EnrichedGraph,
-        startNode: number,
-        impactedNodes: number[],
+        startNode: string,
+        impactedNodes: string[],
         allowedTypes: RelationshipType[],
     ): ImpactedNode[] {
         const levels = this.groupByPropagation(graph, startNode, impactedNodes);
@@ -521,14 +521,14 @@ export class GraphAnalyzerService {
 
     private groupByPropagation(
         graph: EnrichedGraph,
-        startNode: number,
-        impactedNodes: number[],
-    ): Record<number, number[]> {
-        const levels: Record<number, number[]> = {};
-        const queue: { node: number; level: number }[] = [
+        startNode: string,
+        impactedNodes: string[],
+    ): Record<number, string[]> {
+        const levels: Record<number, string[]> = {};
+        const queue: { node: string; level: number }[] = [
             { node: startNode, level: 0 },
         ];
-        const visited = new Set<number>();
+        const visited = new Set<string>();
 
         while (queue.length) {
             const { node, level } = queue.shift();
@@ -588,7 +588,7 @@ export class GraphAnalyzerService {
     /**
      * **Determina a severidade do impacto baseando-se em conexões**
      */
-    determineSeverity(graph: EnrichedGraph, nodeId: number): string {
+    determineSeverity(graph: EnrichedGraph, nodeId: string): string {
         const relatedEdges = graph.relationships.filter(
             (rel) => rel.from === nodeId || rel.to === nodeId,
         );
@@ -622,8 +622,8 @@ export class GraphAnalyzerService {
 
     private getCalledByMethods(
         graph: EnrichedGraph,
-        methodId: number,
-    ): number[] {
+        methodId: string,
+    ): string[] {
         // 1) Filtra relacionamentos do tipo CALLS onde 'to' seja o 'methodId'
         const callersIds = graph.relationships
             .filter(

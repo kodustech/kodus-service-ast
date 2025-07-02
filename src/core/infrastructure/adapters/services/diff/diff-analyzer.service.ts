@@ -37,9 +37,6 @@ export class DiffAnalyzerService {
             filePath: filePath || 'unknown',
             diff: diff ? diff.slice(0, 100) : 'no diff provided',
             content: content ? content.slice(0, 100) : 'no content provided',
-            graphs: graphs
-                ? JSON.stringify(graphs).slice(0, 100)
-                : 'no graphs provided',
         };
 
         try {
@@ -98,7 +95,7 @@ export class DiffAnalyzerService {
             });
 
             const nodesRanges = withRelated.flatMap((node) =>
-                this.getNodeRanges(node, fileNodes, relationships),
+                this.getNodeRanges(node, fileNodes, relationships, content),
             );
 
             const mergedRanges = this.mergeRanges(nodesRanges);
@@ -119,21 +116,44 @@ export class DiffAnalyzerService {
     private contentFromRanges(content: string, ranges: Range[]): string {
         const sorted = [...ranges].sort((a, b) => a.startIndex - b.startIndex);
 
-        const slices = sorted.map((r) =>
-            content.substring(r.startIndex, r.endIndex + 1),
-        );
+        const numberedSlices = sorted.map((r) => {
+            // pull the raw substring
+            const raw = content.substring(r.startIndex, r.endIndex).trimEnd();
 
-        const trimmedSlices = slices.map((slice) =>
-            slice.replace(/^\s*\n|\n\s*$/g, ''),
-        );
+            // determine the first line number in this slice
+            const firstLineNum = (r.startPosition?.row ?? 0) + 1;
 
-        return trimmedSlices.join('\n\n');
+            // split into lines and prefix each with its real line number
+            return raw
+                .split('\n')
+                .map((line, idx) => `${firstLineNum + idx}: ${line}`.trim())
+                .join('\n');
+        });
+
+        const message = `\n<- CUT CONTENT ->\n`;
+
+        let result = numberedSlices.join(`\n${message}\n`);
+
+        // If the first range doesn't start at line 1, add the message at the start
+        if ((sorted[0].startPosition?.row ?? 0) > 0) {
+            result = `${message}\n${result}`;
+        }
+
+        // If the last range doesn't end at the last line, add the message at the end
+        const contentLines = content.split('\n');
+        const lastRange = sorted[sorted.length - 1];
+        if ((lastRange.endPosition?.row ?? 0) < contentLines.length - 1) {
+            result = `${result}\n${message}`;
+        }
+
+        return result;
     }
 
     private getNodeRanges(
         node: EnrichedGraphNode,
         fileNodes: EnrichedGraphNode[],
         relationships: EnrichedGraphEdge[],
+        content: string,
     ): Range[] {
         switch (node.type) {
             case NodeType.NODE_TYPE_CLASS: {
@@ -160,7 +180,11 @@ export class DiffAnalyzerService {
                 const mergedRanges = this.mergeRanges(ranges);
 
                 // Remove the methods ranges from the class range
-                const finalRanges = this.diffRanges([classRange], mergedRanges);
+                const finalRanges = this.diffRanges(
+                    [classRange],
+                    mergedRanges,
+                    content,
+                );
 
                 // Return class range with only the constructor, fields, etc.
                 return finalRanges;
@@ -187,16 +211,15 @@ export class DiffAnalyzerService {
 
             // Check if ranges overlap or are contiguous
             if (nextRange.startIndex <= currentRange.endIndex + 1) {
-                // Merge ranges
-                currentRange.endIndex = Math.max(
-                    currentRange.endIndex,
-                    nextRange.endIndex,
-                );
-                currentRange.endPosition = nextRange.endPosition;
+                // Only merge if the next pushes the endIndex further
+                if (nextRange.endIndex > currentRange.endIndex) {
+                    currentRange.endIndex = nextRange.endIndex;
+                    currentRange.endPosition = nextRange.endPosition;
+                }
             } else {
                 // No overlap, push the current range and start a new one
                 mergedRanges.push(currentRange);
-                currentRange = nextRange;
+                currentRange = { ...nextRange };
             }
         }
 
@@ -205,48 +228,67 @@ export class DiffAnalyzerService {
         return mergedRanges;
     }
 
-    private diffRanges(ranges: Range[], subtract: Range[]): Range[] {
+    private diffRanges(
+        ranges: Range[],
+        subtract: Range[],
+        content: string,
+    ): Range[] {
         const result: Range[] = [];
 
-        for (const range of ranges) {
-            let pieces: Range[] = [range];
+        outer: for (const range of ranges) {
+            let pieces: Range[] = [{ ...range }];
 
             for (const sub of subtract) {
-                pieces = pieces.flatMap((p) => {
+                const nextPieces: Range[] = [];
+
+                for (const p of pieces) {
                     // no overlap
                     if (
                         sub.endIndex < p.startIndex ||
                         sub.startIndex > p.endIndex
                     ) {
-                        return [p];
+                        nextPieces.push(p);
+                        continue;
                     }
-
-                    const out: Range[] = [];
 
                     // left piece
                     if (sub.startIndex > p.startIndex) {
-                        out.push({
-                            startIndex: p.startIndex,
-                            endIndex: sub.startIndex - 1,
-                            startPosition: p.startPosition,
-                            endPosition: sub.startPosition,
+                        const leftStart = p.startIndex;
+                        const leftEnd = sub.startIndex;
+
+                        nextPieces.push({
+                            startIndex: leftStart,
+                            endIndex: leftEnd,
+                            startPosition: this.indexToPosition(
+                                content,
+                                leftStart,
+                            ),
+                            endPosition: this.indexToPosition(content, leftEnd),
                         });
                     }
 
                     // right piece
                     if (sub.endIndex < p.endIndex) {
-                        out.push({
-                            startIndex: sub.endIndex + 1,
-                            endIndex: p.endIndex,
-                            startPosition: sub.endPosition,
-                            endPosition: p.endPosition,
+                        const rightStart = sub.endIndex;
+                        const rightEnd = p.endIndex;
+
+                        nextPieces.push({
+                            startIndex: rightStart,
+                            endIndex: rightEnd,
+                            startPosition: this.indexToPosition(
+                                content,
+                                rightStart,
+                            ),
+                            endPosition: this.indexToPosition(
+                                content,
+                                rightEnd,
+                            ),
                         });
                     }
+                }
 
-                    return out;
-                });
-
-                if (pieces.length === 0) break;
+                pieces = nextPieces;
+                if (pieces.length === 0) continue outer;
             }
 
             result.push(...pieces);
@@ -560,50 +602,31 @@ export class DiffAnalyzerService {
         fileNodes: EnrichedGraphNode[],
         ranges: Range[],
     ): EnrichedGraphNode[] {
-        const nodesInRange = fileNodes.filter((def) => {
-            return ranges.some((range) => {
+        const result: EnrichedGraphNode[] = [];
+
+        for (const range of ranges) {
+            // Find all nodes that fully contain the range
+            const containingNodes = fileNodes.filter((def) => {
                 return (
                     def.position.startIndex <= range.startIndex &&
                     def.position.endIndex >= range.endIndex
                 );
             });
-        });
 
-        return nodesInRange;
-    }
+            if (containingNodes.length === 0) continue;
 
-    private getClosestNodeForRange(
-        nodes: EnrichedGraphNode[],
-        range: Range,
-    ): EnrichedGraphNode | null {
-        if (nodes.length === 0 || !range) {
-            this.logger.warn({
-                context: DiffAnalyzerService.name,
-                message: `No nodes or range provided`,
-                metadata: { nodes, range },
-                serviceName: DiffAnalyzerService.name,
+            // Pick the smallest node (by range size)
+            const smallestNode = containingNodes.reduce((min, curr) => {
+                const minSize = min.position.endIndex - min.position.startIndex;
+                const currSize =
+                    curr.position.endIndex - curr.position.startIndex;
+                return currSize < minSize ? curr : min;
             });
-            return null;
+
+            result.push(smallestNode);
         }
 
-        const overlappingNodes = nodes.filter((node) => {
-            const nodeStart = node.position.startIndex;
-            const nodeEnd = node.position.endIndex;
-
-            return nodeEnd >= range.startIndex && nodeStart <= range.endIndex;
-        });
-
-        if (overlappingNodes.length === 0) {
-            return null;
-        }
-
-        const closestNode = overlappingNodes.reduce((min, curr) => {
-            const minSize = min.position.endIndex - min.position.startIndex;
-            const currSize = curr.position.endIndex - curr.position.startIndex;
-
-            return currSize < minSize ? curr : min;
-        }, overlappingNodes[0]);
-        return closestNode;
+        return result;
     }
 
     private readonly nodeTypeRelationships: Partial<
@@ -683,5 +706,13 @@ export class DiffAnalyzerService {
             });
 
         return relatedNodes;
+    }
+
+    private indexToPosition(content: string, index: number): Point {
+        // Split everything up to `index` into lines
+        const lines = content.slice(0, index).split('\n');
+        const row = lines.length - 1;
+        const column = lines[lines.length - 1].length;
+        return { row, column };
     }
 }

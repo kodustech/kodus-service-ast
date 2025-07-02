@@ -11,7 +11,7 @@ export interface FunctionResult {
     fullName: string;
     functionHash: string;
     signatureHash: string;
-    id: number;
+    id: string;
     fullText: string;
     lines: number;
 }
@@ -54,7 +54,7 @@ export interface ComplexityAnalysis {
 
 /** Impacted node (with optional fields) */
 export interface ImpactedNode {
-    id: number;
+    id: string;
     name: string;
     type: NodeType;
     severity: string;

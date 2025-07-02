@@ -64,44 +64,57 @@ export class TypeScriptResolver
     }
 
     resolveImport(imported: ImportedModule, fromFile: string): ResolvedImport {
-        const moduleName = imported.origin;
-        if (this.dependencies[moduleName]) {
+        try {
+            const moduleName = imported.origin;
+            if (this.dependencies[moduleName]) {
+                return {
+                    originalPath: moduleName,
+                    normalizedPath: moduleName,
+                    relativePath: moduleName,
+                    isExternal: true,
+                    language: SupportedLanguage.TYPESCRIPT,
+                };
+            }
+
+            const resolved = resolveModuleName(
+                moduleName,
+                fromFile,
+                this.tsConfig,
+                tsSys,
+            );
+            if (!resolved.resolvedModule) {
+                // If the module is not resolved, it might be an external module
+                // since we don't install modules then typescript will not resolve them.
+                return {
+                    originalPath: moduleName,
+                    normalizedPath: moduleName,
+                    relativePath: moduleName,
+                    isExternal: true,
+                    language: SupportedLanguage.TYPESCRIPT,
+                };
+            }
+
             return {
                 originalPath: moduleName,
-                normalizedPath: moduleName,
-                relativePath: moduleName,
-                isExternal: true,
+                normalizedPath: resolved.resolvedModule.resolvedFileName,
+                relativePath: path.relative(
+                    path.dirname(fromFile),
+                    resolved.resolvedModule.resolvedFileName,
+                ),
+                isExternal: false,
                 language: SupportedLanguage.TYPESCRIPT,
             };
-        }
-
-        const resolved = resolveModuleName(
-            moduleName,
-            fromFile,
-            this.tsConfig,
-            tsSys,
-        );
-        if (!resolved.resolvedModule) {
-            // If the module is not resolved, it might be an external module
-            // since we don't install modules then typescript will not resolve them.
+        } catch (error) {
+            console.error(
+                `Error resolving import ${imported.origin} from ${fromFile}:`,
+                error,
+            );
             return {
-                originalPath: moduleName,
-                normalizedPath: moduleName,
-                relativePath: moduleName,
+                originalPath: imported.origin,
+                normalizedPath: imported.origin,
+                relativePath: imported.origin,
                 isExternal: true,
-                language: SupportedLanguage.TYPESCRIPT,
             };
         }
-
-        return {
-            originalPath: moduleName,
-            normalizedPath: resolved.resolvedModule.resolvedFileName,
-            relativePath: path.relative(
-                path.dirname(fromFile),
-                resolved.resolvedModule.resolvedFileName,
-            ),
-            isExternal: false,
-            language: SupportedLanguage.TYPESCRIPT,
-        };
     }
 }

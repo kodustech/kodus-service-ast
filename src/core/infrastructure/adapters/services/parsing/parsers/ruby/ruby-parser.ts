@@ -107,9 +107,10 @@ export class RubyParser extends BaseParser {
 
         const receiver = node.childForFieldName('receiver');
         const method = node.childForFieldName('method');
+        const nodeId = this.mapNodeId(node);
 
-        this.addToChain(receiver, ChainType.MEMBER, chain, node.id);
-        this.addToChain(method, ChainType.FUNCTION, chain, node.id);
+        this.addToChain(receiver, ChainType.MEMBER, chain, nodeId);
+        this.addToChain(method, ChainType.FUNCTION, chain, nodeId);
 
         return true;
     }

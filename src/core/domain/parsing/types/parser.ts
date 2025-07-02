@@ -19,7 +19,9 @@ export type ParseContext = {
     instanceMapping: Map<string, string>;
     types: Map<string, TypeAnalysis>;
     functions: Map<string, FunctionAnalysis>;
-    analysisNodes: Map<number, AnalysisNode>;
+    analysisNodes: Map<string, AnalysisNode>;
+    nodeIdMap: Map<number, string>;
+    idMap: Map<string, number>;
 };
 
 export type ParserAnalysis = {
@@ -29,13 +31,13 @@ export type ParserAnalysis = {
 };
 
 export type ImportedSymbol = {
-    nodeId: number;
+    nodeId: string;
     symbol: string;
     alias: string | null;
 };
 
 export type Method = {
-    nodeId: number;
+    nodeId: string;
     name: string;
     params: MethodParameter[];
     returnType: string | null;
@@ -45,7 +47,7 @@ export type Method = {
 };
 
 export type MethodParameter = {
-    nodeId: number;
+    nodeId: string;
     name: string;
     type: string | null;
 };
@@ -56,14 +58,14 @@ export type ObjectProperties = {
 };
 
 export type ObjectProperty = {
-    nodeId: number;
+    nodeId: string;
     name: string;
     type: string | null;
     value: string | null;
 };
 
 export type CallChain = {
-    nodeId: number;
+    nodeId: string;
     name: string;
     type: ChainType;
 };

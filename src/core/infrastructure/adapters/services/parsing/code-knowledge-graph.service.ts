@@ -13,7 +13,7 @@ import { Piscina } from 'piscina';
 import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 import { PinoLoggerService } from '../logger/pino.service';
-import { WorkerInput, WorkerOutput } from './worker/worker';
+import { analyzeBatch, WorkerInput, WorkerOutput } from './worker/worker';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
@@ -128,6 +128,10 @@ export class CodeKnowledgeGraphService {
                         },
                         { name: 'analyzeBatch' },
                     ),
+                    // analyzeBatch({
+                    //     rootDir,
+                    //     batch: batchFiles,
+                    // }),
                     timeoutPromise,
                 ]);
 

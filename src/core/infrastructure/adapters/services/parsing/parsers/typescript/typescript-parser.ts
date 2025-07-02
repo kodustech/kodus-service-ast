@@ -56,9 +56,10 @@ export class TypeScriptParser extends BaseParser {
         switch (node.type) {
             case 'call_expression': {
                 const func = node.childForFieldName('function');
+                const nodeId = this.mapNodeId(node);
 
                 if (func?.type === 'identifier') {
-                    this.addToChain(func, ChainType.FUNCTION, chain, node.id);
+                    this.addToChain(func, ChainType.FUNCTION, chain, nodeId);
                 } else if (chain.length > 0) {
                     chain[chain.length - 1].type = ChainType.FUNCTION;
                 }
@@ -86,13 +87,14 @@ export class TypeScriptParser extends BaseParser {
 
         const object = node.childForFieldName('object');
         const property = node.childForFieldName('property');
+        const nodeId = this.mapNodeId(node);
 
         if (object?.type === 'member_expression') {
             this.processMemberExpression(object, chain, depth + 1);
         }
 
-        this.addToChain(object, ChainType.MEMBER, chain, node.id);
-        this.addToChain(property, ChainType.MEMBER, chain, node.id);
+        this.addToChain(object, ChainType.MEMBER, chain, nodeId);
+        this.addToChain(property, ChainType.MEMBER, chain, nodeId);
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {

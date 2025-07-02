@@ -54,9 +54,10 @@ export class RustParser extends BaseParser {
         switch (node.type) {
             case 'call_expression': {
                 const func = node.childForFieldName('function');
+                const nodeId = this.mapNodeId(node);
 
                 if (func?.type === 'identifier') {
-                    this.addToChain(func, ChainType.FUNCTION, chain, node.id);
+                    this.addToChain(func, ChainType.FUNCTION, chain, nodeId);
                 } else if (chain.length > 0) {
                     chain[chain.length - 1].type = ChainType.FUNCTION;
                 }
@@ -66,17 +67,19 @@ export class RustParser extends BaseParser {
             case 'field_expression': {
                 const value = node.childForFieldName('value');
                 const field = node.childForFieldName('field');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(value, ChainType.MEMBER, chain, node.id);
-                this.addToChain(field, ChainType.MEMBER, chain, node.id);
+                this.addToChain(value, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(field, ChainType.MEMBER, chain, nodeId);
 
                 return true;
             }
             case 'macro_invocation': {
                 const macro = node.childForFieldName('macro');
+                const nodeId = this.mapNodeId(node);
 
                 if (macro?.type === 'identifier') {
-                    this.addToChain(macro, ChainType.FUNCTION, chain, node.id);
+                    this.addToChain(macro, ChainType.FUNCTION, chain, nodeId);
                 } else if (chain.length > 0) {
                     chain[chain.length - 1].type = ChainType.FUNCTION;
                 }
@@ -86,9 +89,10 @@ export class RustParser extends BaseParser {
             case 'scoped_identifier': {
                 const path = node.childForFieldName('path');
                 const name = node.childForFieldName('name');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(path, ChainType.MEMBER, chain, node.id);
-                this.addToChain(name, ChainType.MEMBER, chain, node.id);
+                this.addToChain(path, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(name, ChainType.MEMBER, chain, nodeId);
 
                 return true;
             }

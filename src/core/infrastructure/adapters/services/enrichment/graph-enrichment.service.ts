@@ -16,7 +16,7 @@ export class GraphEnrichmentService {
         string,
         { filePath: string; identifier?: string }
     >;
-    private addedNodes: Set<number>;
+    private addedNodes: Set<string>;
     private relationshipKeys: Record<string, boolean>;
     private nodes: EnrichedGraphNode[];
     private relationships: Map<string, EnrichedGraphEdge>;
@@ -192,11 +192,11 @@ export class GraphEnrichmentService {
 
     private processImports(data: CodeGraph) {
         data.files.forEach((fileData, filePath) => {
-            const normalizedPath = this.normalizePath(filePath);
-
             if (!fileData.imports || !fileData.imports.length) {
                 return;
             }
+
+            const normalizedPath = this.normalizePath(filePath);
 
             fileData.imports.forEach((importedFile) => {
                 const { filePath: importedFilePath, identifier } =
@@ -235,7 +235,7 @@ export class GraphEnrichmentService {
 
     private processFunctionCalls(data: CodeGraph) {
         for (const [key, func] of data.functions.entries()) {
-            if (!func.nodeId || func.nodeId === -1) {
+            if (!func.nodeId || func.nodeId === '') {
                 continue;
             }
 
@@ -307,7 +307,7 @@ export class GraphEnrichmentService {
     }
 
     private addNode(node: EnrichedGraphNode) {
-        if (!node || node.id === -1) {
+        if (!node || node.id === '') {
             return;
         }
 
@@ -397,7 +397,7 @@ export class GraphEnrichmentService {
         interfacePath: string,
         methodName: string,
         data: CodeGraph,
-    ): { id: number; filePath: string } | null {
+    ): { id: string; filePath: string } | null {
         const matchingClasses = Array.from(data.types.entries()).filter(
             ([, type]) =>
                 type.type === NodeType.NODE_TYPE_CLASS &&

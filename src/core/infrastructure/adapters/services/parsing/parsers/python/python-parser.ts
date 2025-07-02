@@ -48,9 +48,10 @@ export class PythonParser extends BaseParser {
         switch (node.type) {
             case 'call': {
                 const func = node.childForFieldName('function');
+                const nodeId = this.mapNodeId(node);
 
                 if (func?.type === 'identifier') {
-                    this.addToChain(func, ChainType.FUNCTION, chain, node.id);
+                    this.addToChain(func, ChainType.FUNCTION, chain, nodeId);
                 } else if (chain.length > 0) {
                     chain[chain.length - 1].type = ChainType.FUNCTION;
                 }
@@ -60,9 +61,10 @@ export class PythonParser extends BaseParser {
             case 'attribute': {
                 const object = node.childForFieldName('object');
                 const attr = node.childForFieldName('attribute');
+                const nodeId = this.mapNodeId(node);
 
-                this.addToChain(object, ChainType.MEMBER, chain, node.id);
-                this.addToChain(attr, ChainType.MEMBER, chain, node.id);
+                this.addToChain(object, ChainType.MEMBER, chain, nodeId);
+                this.addToChain(attr, ChainType.MEMBER, chain, nodeId);
 
                 return true;
             }

@@ -54,7 +54,9 @@ export class SourceFileAnalyzer {
                 importedMapping: new Map<string, string>(),
                 instanceMapping: new Map<string, string>(),
                 types: new Map<string, TypeAnalysis>(),
-                analysisNodes: new Map<number, AnalysisNode>(),
+                analysisNodes: new Map<string, AnalysisNode>(),
+                nodeIdMap: new Map<number, string>(),
+                idMap: new Map<string, number>(),
             };
 
             this.languageParser = getParserByFilePath(

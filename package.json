@@ -25,7 +25,7 @@
         "docker:down": "docker compose -f docker-compose.dev.yml down",
         "docker:start": "yarn docker:down && yarn docker:up",
         "docker:watch": "yarn docker:down && yarn docker:up -d",
-        "docker:test": "docker compose -f docker-compose.dev.yml exec kodus-service-ast node --inspect=0.0.0.0:9301 -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --watchAll --runInBand"
+        "docker:test": "docker compose -f docker-compose.dev.yml exec kodus-service-ast node --inspect=0.0.0.0:9301 node_modules/.bin/jest --watchAll --runInBand"
     },
     "dependencies": {
         "@grpc/grpc-js": "^1.13.4",
@@ -91,32 +91,5 @@
         "tsconfig-paths": "^4.2.0",
         "typescript": "^5.8.3",
         "typescript-eslint": "^8.34.1"
-    },
-    "jest": {
-        "moduleNameMapper": {
-            "^@/(.*)$": "<rootDir>/src/$1",
-            "^test/mocks/(.*)$": "<rootDir>/test/mocks/$1"
-        },
-        "moduleFileExtensions": [
-            "js",
-            "json",
-            "ts"
-        ],
-        "roots": [
-            "src",
-            "test"
-        ],
-        "testRegex": ".*\\.spec\\.ts$",
-        "transform": {
-            "^.+\\.(t|j)s$": "ts-jest"
-        },
-        "collectCoverageFrom": [
-            "**/*.(t|j)s"
-        ],
-        "coverageDirectory": "../coverage",
-        "testEnvironment": "node",
-        "setupFiles": [
-            "dotenv/config"
-        ]
     }
 }

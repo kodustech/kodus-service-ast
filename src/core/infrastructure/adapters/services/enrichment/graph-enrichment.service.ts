@@ -176,6 +176,8 @@ export class GraphEnrichmentService {
                 type: NodeType.NODE_TYPE_FUNCTION,
             });
 
+            this.addNodeOwner(func.nodeId, className, filePath);
+
             const classNode = this.findNode(className, filePath);
 
             if (classNode) {
@@ -255,13 +257,16 @@ export class GraphEnrichmentService {
                 const calledNode = this.findNode(
                     call.function,
                     normalizedCalledFilePath,
+                    call.caller,
                 );
+
                 if (!calledNode) {
                     this.logger.warn({
                         message: `Called node not found for ${call.function} in file ${calledFilePath}`,
                         context: GraphEnrichmentService.name,
                         metadata: {
                             function: call.function,
+                            caller: call.caller,
                             filePath: normalizedFilePath,
                             calledFilePath: normalizedCalledFilePath,
                         },
@@ -314,6 +319,24 @@ export class GraphEnrichmentService {
         if (!this.addedNodes.has(node.id)) {
             this.addedNodes.add(node.id);
             this.nodes.push(node);
+        }
+    }
+
+    private addNodeOwner(
+        nodeId: string,
+        owner: string,
+        filePath: string,
+    ): void {
+        const existingNode = this.nodes.find((n) => n.id === nodeId);
+        if (existingNode) {
+            existingNode.owner = owner;
+            existingNode.filePath = this.normalizePath(filePath);
+        } else {
+            this.logger.warn({
+                message: `Node not found for ID ${nodeId} when adding owner ${owner}`,
+                context: GraphEnrichmentService.name,
+                metadata: { filePath, nodeId, owner },
+            });
         }
     }
 
@@ -435,13 +458,42 @@ export class GraphEnrichmentService {
         };
     }
 
-    private findNode(name: string, filePath: string): EnrichedGraphNode | null {
-        return (
-            this.nodes.find(
-                (node) =>
-                    node.name === name &&
-                    node.filePath === this.normalizePath(filePath),
-            ) || null
-        );
+    private findNode(
+        name: string,
+        filePath: string,
+        caller?: string,
+    ): EnrichedGraphNode | null {
+        const normalizedFilePath = this.normalizePath(filePath);
+
+        if (caller === undefined || caller === null) {
+            return (
+                this.nodes.find(
+                    (node) =>
+                        node.name === name &&
+                        node.filePath === normalizedFilePath,
+                ) || null
+            );
+        }
+
+        // Find the specific node that matches the name, file, and context.
+        const foundNode = this.nodes.find((node) => {
+            // Basic match: name and file must align.
+            if (node.name !== name || node.filePath !== normalizedFilePath) {
+                return false;
+            }
+
+            // Contextual match: use the caller to disambiguate.
+            if (caller) {
+                // A caller was provided (e.g., 'Foo'). We are looking for a method.
+                // The node's owner must match the caller.
+                return node.owner === caller;
+            } else {
+                // No caller was provided. We are looking for a standalone function.
+                // The node must NOT have an owner.
+                return !node.owner;
+            }
+        });
+
+        return foundNode || null;
     }
 }

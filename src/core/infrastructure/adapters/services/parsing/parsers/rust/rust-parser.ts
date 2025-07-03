@@ -18,6 +18,7 @@ export class RustParser extends BaseParser {
         'identifier',
         'scoped_identifier',
         'field_identifier',
+        'self',
     ] as const);
     private static readonly validFunctionTypes = new Set([
         'identifier',

@@ -194,7 +194,27 @@ index b68b68e..0b34d51 100644
 +    console.log("baz called from b.ts");
  }
 `,
-            expected: ``,
+            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/related/1/foo/foo.ts -->
+
+<- CUT CONTENT ->
+
+3: function main() {
+4:     const foo = baz();
+5:     console.log("baz called from b.ts");
+6: }
+
+<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/related/1/b.ts -->
+
+<- CUT CONTENT ->
+
+25: function baz() {
+26:     const cl = new Foo("privateValue", "anotherValue");
+27:
+28:     cl.foo();
+29:
+30:     console.log("baz called");
+31:     console.log("baz called from b.ts");
+32: }`,
         },
         {
             repoData: orchestrator,

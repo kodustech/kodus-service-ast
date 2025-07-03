@@ -14,7 +14,10 @@ export class JavaParser extends BaseParser {
         SUPPORTED_LANGUAGES.java.properties.constructorName;
     private static readonly selfAccessReference =
         SUPPORTED_LANGUAGES.java.properties.selfAccessReference;
-    private static readonly validMemberTypes = new Set(['identifier'] as const);
+    private static readonly validMemberTypes = new Set([
+        'identifier',
+        'this',
+    ] as const);
     private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);

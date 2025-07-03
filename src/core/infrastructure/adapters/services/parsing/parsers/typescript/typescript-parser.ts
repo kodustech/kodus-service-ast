@@ -18,6 +18,7 @@ export class TypeScriptParser extends BaseParser {
         'identifier',
         'property_identifier',
         'private_property_identifier',
+        'this',
     ] as const);
     private static readonly validFunctionTypes = new Set([
         'identifier',

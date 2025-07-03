@@ -602,17 +602,6 @@ export abstract class BaseParser {
 
             const key = `${absolutePath}::${this.scopeToString(method.scope)}`;
 
-            let calls: Call[] = [];
-            if (method.bodyNode) {
-                calls = this.collectFunctionCalls(
-                    method.bodyNode,
-                    absolutePath,
-                    method.scope,
-                );
-
-                this.context.fileCalls.push(...calls);
-            }
-
             const params = method.params.map((param) => param.name);
             const returnType = method.returnType || 'unknown';
             const normalizedBody = normalizeAST(method.bodyNode);
@@ -624,11 +613,11 @@ export abstract class BaseParser {
                 : 0;
             const className =
                 method.scope
-                    .reverse()
+                    .toReversed()
                     .find((scope) => scope.type === NodeType.NODE_TYPE_CLASS)
                     ?.name ||
                 method.scope
-                    .reverse()
+                    .toReversed()
                     .find((scope) =>
                         [
                             NodeType.NODE_TYPE_ENUM,
@@ -639,6 +628,18 @@ export abstract class BaseParser {
             const analysisNode = this.context.analysisNodes.get(method.nodeId);
             if (analysisNode) {
                 this.addNameToAnalysisNode(analysisNode, method.name);
+            }
+
+            let calls: Call[] = [];
+            if (method.bodyNode) {
+                calls = this.collectFunctionCalls(
+                    method.bodyNode,
+                    absolutePath,
+                    method.scope,
+                    className,
+                );
+
+                this.context.fileCalls.push(...calls);
             }
 
             this.context.functions.set(key, {
@@ -712,6 +713,7 @@ export abstract class BaseParser {
         rootNode: SyntaxNode,
         absolutePath: string,
         scope: Scope[],
+        className: string,
     ): Call[] {
         const query = this.getQuery(QueryType.FUNCTION_CALL);
         if (!query) return [];
@@ -720,58 +722,71 @@ export abstract class BaseParser {
         if (matches.length === 0) return [];
 
         const calls: Call[] = [];
-        const chains = new Map<number, CallChain[]>();
+        // Use a Set to track processed nodes to avoid reprocessing children of a matched chain
+        const processedNodeIds = new Set<number>();
 
         for (const match of matches) {
-            const captures = match.captures;
-            if (captures.length === 0) continue;
+            // The query should ideally capture the outermost call expression node
+            const capture = match.captures[match.captures.length - 1];
+            const node = capture?.node;
 
-            for (const capture of captures) {
-                const node = capture.node;
-                if (!node) continue;
-
-                if (chains.has(node.id)) {
-                    continue;
-                }
-
-                const chain = this.getMemberChain(node, chains);
-                if (!chain || chain.length === 0) continue;
-
-                let caller = this.getSelfAccessReference();
-                let targetFile: string;
-
-                if (chain.length === 1) {
-                    targetFile = this.resolveTargetFile(
-                        chain[0].name,
-                        absolutePath,
-                        scope,
-                    );
-                } else {
-                    targetFile = this.resolveTargetFile(
-                        caller,
-                        absolutePath,
-                        scope,
-                    );
-                }
-
-                for (const { name, type, nodeId } of chain) {
-                    if (type === ChainType.FUNCTION) {
-                        calls.push({
-                            nodeId,
-                            function: name,
-                            file: targetFile,
-                            caller,
-                        });
-                    }
-
-                    caller = name;
-                    targetFile = this.resolveTargetFile(
-                        caller,
-                        absolutePath,
-                        scope,
-                    );
-                }
+            if (!node || processedNodeIds.has(node.id)) {
+                continue;
             }
+
+            const chain = this.getMemberChain(node, new Map());
+            if (chain.length === 0) continue;
+
+            // Mark all nodes in this chain as processed so we don't create duplicate calls
+            chain.forEach((link) => {
+                const originalId = this.context.idMap.get(link.nodeId);
+                if (originalId !== undefined) {
+                    processedNodeIds.add(originalId);
+                }
+            });
+
+            // The function being called is the last link in the chain
+            const functionLink = chain[chain.length - 1];
+            if (functionLink.type !== ChainType.FUNCTION) {
+                continue;
+            }
+
+            const callerChain = chain.slice(0, chain.length - 1);
+
+            let callerName = '';
+            let targetFile: string;
+
+            if (callerChain.length === 0) {
+                // Case 1: Standalone function call, e.g., `bar()`
+                callerName = '';
+                targetFile = this.resolveTargetFile(
+                    functionLink.name,
+                    absolutePath,
+                    scope,
+                );
+            } else {
+                callerName = callerChain[0].name;
+                if (callerName === this.getSelfAccessReference()) {
+                    if (callerChain.length > 1) {
+                        callerName = callerChain[1].name;
+                    } else {
+                        callerName = className || '';
+                    }
+                }
+
+                targetFile = this.resolveTargetFile(
+                    callerName,
+                    absolutePath,
+                    scope,
+                );
+            }
+
+            calls.push({
+                nodeId: functionLink.nodeId,
+                function: functionLink.name,
+                file: targetFile, // Best-effort resolution of the target file.
+                caller: this.resolveAlias(callerName, scope), // The object/namespace the function is called on.
+            });
         }
 
         return calls;
@@ -942,16 +957,17 @@ export abstract class BaseParser {
         absolutePath: string,
         scope: Scope[],
     ): string {
+        let newScope: Scope[] = scope;
         const noMethodScopeIdx = findLastIndexOf(
             scope,
             (s) => s.type === NodeType.NODE_TYPE_FUNCTION,
         );
         if (noMethodScopeIdx !== -1) {
-            scope = scope.slice(0, scope.length - noMethodScopeIdx);
+            newScope = scope.slice(0, scope.length - noMethodScopeIdx);
         }
 
         let typeName = this.context.instanceMapping.get(
-            `${this.scopeToString(scope)}::${instanceName}`,
+            `${this.scopeToString(newScope)}::${instanceName}`,
         );
 
         if (typeName) {
@@ -1088,5 +1104,25 @@ export abstract class BaseParser {
         this.context.idMap.set(newId, node.id);
 
         return newId;
+    }
+
+    protected resolveAlias(alias: string, scope: Scope[]): string {
+        let newScope: Scope[] = scope;
+        const noMethodScopeIdx = findLastIndexOf(
+            scope,
+            (s) => s.type === NodeType.NODE_TYPE_FUNCTION,
+        );
+        if (noMethodScopeIdx !== -1) {
+            newScope = scope.slice(0, scope.length - noMethodScopeIdx);
+        }
+
+        const resolved = this.context.instanceMapping.get(
+            `${this.scopeToString(newScope)}::${alias}`,
+        );
+
+        if (resolved) {
+            return resolved.split('::').pop() || alias;
+        }
+        return alias;
     }
 }

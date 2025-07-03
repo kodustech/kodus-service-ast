@@ -250,6 +250,7 @@ export class DiffAnalyzerService {
             const raw = content.substring(r.startIndex, r.endIndex);
             const lines = raw.split('\n');
 
+            // find the last line that contains code
             const lastCodeLineIndex = lines.findLastIndex((line) => {
                 const trimmed = line.trim();
 

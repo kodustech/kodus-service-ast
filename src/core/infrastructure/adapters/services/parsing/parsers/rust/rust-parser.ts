@@ -5,12 +5,15 @@ import { rustQueries } from './rust-queries';
 import { ParserQuery, QueryType } from '../query';
 import { CallChain, ChainType } from '@/core/domain/parsing/types/parser';
 import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 
 export class RustParser extends BaseParser {
     private static readonly language = RustLang as Language;
     private static readonly rawQueries = rustQueries;
-    private static readonly constructorName = '';
-    private static readonly selfAccessReference = 'self';
+    private static readonly constructorName =
+        SUPPORTED_LANGUAGES.rust.properties.constructorName;
+    private static readonly selfAccessReference =
+        SUPPORTED_LANGUAGES.rust.properties.selfAccessReference;
     private static readonly validMemberTypes = new Set([
         'identifier',
         'scoped_identifier',
@@ -20,22 +23,22 @@ export class RustParser extends BaseParser {
         'identifier',
     ] as const);
 
-    protected getLanguage(): Language {
+    protected override getLanguage(): Language {
         return RustParser.language;
     }
-    protected getRawQueries(): Map<QueryType, ParserQuery> {
+    protected override getRawQueries(): Map<QueryType, ParserQuery> {
         return RustParser.rawQueries;
     }
-    protected getConstructorName(): string {
+    protected override getConstructorName(): string {
         return RustParser.constructorName;
     }
-    protected getSelfAccessReference(): string {
+    protected override getSelfAccessReference(): string {
         return RustParser.selfAccessReference;
     }
-    protected getValidMemberTypes(): Set<string> {
+    protected override getValidMemberTypes(): Set<string> {
         return RustParser.validMemberTypes;
     }
-    protected getValidFunctionTypes(): Set<string> {
+    protected override getValidFunctionTypes(): Set<string> {
         return RustParser.validFunctionTypes;
     }
 

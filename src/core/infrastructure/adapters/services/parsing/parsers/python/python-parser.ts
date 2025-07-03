@@ -5,33 +5,36 @@ import { pythonQueries } from './python-queries';
 import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
 import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 
 export class PythonParser extends BaseParser {
     private static readonly language = PythonLang as Language;
     private static readonly rawQueries = pythonQueries;
-    private static readonly constructorName = '__init__';
-    private static readonly selfAccessReference = 'self';
+    private static readonly constructorName =
+        SUPPORTED_LANGUAGES.python.properties.constructorName;
+    private static readonly selfAccessReference =
+        SUPPORTED_LANGUAGES.python.properties.selfAccessReference;
     private static readonly validMemberTypes = new Set(['identifier'] as const);
     private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);
 
-    protected getLanguage(): Language {
+    protected override getLanguage(): Language {
         return PythonParser.language;
     }
-    protected getRawQueries(): Map<QueryType, ParserQuery> {
+    protected override getRawQueries(): Map<QueryType, ParserQuery> {
         return PythonParser.rawQueries;
     }
-    protected getConstructorName(): string {
+    protected override getConstructorName(): string {
         return PythonParser.constructorName;
     }
-    protected getSelfAccessReference(): string {
+    protected override getSelfAccessReference(): string {
         return PythonParser.selfAccessReference;
     }
-    protected getValidMemberTypes(): Set<string> {
+    protected override getValidMemberTypes(): Set<string> {
         return PythonParser.validMemberTypes;
     }
-    protected getValidFunctionTypes(): Set<string> {
+    protected override getValidFunctionTypes(): Set<string> {
         return PythonParser.validFunctionTypes;
     }
 

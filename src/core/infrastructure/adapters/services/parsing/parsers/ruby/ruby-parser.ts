@@ -11,12 +11,15 @@ import {
 } from '@/core/domain/parsing/types/parser';
 import { NodeType, Scope, TypeAnalysis } from '@kodus/kodus-proto/ast/v2';
 import { appendOrUpdateElement } from '@/shared/utils/arrays';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 
 export class RubyParser extends BaseParser {
     private static readonly language = RubyLang as Language;
     private static readonly rawQueries = rubyQueries;
-    private static readonly constructorName = 'initialize';
-    private static readonly selfAccessReference = 'self';
+    private static readonly constructorName =
+        SUPPORTED_LANGUAGES.ruby.properties.constructorName;
+    private static readonly selfAccessReference =
+        SUPPORTED_LANGUAGES.ruby.properties.selfAccessReference;
     private static readonly validMemberTypes = new Set([
         'self',
         'identifier',
@@ -28,22 +31,22 @@ export class RubyParser extends BaseParser {
         'identifier',
     ] as const);
 
-    protected getLanguage(): Language {
+    protected override getLanguage(): Language {
         return RubyParser.language;
     }
-    protected getRawQueries(): Map<QueryType, ParserQuery> {
+    protected override getRawQueries(): Map<QueryType, ParserQuery> {
         return RubyParser.rawQueries;
     }
-    protected getConstructorName(): string {
+    protected override getConstructorName(): string {
         return RubyParser.constructorName;
     }
-    protected getSelfAccessReference(): string {
+    protected override getSelfAccessReference(): string {
         return RubyParser.selfAccessReference;
     }
-    protected getValidMemberTypes(): Set<string> {
+    protected override getValidMemberTypes(): Set<string> {
         return RubyParser.validMemberTypes;
     }
-    protected getValidFunctionTypes(): Set<string> {
+    protected override getValidFunctionTypes(): Set<string> {
         return RubyParser.validFunctionTypes;
     }
 

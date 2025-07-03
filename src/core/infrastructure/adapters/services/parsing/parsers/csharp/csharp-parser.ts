@@ -6,33 +6,36 @@ import { ParserQuery, QueryType } from '../query';
 import { findNamedChildByType } from '@/shared/utils/ast-helpers';
 import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
 import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 
 export class CSharpParser extends BaseParser {
     private static readonly language = CSharpLang as Language;
     private static readonly rawQueries = cSharpQueries;
-    private static readonly constructorName = 'constructor';
-    private static readonly selfAccessReference = 'this';
+    private static readonly constructorName =
+        SUPPORTED_LANGUAGES.csharp.properties.constructorName;
+    private static readonly selfAccessReference =
+        SUPPORTED_LANGUAGES.csharp.properties.selfAccessReference;
     private static readonly validMemberTypes = new Set(['identifier'] as const);
     private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);
 
-    protected getLanguage(): Language {
+    protected override getLanguage(): Language {
         return CSharpParser.language;
     }
-    protected getRawQueries(): Map<QueryType, ParserQuery> {
+    protected override getRawQueries(): Map<QueryType, ParserQuery> {
         return CSharpParser.rawQueries;
     }
-    protected getConstructorName(): string {
+    protected override getConstructorName(): string {
         return CSharpParser.constructorName;
     }
-    protected getSelfAccessReference(): string {
+    protected override getSelfAccessReference(): string {
         return CSharpParser.selfAccessReference;
     }
-    protected getValidMemberTypes(): Set<string> {
+    protected override getValidMemberTypes(): Set<string> {
         return CSharpParser.validMemberTypes;
     }
-    protected getValidFunctionTypes(): Set<string> {
+    protected override getValidFunctionTypes(): Set<string> {
         return CSharpParser.validFunctionTypes;
     }
 

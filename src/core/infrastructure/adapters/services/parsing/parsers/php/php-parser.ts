@@ -5,12 +5,15 @@ import * as PhpLang from 'tree-sitter-php/php';
 import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
 import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 
 export class PhpParser extends BaseParser {
     private static readonly language = PhpLang as Language;
     private static readonly rawQueries = phpQueries;
-    private static readonly constructorName = '__construct';
-    private static readonly selfAccessReference = '$this';
+    private static readonly constructorName =
+        SUPPORTED_LANGUAGES.php.properties.constructorName;
+    private static readonly selfAccessReference =
+        SUPPORTED_LANGUAGES.php.properties.selfAccessReference;
     private static readonly validMemberTypes = new Set([
         'variable_name',
         'name',
@@ -20,22 +23,22 @@ export class PhpParser extends BaseParser {
         'name',
     ] as const);
 
-    protected getLanguage(): Language {
+    protected override getLanguage(): Language {
         return PhpParser.language;
     }
-    protected getRawQueries(): Map<QueryType, ParserQuery> {
+    protected override getRawQueries(): Map<QueryType, ParserQuery> {
         return PhpParser.rawQueries;
     }
-    protected getConstructorName(): string {
+    protected override getConstructorName(): string {
         return PhpParser.constructorName;
     }
-    protected getSelfAccessReference(): string {
+    protected override getSelfAccessReference(): string {
         return PhpParser.selfAccessReference;
     }
-    protected getValidMemberTypes(): Set<string> {
+    protected override getValidMemberTypes(): Set<string> {
         return PhpParser.validMemberTypes;
     }
-    protected getValidFunctionTypes(): Set<string> {
+    protected override getValidFunctionTypes(): Set<string> {
         return PhpParser.validFunctionTypes;
     }
 

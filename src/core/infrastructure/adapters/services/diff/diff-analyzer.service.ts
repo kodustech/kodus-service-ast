@@ -22,6 +22,10 @@ import {
     REPOSITORY_MANAGER_TOKEN,
     IRepositoryManager,
 } from '@/core/domain/repository/contracts/repository-manager.contract';
+import {
+    getLanguageConfigForFilePath,
+    LanguageConfig,
+} from '@/core/domain/parsing/types/supported-languages';
 
 enum RelatedNodeDirection {
     TO,
@@ -43,10 +47,21 @@ export class DiffAnalyzerService {
         graphs: GetGraphsResponseData,
         repoData: RepositoryData,
     ): Promise<string> {
-        if (!path.isAbsolute(filePath)) {
+        if (!filePath || filePath.length === 0 || !path.isAbsolute(filePath)) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
-                message: `File path is not absolute: ${filePath}`,
+                message: `File path not provided or is not absolute: ${filePath}`,
+                metadata: { filePath },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return '';
+        }
+
+        const languageConfig = getLanguageConfigForFilePath(filePath);
+        if (!languageConfig) {
+            this.logger.error({
+                context: DiffAnalyzerService.name,
+                message: `No language config found for file: ${filePath}`,
                 metadata: { filePath },
                 serviceName: DiffAnalyzerService.name,
             });
@@ -186,6 +201,7 @@ export class DiffAnalyzerService {
                         relationships,
                         fileContent,
                         file,
+                        languageConfig,
                     ),
                 );
 
@@ -194,6 +210,7 @@ export class DiffAnalyzerService {
                 const rangeContent = this.contentFromRanges(
                     fileContent,
                     mergedRanges,
+                    languageConfig,
                 );
 
                 result.push(`<-- ${file} -->\n${rangeContent}`);
@@ -212,7 +229,11 @@ export class DiffAnalyzerService {
         }
     }
 
-    private contentFromRanges(content: string, ranges: Range[]): string {
+    private contentFromRanges(
+        content: string,
+        ranges: Range[],
+        languageConfig: LanguageConfig,
+    ): string {
         if (!content || !ranges || ranges.length === 0) {
             this.logger.warn({
                 context: DiffAnalyzerService.name,
@@ -232,13 +253,11 @@ export class DiffAnalyzerService {
             const lastCodeLineIndex = lines.findLastIndex((line) => {
                 const trimmed = line.trim();
 
-                return (
-                    trimmed !== '' &&
-                    !trimmed.startsWith('//') &&
-                    !trimmed.startsWith('/*') &&
-                    !trimmed.startsWith('*') &&
-                    !trimmed.startsWith('*/')
+                const isComment = languageConfig.properties.comments.some(
+                    (comment) => trimmed.startsWith(comment),
                 );
+
+                return trimmed !== '' && !isComment;
             });
 
             if (lastCodeLineIndex === -1) {
@@ -303,6 +322,7 @@ export class DiffAnalyzerService {
         relationships: EnrichedGraphEdge[],
         content: string,
         filePath: string,
+        languageConfig: LanguageConfig,
     ): Range[] {
         switch (node.type) {
             case NodeType.NODE_TYPE_CLASS: {
@@ -322,7 +342,7 @@ export class DiffAnalyzerService {
 
                 // Filter out the constructor method
                 const noConstructor = methods.filter(
-                    (m) => m.name !== 'constructor',
+                    (m) => m.name !== languageConfig.properties.constructorName,
                 );
 
                 // Merge the ranges of all methods except the constructor
@@ -779,7 +799,7 @@ export class DiffAnalyzerService {
         return result;
     }
 
-    private readonly nodeTypeRelationships: Partial<
+    private static readonly nodeTypeRelationships: Partial<
         Record<NodeType, RelationshipType[]>
     > = {
         [NodeType.NODE_TYPE_FUNCTION]: [
@@ -829,9 +849,10 @@ export class DiffAnalyzerService {
                     direction === RelatedNodeDirection.FROM &&
                     relation.from === node.id;
 
-                const isValidRelationType = this.nodeTypeRelationships[
-                    node.type
-                ]?.includes(relation.type);
+                const isValidRelationType =
+                    DiffAnalyzerService.nodeTypeRelationships[
+                        node.type
+                    ]?.includes(relation.type);
 
                 return (isToRelation || isFromRelation) && isValidRelationType;
             })

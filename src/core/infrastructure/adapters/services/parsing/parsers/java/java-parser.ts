@@ -5,33 +5,36 @@ import * as JavaLang from 'tree-sitter-java';
 import { ParserQuery, QueryType } from '../query';
 import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
 import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
 
 export class JavaParser extends BaseParser {
     private static readonly language = JavaLang as Language;
     private static readonly rawQueries = javaQueries;
-    private static readonly constructorName = '';
-    private static readonly selfAccessReference = 'this';
+    private static readonly constructorName =
+        SUPPORTED_LANGUAGES.java.properties.constructorName;
+    private static readonly selfAccessReference =
+        SUPPORTED_LANGUAGES.java.properties.selfAccessReference;
     private static readonly validMemberTypes = new Set(['identifier'] as const);
     private static readonly validFunctionTypes = new Set([
         'identifier',
     ] as const);
 
-    protected getLanguage(): Language {
+    protected override getLanguage(): Language {
         return JavaParser.language;
     }
-    protected getRawQueries(): Map<QueryType, ParserQuery> {
+    protected override getRawQueries(): Map<QueryType, ParserQuery> {
         return JavaParser.rawQueries;
     }
-    protected getConstructorName(): string {
+    protected override getConstructorName(): string {
         return JavaParser.constructorName;
     }
-    protected getSelfAccessReference(): string {
+    protected override getSelfAccessReference(): string {
         return JavaParser.selfAccessReference;
     }
-    protected getValidMemberTypes(): Set<string> {
+    protected override getValidMemberTypes(): Set<string> {
         return JavaParser.validMemberTypes;
     }
-    protected getValidFunctionTypes(): Set<string> {
+    protected override getValidFunctionTypes(): Set<string> {
         return JavaParser.validFunctionTypes;
     }
 

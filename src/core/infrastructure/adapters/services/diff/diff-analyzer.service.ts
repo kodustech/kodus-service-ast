@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service';
 import {
     EnrichedGraphEdge,
@@ -9,6 +9,7 @@ import {
     Point,
     Range,
     RelationshipType,
+    RepositoryData,
 } from '@kodus/kodus-proto/ast/v2';
 import {
     ChangeResult,
@@ -17,6 +18,10 @@ import {
 } from '@/core/domain/diff/types/diff-analyzer.types';
 import * as path from 'path';
 import { parsePatch } from 'diff';
+import {
+    REPOSITORY_MANAGER_TOKEN,
+    IRepositoryManager,
+} from '@/core/domain/repository/contracts/repository-manager.contract';
 
 enum RelatedNodeDirection {
     TO,
@@ -25,22 +30,36 @@ enum RelatedNodeDirection {
 
 @Injectable()
 export class DiffAnalyzerService {
-    constructor(private readonly logger: PinoLoggerService) {}
+    constructor(
+        @Inject(REPOSITORY_MANAGER_TOKEN)
+        private readonly repositoryManagerService: IRepositoryManager,
 
-    getRelevantContent(
+        private readonly logger: PinoLoggerService,
+    ) {}
+
+    async getRelevantContent(
         filePath: string,
         diff: string,
-        content: string,
         graphs: GetGraphsResponseData,
-    ): string {
+        repoData: RepositoryData,
+    ): Promise<string> {
+        if (!path.isAbsolute(filePath)) {
+            this.logger.error({
+                context: DiffAnalyzerService.name,
+                message: `File path is not absolute: ${filePath}`,
+                metadata: { filePath },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return '';
+        }
+
         const metadata = {
             filePath: filePath || 'unknown',
             diff: diff ? diff.slice(0, 100) : 'no diff provided',
-            content: content ? content.slice(0, 100) : 'no content provided',
         };
 
         try {
-            if (!content || !graphs) {
+            if (!graphs) {
                 this.logger.error({
                     context: DiffAnalyzerService.name,
                     message: `Content or graphs not provided`,
@@ -50,7 +69,24 @@ export class DiffAnalyzerService {
                 return null;
             }
 
-            const ranges = this.getModifiedRanges(diff, content);
+            const mainFileContent =
+                await this.repositoryManagerService.readFile({
+                    repoData,
+                    filePath,
+                    absolute: true,
+                });
+
+            if (!mainFileContent) {
+                this.logger.error({
+                    context: DiffAnalyzerService.name,
+                    message: `No content found for file ${filePath}`,
+                    metadata,
+                    serviceName: DiffAnalyzerService.name,
+                });
+                return null;
+            }
+
+            const ranges = this.getModifiedRanges(diff, mainFileContent);
             if (ranges.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
@@ -61,8 +97,8 @@ export class DiffAnalyzerService {
                 return null;
             }
 
-            const fileNodes = this.getFileNodes(graphs, filePath);
-            if (fileNodes.length === 0) {
+            const mainFileNodes = this.getFileNodes(graphs, filePath);
+            if (mainFileNodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
                     message: `No file nodes found for ${filePath}`,
@@ -72,8 +108,8 @@ export class DiffAnalyzerService {
                 return null;
             }
 
-            const nodes = this.getNodesForRanges(fileNodes, ranges);
-            if (nodes.length === 0) {
+            const mainNodes = this.getNodesForRanges(mainFileNodes, ranges);
+            if (mainNodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
                     message: `No nodes found for ranges`,
@@ -84,23 +120,86 @@ export class DiffAnalyzerService {
             }
 
             const relationships = graphs.enrichHeadGraph.relationships;
-            const withRelated = nodes.flatMap((node) => {
+            const withRelated = mainNodes.flatMap((node) => {
                 const relatedNodes = this.getRelatedNodes(
-                    fileNodes,
+                    graphs.enrichHeadGraph.nodes,
                     relationships,
                     node,
+                    filePath,
                 );
 
                 return [...relatedNodes, node];
             });
 
-            const nodesRanges = withRelated.flatMap((node) =>
-                this.getNodeRanges(node, fileNodes, relationships, content),
+            const groupedByFilePath = withRelated.reduce(
+                (accumulator, node) => {
+                    const key = node.filePath;
+
+                    if (!accumulator[key]) {
+                        accumulator[key] = [];
+                    }
+
+                    accumulator[key].push(node);
+
+                    return accumulator;
+                },
+                {} as Record<string, EnrichedGraphNode[]>,
             );
 
-            const mergedRanges = this.mergeRanges(nodesRanges);
+            const result: string[] = [];
+            for (const [file, nodes] of Object.entries(groupedByFilePath)) {
+                let fileContent: string;
+                if (file === filePath) {
+                    fileContent = mainFileContent;
+                } else {
+                    // If the node is from a different file, read that file's content
+                    fileContent = await this.repositoryManagerService.readFile({
+                        repoData,
+                        filePath: file,
+                        absolute: true,
+                    });
+                }
 
-            return this.contentFromRanges(content, mergedRanges);
+                if (!fileContent) {
+                    this.logger.warn({
+                        context: DiffAnalyzerService.name,
+                        message: `No content found for file ${file}`,
+                        metadata,
+                        serviceName: DiffAnalyzerService.name,
+                    });
+                    continue;
+                }
+
+                let fileNodes: EnrichedGraphNode[];
+                if (file === filePath) {
+                    // Use the main file nodes if it's the same file
+                    fileNodes = mainFileNodes;
+                } else {
+                    // Otherwise, get the nodes for the other file
+                    fileNodes = this.getFileNodes(graphs, file);
+                }
+
+                const nodesRanges = nodes.flatMap((node) =>
+                    this.getNodeRanges(
+                        node,
+                        fileNodes,
+                        relationships,
+                        fileContent,
+                        file,
+                    ),
+                );
+
+                const mergedRanges = this.mergeRanges(nodesRanges);
+
+                const rangeContent = this.contentFromRanges(
+                    fileContent,
+                    mergedRanges,
+                );
+
+                result.push(`<-- ${file} -->\n${rangeContent}`);
+            }
+
+            return result.join('\n\n');
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
@@ -114,20 +213,63 @@ export class DiffAnalyzerService {
     }
 
     private contentFromRanges(content: string, ranges: Range[]): string {
+        if (!content || !ranges || ranges.length === 0) {
+            this.logger.warn({
+                context: DiffAnalyzerService.name,
+                message: `No content or ranges provided`,
+                serviceName: DiffAnalyzerService.name,
+            });
+            return '';
+        }
+
         const sorted = [...ranges].sort((a, b) => a.startIndex - b.startIndex);
 
-        const numberedSlices = sorted.map((r) => {
+        const numberedSlices = sorted.flatMap((r) => {
             // pull the raw substring
-            const raw = content.substring(r.startIndex, r.endIndex).trimEnd();
+            const raw = content.substring(r.startIndex, r.endIndex);
+            const lines = raw.split('\n');
+
+            const lastCodeLineIndex = lines.findLastIndex((line) => {
+                const trimmed = line.trim();
+
+                return (
+                    trimmed !== '' &&
+                    !trimmed.startsWith('//') &&
+                    !trimmed.startsWith('/*') &&
+                    !trimmed.startsWith('*') &&
+                    !trimmed.startsWith('*/')
+                );
+            });
+
+            if (lastCodeLineIndex === -1) {
+                // If there are no code lines, ignore
+                return [];
+            }
+
+            const relevantLines = lines.slice(0, lastCodeLineIndex + 1);
 
             // determine the first line number in this slice
             const firstLineNum = (r.startPosition?.row ?? 0) + 1;
 
+            let isPreamble = true;
+
             // split into lines and prefix each with its real line number
-            return raw
-                .split('\n')
-                .map((line, idx) => `${firstLineNum + idx}: ${line}`.trim())
-                .join('\n');
+            return [
+                relevantLines
+                    .flatMap((line, idx) => {
+                        if (isPreamble && line.trim() === '') {
+                            // skip empty lines at the start
+                            return [];
+                        }
+
+                        isPreamble = false;
+
+                        const lineNumber = firstLineNum + idx;
+
+                        return [`${lineNumber}: ${line}`.trim()];
+                    })
+                    .join('\n'),
+            ];
         });
 
         const message = `\n<- CUT CONTENT ->\n`;
@@ -143,7 +285,13 @@ export class DiffAnalyzerService {
         const contentLines = content.split('\n');
         const lastRange = sorted[sorted.length - 1];
         if ((lastRange.endPosition?.row ?? 0) < contentLines.length - 1) {
-            result = `${result}\n${message}`;
+            const remainingContent = contentLines
+                .slice((lastRange.endPosition?.row ?? 0) + 1)
+                .join('\n')
+                .trim();
+            if (remainingContent) {
+                result = `${result}\n${message}`;
+            }
         }
 
         return result;
@@ -154,6 +302,7 @@ export class DiffAnalyzerService {
         fileNodes: EnrichedGraphNode[],
         relationships: EnrichedGraphEdge[],
         content: string,
+        filePath: string,
     ): Range[] {
         switch (node.type) {
             case NodeType.NODE_TYPE_CLASS: {
@@ -164,6 +313,7 @@ export class DiffAnalyzerService {
                     fileNodes,
                     relationships,
                     node,
+                    filePath,
                     {
                         direction: RelatedNodeDirection.FROM,
                         nodeTypeFilter: [NodeType.NODE_TYPE_FUNCTION],
@@ -649,6 +799,7 @@ export class DiffAnalyzerService {
         fileNodes: EnrichedGraphNode[],
         relations: EnrichedGraphEdge[],
         node: EnrichedGraphNode,
+        filePath: string,
         options?: {
             direction?: RelatedNodeDirection;
             nodeTypeFilter?: NodeType[];
@@ -704,6 +855,36 @@ export class DiffAnalyzerService {
                 if (nodeTypeFilter.length === 0) return true;
                 return nodeTypeFilter.includes(n.type);
             });
+
+        const otherFileFunctions = relatedNodes.filter(
+            (n) =>
+                n.filePath !== filePath &&
+                n.type === NodeType.NODE_TYPE_FUNCTION,
+        );
+
+        const otherFileFunctionsClass = relations
+            .filter((relation) => {
+                // filter relations that connect functions to classes in other files
+                return (
+                    relation.type ===
+                        RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD &&
+                    otherFileFunctions.some((f) => f.id === relation.to)
+                );
+            })
+            .map((relation) => {
+                // find the class node in the file nodes
+                const classNode = fileNodes.find(
+                    (n) =>
+                        n.id === relation.from &&
+                        n.type === NodeType.NODE_TYPE_CLASS,
+                );
+
+                return classNode || null;
+            })
+            .filter((n) => n !== null);
+
+        // Combine related nodes from the same file and classes from other files
+        relatedNodes.push(...otherFileFunctionsClass);
 
         return relatedNodes;
     }

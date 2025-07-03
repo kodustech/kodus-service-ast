@@ -1,17 +1,21 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { GrpcInvalidArgumentException } from '@/shared/utils/grpc/exceptions';
 import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
 import {
     DeleteRepositoryRequest,
     DeleteRepositoryResponse,
 } from '@kodus/kodus-proto/ast';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import {
+    IRepositoryManager,
+    REPOSITORY_MANAGER_TOKEN,
+} from '@/core/domain/repository/contracts/repository-manager.contract';
 
 @Injectable()
 export class DeleteRepositoryUseCase {
     constructor(
-        private readonly repositoryManagerService: RepositoryManagerService,
+        @Inject(REPOSITORY_MANAGER_TOKEN)
+        private readonly repositoryManagerService: IRepositoryManager,
 
         private readonly logger: PinoLoggerService,
     ) {}

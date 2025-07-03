@@ -24,7 +24,8 @@
         "docker:up": "docker compose -f docker-compose.dev.yml up",
         "docker:down": "docker compose -f docker-compose.dev.yml down",
         "docker:start": "yarn docker:down && yarn docker:up",
-        "docker:watch": "yarn docker:down && yarn docker:up -d"
+        "docker:watch": "yarn docker:down && yarn docker:up -d",
+        "docker:test": "docker compose -f docker-compose.dev.yml exec kodus-service-ast node --inspect=0.0.0.0:9301 -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --watchAll --runInBand"
     },
     "dependencies": {
         "@grpc/grpc-js": "^1.13.4",

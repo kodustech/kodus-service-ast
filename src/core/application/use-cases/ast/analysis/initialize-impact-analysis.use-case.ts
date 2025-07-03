@@ -8,20 +8,25 @@ import {
     GetImpactAnalysisResponse,
     InitializeImpactAnalysisRequest,
 } from '@kodus/kodus-proto/ast';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { GetGraphsUseCase } from '../graphs/get-graphs.use-case';
 import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service';
 import { handleError } from '@/shared/utils/errors';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types';
 import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
+import {
+    IRepositoryManager,
+    REPOSITORY_MANAGER_TOKEN,
+} from '@/core/domain/repository/contracts/repository-manager.contract';
 
 @Injectable()
 export class InitializeImpactAnalysisUseCase {
     constructor(
         private readonly taskManagerService: TaskManagerService,
         private readonly graphAnalyzerService: GraphAnalyzerService,
-        private readonly repositoryManagerService: RepositoryManagerService,
+
+        @Inject(REPOSITORY_MANAGER_TOKEN)
+        private readonly repositoryManagerService: IRepositoryManager,
 
         private readonly getGraphsUseCase: GetGraphsUseCase,
 

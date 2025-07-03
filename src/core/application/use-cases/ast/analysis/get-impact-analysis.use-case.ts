@@ -1,6 +1,9 @@
 import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types';
+import {
+    IRepositoryManager,
+    REPOSITORY_MANAGER_TOKEN,
+} from '@/core/domain/repository/contracts/repository-manager.contract';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import {
     GrpcInvalidArgumentException,
     GrpcNotFoundException,
@@ -9,13 +12,14 @@ import {
     GetImpactAnalysisRequest,
     GetImpactAnalysisResponse,
 } from '@kodus/kodus-proto/ast';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 @Injectable()
 export class GetImpactAnalysisUseCase {
     constructor(
-        private readonly repositoryManagerService: RepositoryManagerService,
+        @Inject(REPOSITORY_MANAGER_TOKEN)
+        private readonly repositoryManagerService: IRepositoryManager,
 
         private readonly logger: PinoLoggerService,
     ) {}
@@ -60,9 +64,7 @@ export class GetImpactAnalysisUseCase {
                 );
             }
 
-            const parsedAnalysis = JSON.parse(
-                impactAnalysis.toString('utf-8'),
-            ) as {
+            const parsedAnalysis = JSON.parse(impactAnalysis) as {
                 analysisResult: ChangeResult;
                 impactAnalysis: GetImpactAnalysisResponse;
             };

@@ -1,5 +1,7 @@
 import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
 
+export const REPOSITORY_MANAGER_TOKEN = Symbol('REPOSITORY_MANAGER_TOKEN');
+
 export interface IRepositoryManager {
     gitCloneWithAuth(params: { repoData: RepositoryData }): Promise<string>;
     deleteLocalRepository(params: {
@@ -12,15 +14,32 @@ export interface IRepositoryManager {
         excludePatterns?: string[];
         maxFiles?: number;
     }): Promise<string[]>;
+
     writeFile(params: {
         repoData: RepositoryData;
         filePath: string;
-        data: Buffer;
+        data: Buffer | string;
         inKodusDir?: boolean;
     }): Promise<boolean>;
+
     readFile(params: {
         repoData: RepositoryData;
         filePath: string;
         inKodusDir?: boolean;
+        stringify?: true; // default is true
+        absolute?: boolean;
+    }): Promise<string | null>;
+    readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: false;
+        absolute?: boolean;
     }): Promise<Buffer | null>;
+    readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        absolute?: boolean;
+    }): Promise<Buffer | string | null>;
 }

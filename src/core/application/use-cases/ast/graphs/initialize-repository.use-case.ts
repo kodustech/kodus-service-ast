@@ -1,7 +1,6 @@
 import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service';
 import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { handleError } from '@/shared/utils/errors';
 import {
     GrpcInternalException,
@@ -12,16 +11,21 @@ import {
     EnrichedGraph,
     CodeGraph,
 } from '@kodus/kodus-proto/ast/v2';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
 import { InitializeRepositoryRequest } from '@kodus/kodus-proto/ast';
 import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
+import {
+    IRepositoryManager,
+    REPOSITORY_MANAGER_TOKEN,
+} from '@/core/domain/repository/contracts/repository-manager.contract';
 
 @Injectable()
 export class InitializeRepositoryUseCase {
     constructor(
-        private readonly repositoryManagerService: RepositoryManagerService,
+        @Inject(REPOSITORY_MANAGER_TOKEN)
+        private readonly repositoryManagerService: IRepositoryManager,
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         private readonly codeAnalyzerService: GraphEnrichmentService,
 

@@ -10,6 +10,7 @@ services:
             - ${API_TASK_PORT}:${API_TASK_PORT}
             - 5001:5001
             - 9300:9300
+            - 9301:9301
         env_file:
             - .env
         restart: unless-stopped

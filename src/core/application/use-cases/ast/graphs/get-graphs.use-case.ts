@@ -1,10 +1,9 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import {
     GrpcInternalException,
     GrpcNotFoundException,
 } from '@/shared/utils/grpc/exceptions';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
     ASTDeserializer,
     SerializedGetGraphsResponseData,
@@ -13,11 +12,16 @@ import {
     GetGraphsRequest,
     GetGraphsResponseData,
 } from '@kodus/kodus-proto/ast/v2';
+import {
+    IRepositoryManager,
+    REPOSITORY_MANAGER_TOKEN,
+} from '@/core/domain/repository/contracts/repository-manager.contract';
 
 @Injectable()
 export class GetGraphsUseCase {
     constructor(
-        private readonly repositoryManagerService: RepositoryManagerService,
+        @Inject(REPOSITORY_MANAGER_TOKEN)
+        private readonly repositoryManagerService: IRepositoryManager,
 
         private readonly logger: PinoLoggerService,
     ) {}
@@ -69,7 +73,7 @@ export class GetGraphsUseCase {
         });
 
         const parsedGraphs = JSON.parse(
-            graphs.toString(),
+            graphs,
         ) as SerializedGetGraphsResponseData;
         if (!parsedGraphs) {
             this.logger.error({

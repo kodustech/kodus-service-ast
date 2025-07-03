@@ -2,7 +2,6 @@ import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/dif
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { GetContentFromDiffRequest } from '@kodus/kodus-proto/ast';
 import { GetGraphsUseCase } from './get-graphs.use-case';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
 import { Injectable } from '@nestjs/common';
 import { GrpcNotFoundException } from '@/shared/utils/grpc/exceptions';
 
@@ -11,7 +10,7 @@ export class GetContentFromDiffUseCase {
     constructor(
         private readonly getGraphsUseCase: GetGraphsUseCase,
         private readonly differService: DiffAnalyzerService,
-        private readonly repositoryManagerService: RepositoryManagerService,
+
         private readonly logger: PinoLoggerService,
     ) {}
 
@@ -36,16 +35,11 @@ export class GetContentFromDiffUseCase {
                 );
             }
 
-            const fileContent = await this.repositoryManagerService.readFile({
-                repoData: repoData.headRepo,
-                filePath,
-            });
-
             return this.differService.getRelevantContent(
                 filePath,
                 diff,
-                fileContent.toString('utf-8'),
                 graphs,
+                repoData.headRepo,
             );
         } catch (error) {
             this.logger.error({

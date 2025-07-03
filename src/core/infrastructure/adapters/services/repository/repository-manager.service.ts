@@ -490,29 +490,66 @@ export class RepositoryManagerService implements IRepositoryManager {
         repoData: RepositoryData;
         filePath: string;
         inKodusDir?: boolean;
-    }): Promise<Buffer | null> {
-        const { repoData, filePath, inKodusDir = false } = params;
+        stringify?: true; // default is true
+        absolute?: boolean;
+    }): Promise<string | null>;
+
+    public async readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: false;
+        absolute?: boolean;
+    }): Promise<Buffer | null>;
+
+    public async readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: boolean;
+        absolute?: boolean;
+    }): Promise<Buffer | string | null> {
+        const {
+            repoData,
+            filePath,
+            inKodusDir = false,
+            stringify = true,
+            absolute = false,
+        } = params;
 
         try {
-            const repoPath = await this.getRepoDir(repoData);
+            let fullPath: string;
+            if (absolute) {
+                fullPath = filePath;
+            } else {
+                const repoPath = await this.getRepoDir(repoData);
 
-            const fullPath = inKodusDir
-                ? path.join(
-                      repoPath,
-                      RepositoryManagerService.KODUS_DIRECTORY,
-                      filePath,
-                  )
-                : path.join(repoPath, filePath);
-            const normalizedFullPath = fullPath.normalize();
-            if (!normalizedFullPath.startsWith(repoPath)) {
-                throw new Error('Invalid file path: path traversal detected');
+                fullPath = inKodusDir
+                    ? path.join(
+                          repoPath,
+                          RepositoryManagerService.KODUS_DIRECTORY,
+                          filePath,
+                      )
+                    : path.join(repoPath, filePath);
+                const normalizedFullPath = fullPath.normalize();
+                if (!normalizedFullPath.startsWith(repoPath)) {
+                    throw new Error(
+                        'Invalid file path: path traversal detected',
+                    );
+                }
             }
 
             if (!(await fs.promises.stat(fullPath).catch(() => false))) {
                 return null;
             }
 
-            return await fs.promises.readFile(fullPath);
+            const buff = await fs.promises.readFile(fullPath);
+
+            if (stringify) {
+                return buff.toString('utf-8');
+            }
+
+            return buff;
         } catch (error) {
             this.logger.error({
                 message: 'Error reading file',

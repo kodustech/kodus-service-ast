@@ -4,6 +4,7 @@ import { GetContentFromDiffRequest } from '@kodus/kodus-proto/ast';
 import { GetGraphsUseCase } from './get-graphs.use-case';
 import { Injectable } from '@nestjs/common';
 import { GrpcNotFoundException } from '@/shared/utils/grpc/exceptions';
+import * as path from 'path';
 
 @Injectable()
 export class GetContentFromDiffUseCase {
@@ -35,8 +36,13 @@ export class GetContentFromDiffUseCase {
                 );
             }
 
+            let absoluteFilePath = filePath;
+            if (!path.isAbsolute(filePath)) {
+                absoluteFilePath = path.join(graphs.headGraph.dir, filePath);
+            }
+
             return this.differService.getRelevantContent(
-                filePath,
+                absoluteFilePath,
                 diff,
                 graphs,
                 repoData.headRepo,

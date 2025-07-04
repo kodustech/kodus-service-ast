@@ -9,8 +9,8 @@ services:
             - ${API_AST_PORT}:${API_AST_PORT}
             - ${API_TASK_PORT}:${API_TASK_PORT}
             - 5001:5001
-            - 9300:9300
-            - 9301:9301
+            - 9300:9300 # debug
+            - 9301:9301 # test debug
         env_file:
             - .env
         restart: unless-stopped

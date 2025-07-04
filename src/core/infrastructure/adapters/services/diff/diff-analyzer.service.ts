@@ -26,10 +26,13 @@ import {
     getLanguageConfigForFilePath,
     LanguageConfig,
 } from '@/core/domain/parsing/types/supported-languages';
+import { getLanguageResolver } from '../parsing/resolvers';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
 
 enum RelatedNodeDirection {
     TO,
     FROM,
+    BOTH,
 }
 
 @Injectable()
@@ -67,6 +70,19 @@ export class DiffAnalyzerService {
             });
             return '';
         }
+
+        const rootDir = graphs.headGraph.dir;
+        const resolver = await getLanguageResolver(rootDir);
+        if (!resolver) {
+            this.logger.error({
+                context: DiffAnalyzerService.name,
+                message: `No language resolver found for directory: ${rootDir}`,
+                metadata: { filePath },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return '';
+        }
+        await resolver.initialize();
 
         const metadata = {
             filePath: filePath || 'unknown',
@@ -136,11 +152,19 @@ export class DiffAnalyzerService {
 
             const relationships = graphs.enrichHeadGraph.relationships;
             const withRelated = mainNodes.flatMap((node) => {
+                let direction = RelatedNodeDirection.BOTH;
+                if (node.type !== NodeType.NODE_TYPE_FUNCTION) {
+                    direction = RelatedNodeDirection.TO;
+                }
+
                 const relatedNodes = this.getRelatedNodes(
                     graphs.enrichHeadGraph.nodes,
                     relationships,
                     node,
                     filePath,
+                    {
+                        direction,
+                    },
                 );
 
                 return [...relatedNodes, node];
@@ -160,6 +184,34 @@ export class DiffAnalyzerService {
                 },
                 {} as Record<string, EnrichedGraphNode[]>,
             );
+
+            for (const [file] of Object.entries(groupedByFilePath)) {
+                if (file === filePath) {
+                    continue;
+                }
+
+                const fileNodes = this.getFileNodes(graphs, file);
+
+                if (fileNodes.length === 0) {
+                    this.logger.warn({
+                        context: DiffAnalyzerService.name,
+                        message: `No nodes found for file ${file}`,
+                        metadata,
+                        serviceName: DiffAnalyzerService.name,
+                    });
+                    continue;
+                }
+
+                const importNodes = this.getImportNodes(
+                    resolver,
+                    fileNodes,
+                    file,
+                    rootDir,
+                    [filePath],
+                );
+
+                groupedByFilePath[file].push(...importNodes);
+            }
 
             const result: string[] = [];
             for (const [file, nodes] of Object.entries(groupedByFilePath)) {
@@ -843,12 +895,16 @@ export class DiffAnalyzerService {
             .filter((relation) => {
                 // filter relations based on direction and type
                 const isToRelation =
-                    direction === RelatedNodeDirection.TO &&
-                    relation.to === node.id;
+                    [
+                        RelatedNodeDirection.TO,
+                        RelatedNodeDirection.BOTH,
+                    ].includes(direction) && relation.to === node.id;
 
                 const isFromRelation =
-                    direction === RelatedNodeDirection.FROM &&
-                    relation.from === node.id;
+                    [
+                        RelatedNodeDirection.FROM,
+                        RelatedNodeDirection.BOTH,
+                    ].includes(direction) && relation.from === node.id;
 
                 const isValidRelationType =
                     DiffAnalyzerService.nodeTypeRelationships[
@@ -858,11 +914,26 @@ export class DiffAnalyzerService {
                 return (isToRelation || isFromRelation) && isValidRelationType;
             })
             .map((relation) => {
-                // map the relations to the related nodes
-                const relatedNodeId =
-                    direction === RelatedNodeDirection.TO
-                        ? relation.from
-                        : relation.to;
+                let relatedNodeId: string | undefined;
+
+                if (
+                    direction === RelatedNodeDirection.TO &&
+                    relation.to === node.id
+                ) {
+                    relatedNodeId = relation.from;
+                } else if (
+                    direction === RelatedNodeDirection.FROM &&
+                    relation.from === node.id
+                ) {
+                    relatedNodeId = relation.to;
+                } else if (direction === RelatedNodeDirection.BOTH) {
+                    // pick the node on the opposite side of the current node
+                    if (relation.to === node.id) {
+                        relatedNodeId = relation.from;
+                    } else if (relation.from === node.id) {
+                        relatedNodeId = relation.to;
+                    }
+                }
 
                 // find the related node in the file nodes
                 const relatedNode = fileNodes.find(
@@ -917,5 +988,38 @@ export class DiffAnalyzerService {
         const row = lines.length - 1;
         const column = lines[lines.length - 1].length;
         return { row, column };
+    }
+
+    private getImportNodes(
+        resolver: LanguageResolver,
+        fileNodes: EnrichedGraphNode[],
+        fromFile: string,
+        rootDir: string,
+        paths: string[],
+    ): EnrichedGraphNode[] {
+        if (!fileNodes || !paths || paths.length === 0) {
+            this.logger.warn({
+                context: DiffAnalyzerService.name,
+                message: `Invalid input for getting import nodes`,
+                metadata: { fileNodes, paths },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return [];
+        }
+
+        return fileNodes.filter((node) => {
+            if (node.type !== NodeType.NODE_TYPE_IMPORT) return false;
+
+            const resolvedPath = resolver.resolveImport(
+                { origin: node.name, imported: [] },
+                fromFile,
+            );
+
+            if (!resolvedPath.normalizedPath.startsWith(rootDir)) return false;
+
+            return paths.some((path) =>
+                resolvedPath.normalizedPath.includes(path),
+            );
+        });
     }
 }

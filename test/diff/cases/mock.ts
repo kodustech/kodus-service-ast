@@ -195,6 +195,7 @@ index b68b68e..0b34d51 100644
  }
 `,
             expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/related/1/foo/foo.ts -->
+1: import { baz } from "../b";
 
 <- CUT CONTENT ->
 
@@ -391,6 +392,63 @@ index 43e956fed..2ac0c9a2b 100644
 49:         /(?:const|let|var)\\s+(\\w+)\\s*=\\s*\\([^)]*\\)\\s*=>/, // arrow function
 50:         /private\\s+async\\s+(\\w+)\\s*\\([^)]*\\)\\s*{/, // private async method declaration
 51:     ];
+52:
+53:     /**
+54:      * Extracts functions from a file based on the code graph
+55:      */
+56:     private extractFileFunctions(
+57:         codeGraphFunctions: Map<string, FunctionAnalysis>,
+58:         filePath: string,
+59:     ): ExtendedFunctionInfo[] {
+60:         if (!codeGraphFunctions) {
+61:             return [];
+62:         }
+63:
+64:         const normalizedPath = path.normalize(filePath);
+65:
+66:         const funcs = Array.from(codeGraphFunctions.entries())
+67:             .filter(([_, func]) =>
+68:                 this.isMatchingFile(func.file, normalizedPath),
+69:             )
+70:             .map(([key, func]) => ({
+71:                 ...func,
+72:                 name: key.split(':').pop() || 'unknown',
+73:                 startLine: (func as any).startLine || 0,
+74:                 endLine: (func as any).endLine || 0,
+75:             }));
+76:
+77:         return funcs;
+78:     }
+
+<- CUT CONTENT ->
+
+137:     /**
+138:      * Checks if a hunk affects a function
+139:      */
+140:     private isHunkAffectingFunction(
+141:         hunk: DiffHunk,
+142:         func: ExtendedFunctionInfo,
+143:     ): boolean {
+144:         const hunkStartLine = hunk.oldStart;
+145:         const hunkEndLine = hunk.oldStart + hunk.oldCount - 1;
+146:
+147:         // Check if there is overlap between the hunk and the function
+148:         const isOverlapping =
+149:             // Hunk starts within the function
+150:             (hunkStartLine >= func.startLine &&
+151:                 hunkStartLine <= func.endLine) ||
+152:             // Hunk ends within the function
+153:             (hunkEndLine >= func.startLine && hunkEndLine <= func.endLine) ||
+154:             // Hunk completely encompasses the function
+155:             (hunkStartLine <= func.startLine && hunkEndLine >= func.endLine);
+156:
+157:         // Check if the hunk has real additions or deletions (not just context)
+158:         const hasRealChanges = hunk.content
+159:             .split('\\n')
+160:             .some((line) => line.startsWith('+') || line.startsWith('-'));
+161:
+162:         return isOverlapping && hasRealChanges;
+163:     }
 
 <- CUT CONTENT ->
 
@@ -495,12 +553,31 @@ index 43e956fed..2ac0c9a2b 100644
 283:             return result;
 284:         }
 285:     }
-
-<- CUT CONTENT ->
-
+286:
+287:     private parseHunks(diff: string): DiffHunk[] {
+288:         const hunks: DiffHunk[] = [];
+289:         const hunkRegex = /@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@([\\s\\S]+?)(?=@@|$)/g;
+290:
+291:         let match;
+292:         while ((match = hunkRegex.exec(diff)) !== null) {
+293:             hunks.push({
+294:                 oldStart: parseInt(match[1], 10),
+295:                 oldCount: parseInt(match[2], 10),
+296:                 newStart: parseInt(match[3], 10),
+297:                 newCount: parseInt(match[4], 10),
+298:                 content: match[5].trim(),
+299:             });
+300:         }
+301:
+302:         return hunks;
+303:     }
 304: }
 
 <-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/670345891:kodus-orchestrator/feat-astv3/src/ee/codeBase/codeASTAnalysis.service.ts -->
+
+<- CUT CONTENT ->
+
+24: import { ChangeResult, DiffAnalyzerService } from './diffAnalyzer.service';
 
 <- CUT CONTENT ->
 

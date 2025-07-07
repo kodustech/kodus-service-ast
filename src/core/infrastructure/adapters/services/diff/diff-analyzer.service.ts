@@ -71,12 +71,12 @@ export class DiffAnalyzerService {
             return '';
         }
 
-        const rootDir = graphs.headGraph.dir;
-        const resolver = await getLanguageResolver(rootDir);
+        const absoluteRootDir = graphs.headGraph.dir;
+        const resolver = await getLanguageResolver(absoluteRootDir);
         if (!resolver) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
-                message: `No language resolver found for directory: ${rootDir}`,
+                message: `No language resolver found for directory: ${absoluteRootDir}`,
                 metadata: { filePath },
                 serviceName: DiffAnalyzerService.name,
             });
@@ -206,7 +206,7 @@ export class DiffAnalyzerService {
                     resolver,
                     fileNodes,
                     file,
-                    rootDir,
+                    absoluteRootDir,
                     [filePath],
                 );
 
@@ -265,7 +265,12 @@ export class DiffAnalyzerService {
                     languageConfig,
                 );
 
-                result.push(`<-- ${file} -->\n${rangeContent}`);
+                const relativeFilePath = this.relativizePath(
+                    absoluteRootDir,
+                    file,
+                );
+
+                result.push(`<-- ${relativeFilePath} -->\n${rangeContent}`);
             }
 
             return result.join('\n\n');
@@ -1021,5 +1026,26 @@ export class DiffAnalyzerService {
                 resolvedPath.normalizedPath.includes(path),
             );
         });
+    }
+
+    private relativizePath(
+        absoluteRootDir: string,
+        absoluteFilePath: string,
+    ): string {
+        if (!absoluteRootDir || !absoluteFilePath) {
+            this.logger.warn({
+                context: DiffAnalyzerService.name,
+                message: `Invalid paths for relativization`,
+                metadata: { absoluteRootDir, absoluteFilePath },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return absoluteFilePath;
+        }
+
+        // Ensure the root directory ends with a separator
+        const normalizedRoot = path.normalize(absoluteRootDir);
+        const normalizedFile = path.normalize(absoluteFilePath);
+
+        return path.relative(normalizedRoot, normalizedFile);
     }
 }

@@ -47,7 +47,7 @@ index 66afa60..aa68d46 100644
      }
  }
 `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/1/b.ts -->
+            expected: `<-- src/simple/1/b.ts -->
 1: class Foo {
 2:     private _privateProperty: string;
 3:
@@ -88,7 +88,7 @@ index 1b5b18e..a169704 100644
 +    console.log("baz baz baz");
  }
 `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/2/b.ts -->
+            expected: `<-- src/simple/2/b.ts -->
 
 <- CUT CONTENT ->
 
@@ -113,7 +113,7 @@ index dff5b41..01f021b 100644
 +    console.log("baz baz baz");
  }
 `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/3/b.ts -->
+            expected: `<-- src/simple/3/b.ts -->
 
 <- CUT CONTENT ->
 
@@ -143,7 +143,7 @@ index dff5b41..85926cf 100644
          console.log("Hello, world!");
      }
  `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/simple/4/b.ts -->
+            expected: `<-- src/simple/4/b.ts -->
 1: class Foo {
 2:     private _privateProperty: string;
 3:
@@ -194,7 +194,7 @@ index b68b68e..0b34d51 100644
 +    console.log("baz called from b.ts");
  }
 `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/related/1/foo/foo.ts -->
+            expected: `<-- src/related/1/foo/foo.ts -->
 1: import { baz } from "../b";
 
 <- CUT CONTENT ->
@@ -204,7 +204,7 @@ index b68b68e..0b34d51 100644
 5:     console.log("baz called from b.ts");
 6: }
 
-<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/929108425:testing-repo/typescript-diff/src/related/1/b.ts -->
+<-- src/related/1/b.ts -->
 
 <- CUT CONTENT ->
 
@@ -245,7 +245,7 @@ index ff0c3edf8..2b722cf62 100644
 
          if (!hasRules || !isEnabled) {
 `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/670345891:kodus-orchestrator/feat-astv3/src/ee/codeBase/codeAnalysisOrchestrator.service.ts -->
+            expected: `<-- src/ee/codeBase/codeAnalysisOrchestrator.service.ts -->
 
 <- CUT CONTENT ->
 
@@ -380,7 +380,7 @@ index 43e956fed..2ac0c9a2b 100644
                          functionHash: func.functionHash,
                          signatureHash: func.signatureHash,
 `,
-            expected: `<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/670345891:kodus-orchestrator/feat-astv3/src/ee/codeBase/diffAnalyzer.service.ts -->
+            expected: `<-- src/ee/codeBase/diffAnalyzer.service.ts -->
 
 <- CUT CONTENT ->
 
@@ -573,7 +573,7 @@ index 43e956fed..2ac0c9a2b 100644
 303:     }
 304: }
 
-<-- /tmp/cloned-repos/35c117e3-f4de-42f0-be5a-f95286f61fdb/repositories/670345891:kodus-orchestrator/feat-astv3/src/ee/codeBase/codeASTAnalysis.service.ts -->
+<-- src/ee/codeBase/codeASTAnalysis.service.ts -->
 
 <- CUT CONTENT ->
 

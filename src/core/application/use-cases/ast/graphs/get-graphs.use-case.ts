@@ -41,7 +41,7 @@ export class GetGraphsUseCase {
         serialized: boolean,
     ): Promise<GetGraphsResponseData | SerializedGetGraphsResponseData | null> {
         const { headRepo } = request;
-        const fileName = `graphs`;
+        const fileName = this.repositoryManagerService.graphsFileName;
 
         const graphs = await this.repositoryManagerService.readFile({
             repoData: headRepo,

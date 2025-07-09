@@ -100,8 +100,6 @@ export class InitializeRepositoryUseCase {
                 handleError(error).message,
                 'Initialization failed',
             );
-
-            throw error;
         }
     }
 
@@ -170,7 +168,7 @@ export class InitializeRepositoryUseCase {
         headGraphDir: string,
         enrichHeadGraph: EnrichedGraph,
     ): Promise<void> {
-        const fileName = `graphs`;
+        const fileName = this.repositoryManagerService.graphsFileName;
         const graphs = ASTSerializer.serializeGetGraphsResponseData({
             baseGraph: {
                 graph: baseGraph,

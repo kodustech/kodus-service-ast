@@ -107,8 +107,6 @@ export class InitializeImpactAnalysisUseCase {
                 handleError(error).message,
                 'Impact analysis initialization failed',
             );
-
-            throw error;
         }
     }
 

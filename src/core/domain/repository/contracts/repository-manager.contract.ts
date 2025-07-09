@@ -3,6 +3,8 @@ import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
 export const REPOSITORY_MANAGER_TOKEN = Symbol('REPOSITORY_MANAGER_TOKEN');
 
 export interface IRepositoryManager {
+    readonly graphsFileName: string;
+
     gitCloneWithAuth(params: { repoData: RepositoryData }): Promise<string>;
     deleteLocalRepository(params: {
         repoData: RepositoryData;

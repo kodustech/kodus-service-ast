@@ -11,6 +11,8 @@ import { handleError } from '@/shared/utils/errors';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
+    readonly graphsFileName: string = 'graphs';
+
     static readonly KODUS_DIRECTORY = '.kodus';
 
     private readonly baseDir = '/tmp/cloned-repos';

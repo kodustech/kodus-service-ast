@@ -50,37 +50,51 @@ async function bootstrap() {
     await app.listen(healthPort, '0.0.0.0');
 
     /* 2. Microservice gRPC (plaintext) */
-    app.connectMicroservice<MicroserviceOptions>({
-        transport: Transport.GRPC,
-        options: {
-            url: `0.0.0.0:${grpcASTPort}`,
-            package: 'kodus.ast.v3',
-            protoPath: resolve(
-                cwd(),
-                'node_modules/@kodus/kodus-proto/kodus/ast/v3/analyzer.proto',
-            ),
-            credentials: ServerCredentials.createInsecure(), // plaintext
-            loader: {
-                includeDirs: [join(cwd(), 'node_modules/@kodus/kodus-proto')],
+    app.connectMicroservice<MicroserviceOptions>(
+        {
+            transport: Transport.GRPC,
+            options: {
+                url: `0.0.0.0:${grpcASTPort}`,
+                package: 'kodus.ast.v3',
+                protoPath: resolve(
+                    cwd(),
+                    'node_modules/@kodus/kodus-proto/kodus/ast/v3/analyzer.proto',
+                ),
+                credentials: ServerCredentials.createInsecure(), // plaintext
+                loader: {
+                    includeDirs: [
+                        join(cwd(), 'node_modules/@kodus/kodus-proto'),
+                    ],
+                },
             },
         },
-    });
+        {
+            inheritAppConfig: true,
+        },
+    );
 
-    app.connectMicroservice<MicroserviceOptions>({
-        transport: Transport.GRPC,
-        options: {
-            url: `0.0.0.0:${grpcTaskPort}`,
-            package: 'kodus.task.v1',
-            protoPath: resolve(
-                cwd(),
-                'node_modules/@kodus/kodus-proto/kodus/task/v1/manager.proto',
-            ),
-            credentials: ServerCredentials.createInsecure(), // plaintext
-            loader: {
-                includeDirs: [join(cwd(), 'node_modules/@kodus/kodus-proto')],
+    app.connectMicroservice<MicroserviceOptions>(
+        {
+            transport: Transport.GRPC,
+            options: {
+                url: `0.0.0.0:${grpcTaskPort}`,
+                package: 'kodus.task.v1',
+                protoPath: resolve(
+                    cwd(),
+                    'node_modules/@kodus/kodus-proto/kodus/task/v1/manager.proto',
+                ),
+                credentials: ServerCredentials.createInsecure(), // plaintext
+                loader: {
+                    includeDirs: [
+                        join(cwd(), 'node_modules/@kodus/kodus-proto'),
+                    ],
+                },
             },
         },
-    });
+        {
+            inheritAppConfig: true,
+        },
+    );
 
     /* 3. Logger, shutdown hooks e start */
     app.useLogger(app.get(PinoLoggerService));

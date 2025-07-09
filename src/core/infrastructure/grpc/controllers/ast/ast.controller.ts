@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, UseFilters } from '@nestjs/common';
 import {
     ASTAnalyzerServiceController,
     ASTAnalyzerServiceControllerMethods,
@@ -21,9 +21,11 @@ import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/grap
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
 import { GetImpactAnalysisUseCase } from '@/core/application/use-cases/ast/analysis/get-impact-analysis.use-case';
 import { InitializeImpactAnalysisUseCase } from '@/core/application/use-cases/ast/analysis/initialize-impact-analysis.use-case';
+import { GrpcExceptionFilter } from '@/core/infrastructure/filters/grpc.filter';
 
 @Controller('ast')
 @ASTAnalyzerServiceControllerMethods()
+@UseFilters(new GrpcExceptionFilter())
 export class ASTController implements ASTAnalyzerServiceController {
     constructor(
         private readonly taskManagerService: TaskManagerService,

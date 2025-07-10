@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 node:22.14.0
+FROM --platform=linux/amd64 node:22.14.0-slim
 
 ENV NODE_ENV=development \
     NODE_OPTIONS=--max-old-space-size=4096 \
@@ -9,11 +9,17 @@ ENV NODE_ENV=development \
 
 WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates git python3 make g++ pkg-config \
-      && rm -rf /var/lib/apt/lists/*
+# Instala dependências do sistema necessárias para build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    python3 \
+    make \
+    g++ \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY .yalc .yalc
 COPY package.json yarn.lock ./
 RUN yarn install --network-timeout 600000 \
  && npx --yes node-gyp rebuild -C node_modules/tree-sitter

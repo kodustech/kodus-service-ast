@@ -1,24 +1,47 @@
-import { RepositoryData } from '@kodus/kodus-proto/v1';
+import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
+
+export const REPOSITORY_MANAGER_TOKEN = Symbol('REPOSITORY_MANAGER_TOKEN');
 
 export interface IRepositoryManager {
-    gitCloneWithAuth(repoData: RepositoryData): Promise<string>;
-    deleteLocalRepository(
-        repoData: RepositoryData,
-        keepKodusData?: boolean,
-    ): Promise<void>;
-    listRepositoryFiles(
-        repoData: RepositoryData,
-        patterns?: string[],
-        excludePatterns?: string[],
-        maxFiles?: number,
-    ): Promise<string[]>;
-    writeFile(
-        repoData: RepositoryData,
-        filePath: string,
-        data: Buffer,
-    ): Promise<boolean>;
-    readFile(
-        repoData: RepositoryData,
-        filePath: string,
-    ): Promise<Buffer | null>;
+    readonly graphsFileName: string;
+
+    gitCloneWithAuth(params: { repoData: RepositoryData }): Promise<string>;
+    deleteLocalRepository(params: {
+        repoData: RepositoryData;
+        keepKodusData?: boolean;
+    }): Promise<void>;
+    listRepositoryFiles(params: {
+        repoData: RepositoryData;
+        patterns?: string[];
+        excludePatterns?: string[];
+        maxFiles?: number;
+    }): Promise<string[]>;
+
+    writeFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        data: Buffer | string;
+        inKodusDir?: boolean;
+    }): Promise<boolean>;
+
+    readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: true; // default is true
+        absolute?: boolean;
+    }): Promise<string | null>;
+    readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: false;
+        absolute?: boolean;
+    }): Promise<Buffer | null>;
+    readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        absolute?: boolean;
+    }): Promise<Buffer | string | null>;
 }

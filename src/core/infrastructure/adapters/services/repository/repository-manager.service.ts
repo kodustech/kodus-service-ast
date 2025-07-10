@@ -6,11 +6,15 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import simpleGit from 'simple-git';
-import { handleError, isError } from '@/shared/utils/errors';
-import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/v1';
+import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/ast/v2';
+import { handleError } from '@/shared/utils/errors';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
+    readonly graphsFileName: string = 'graphs';
+
+    static readonly KODUS_DIRECTORY = '.kodus';
+
     private readonly baseDir = '/tmp/cloned-repos';
     private readonly CLONE_TIMEOUT = 8 * 60 * 1000; // 8 minutes timeout for clone operations
     private readonly ALLOWED_PROTOCOLS = ['https:', 'http:']; // Only allow HTTP/HTTPS
@@ -32,8 +36,9 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error ensuring base directory exists',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: { baseDir: this.baseDir },
+                serviceName: RepositoryManagerService.name,
             });
             throw error;
         }
@@ -149,9 +154,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 }
             }
         } catch (error) {
-            throw new Error(
-                `Invalid Git URL: ${isError(error) ? error.message : error}`,
-            );
+            throw new Error(`Invalid Git URL: ${handleError(error).message}`);
         }
     }
 
@@ -185,14 +188,18 @@ export class RepositoryManagerService implements IRepositoryManager {
         return git;
     }
 
-    async gitCloneWithAuth(repoData: RepositoryData): Promise<string> {
+    async gitCloneWithAuth(params: {
+        repoData: RepositoryData;
+    }): Promise<string> {
+        const { repoData } = params;
+
         this.validateGitUrl(repoData.url);
         await this.ensureClientDirExists(repoData.organizationId);
 
         const repoPath = await this.getRepoDir(repoData);
 
         if (await fs.promises.stat(repoPath).catch(() => false)) {
-            await this.deleteLocalRepository(repoData);
+            await this.deleteLocalRepository({ repoData });
         }
 
         let cloneUrl = repoData.url;
@@ -235,7 +242,7 @@ export class RepositoryManagerService implements IRepositoryManager {
 
             const stats = await this.getDirectorySize(repoPath);
             if (stats > this.MAX_REPO_SIZE) {
-                await this.deleteLocalRepository(repoData);
+                await this.deleteLocalRepository({ repoData });
 
                 throw new Error(
                     `Repository size (${Math.round(stats / 1024 / 1024)}MB) exceeds max allowed (${Math.round(this.MAX_REPO_SIZE / 1024 / 1024)}MB)`,
@@ -247,11 +254,12 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error cloning repository',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: { params: repoData, repoPath, cloneUrl },
+                serviceName: RepositoryManagerService.name,
             });
 
-            await this.deleteLocalRepository(repoData);
+            await this.deleteLocalRepository({ repoData });
 
             throw error;
         }
@@ -282,10 +290,12 @@ export class RepositoryManagerService implements IRepositoryManager {
         return totalSize;
     }
 
-    async deleteLocalRepository(
-        repoData: RepositoryData,
-        keepKodusData: boolean = true,
-    ): Promise<void> {
+    async deleteLocalRepository(params: {
+        repoData: RepositoryData;
+        keepKodusData?: boolean;
+    }): Promise<void> {
+        const { repoData, keepKodusData = false } = params;
+
         try {
             const repoPath = await this.getRepoDir(repoData);
 
@@ -301,7 +311,12 @@ export class RepositoryManagerService implements IRepositoryManager {
                     withFileTypes: true,
                 });
                 for (const entry of entries) {
-                    if (!keepKodusData && entry.name === '.kodus') continue;
+                    if (
+                        keepKodusData &&
+                        entry.name === RepositoryManagerService.KODUS_DIRECTORY
+                    ) {
+                        continue;
+                    }
                     const entryPath = path.join(repoPath, entry.name);
                     await fs.promises.rm(entryPath, {
                         recursive: true,
@@ -314,20 +329,23 @@ export class RepositoryManagerService implements IRepositoryManager {
                 message:
                     'Error while attempting to delete the local repository',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
                 },
+                serviceName: RepositoryManagerService.name,
             });
             throw error;
         }
     }
 
-    private async scanDirectoryForFiles(
-        dirPath: string,
-        patterns?: string[],
-        excludePatterns?: string[],
-    ): Promise<string[]> {
+    private async scanDirectoryForFiles(params: {
+        dirPath: string;
+        patterns?: string[];
+        excludePatterns?: string[];
+    }): Promise<string[]> {
+        const { dirPath, patterns = [], excludePatterns = [] } = params;
+
         const allFiles: string[] = [];
         const MAX_FILES_TO_SCAN = 10000; // Safety limit
         let scannedFiles = 0;
@@ -374,12 +392,19 @@ export class RepositoryManagerService implements IRepositoryManager {
         return allFiles;
     }
 
-    async listRepositoryFiles(
-        repoData: RepositoryData,
-        patterns?: string[],
-        excludePatterns?: string[],
-        maxFiles?: number,
-    ): Promise<string[]> {
+    async listRepositoryFiles(params: {
+        repoData: RepositoryData;
+        patterns?: string[];
+        excludePatterns?: string[];
+        maxFiles?: number;
+    }): Promise<string[]> {
+        const {
+            repoData,
+            patterns = [],
+            excludePatterns = [],
+            maxFiles,
+        } = params;
+
         try {
             const repoPath = await this.getRepoDir(repoData);
 
@@ -390,11 +415,11 @@ export class RepositoryManagerService implements IRepositoryManager {
                 throw new Error('Repository not found');
             }
 
-            let files = await this.scanDirectoryForFiles(
-                repoPath,
+            let files = await this.scanDirectoryForFiles({
+                dirPath: repoPath,
                 patterns,
                 excludePatterns,
-            );
+            });
 
             if (maxFiles && files.length > maxFiles) {
                 files = files.slice(0, maxFiles);
@@ -405,27 +430,36 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error listing repository files',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
                     patterns,
                     excludePatterns,
                     maxFiles,
                 },
+                serviceName: RepositoryManagerService.name,
             });
             throw error;
         }
     }
 
-    public async writeFile(
-        repoData: RepositoryData,
-        fileName: string,
-        data: Buffer | string,
-    ): Promise<boolean> {
+    public async writeFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        data: Buffer | string;
+        inKodusDir?: boolean;
+    }): Promise<boolean> {
+        const { repoData, filePath, data, inKodusDir = false } = params;
         try {
             const repoPath = await this.getRepoDir(repoData);
 
-            const fullPath = path.join(repoPath, '.kodus', fileName);
+            const fullPath = inKodusDir
+                ? path.join(
+                      repoPath,
+                      RepositoryManagerService.KODUS_DIRECTORY,
+                      filePath,
+                  )
+                : path.join(repoPath, filePath);
             const normalizedFullPath = fullPath.normalize();
             if (!normalizedFullPath.startsWith(repoPath)) {
                 throw new Error('Invalid file path: path traversal detected');
@@ -441,44 +475,94 @@ export class RepositoryManagerService implements IRepositoryManager {
             this.logger.error({
                 message: 'Error writing file',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
-                    filePath: fileName,
+                    filePath,
                     data: data.toString('base64').slice(0, 100), // Log only first 100 chars for safety
+                    inKodusDir,
                 },
+                serviceName: RepositoryManagerService.name,
             });
             return false;
         }
     }
 
-    public async readFile(
-        repoData: RepositoryData,
-        fileName: string,
-    ): Promise<Buffer | null> {
-        try {
-            const repoPath = await this.getRepoDir(repoData);
+    public async readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: true; // default is true
+        absolute?: boolean;
+    }): Promise<string | null>;
 
-            const fullPath = path.join(repoPath, '.kodus', fileName);
-            const normalizedFullPath = fullPath.normalize();
-            if (!normalizedFullPath.startsWith(repoPath)) {
-                throw new Error('Invalid file path: path traversal detected');
+    public async readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: false;
+        absolute?: boolean;
+    }): Promise<Buffer | null>;
+
+    public async readFile(params: {
+        repoData: RepositoryData;
+        filePath: string;
+        inKodusDir?: boolean;
+        stringify?: boolean;
+        absolute?: boolean;
+    }): Promise<Buffer | string | null> {
+        const {
+            repoData,
+            filePath,
+            inKodusDir = false,
+            stringify = true,
+            absolute = false,
+        } = params;
+
+        try {
+            let fullPath: string;
+            if (absolute) {
+                fullPath = filePath;
+            } else {
+                const repoPath = await this.getRepoDir(repoData);
+
+                fullPath = inKodusDir
+                    ? path.join(
+                          repoPath,
+                          RepositoryManagerService.KODUS_DIRECTORY,
+                          filePath,
+                      )
+                    : path.join(repoPath, filePath);
+                const normalizedFullPath = fullPath.normalize();
+                if (!normalizedFullPath.startsWith(repoPath)) {
+                    throw new Error(
+                        'Invalid file path: path traversal detected',
+                    );
+                }
             }
 
             if (!(await fs.promises.stat(fullPath).catch(() => false))) {
                 return null;
             }
 
-            return await fs.promises.readFile(fullPath);
+            const buff = await fs.promises.readFile(fullPath);
+
+            if (stringify) {
+                return buff.toString('utf-8');
+            }
+
+            return buff;
         } catch (error) {
             this.logger.error({
                 message: 'Error reading file',
                 context: RepositoryManagerService.name,
-                error: handleError(error),
+                error,
                 metadata: {
                     repoData,
-                    filePath: fileName,
+                    filePath,
+                    inKodusDir,
                 },
+                serviceName: RepositoryManagerService.name,
             });
             return null;
         }

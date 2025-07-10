@@ -6,8 +6,9 @@ import { Module } from '@nestjs/common';
  * Module that provides health check functionality
  */
 @Module({
-    controllers: [HealthController],
+    imports: [],
     providers: [HealthService],
     exports: [HealthService],
+    controllers: [HealthController],
 })
 export class HealthModule {}

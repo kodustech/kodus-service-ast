@@ -24,19 +24,24 @@
         "docker:up": "docker compose -f docker-compose.dev.yml up",
         "docker:down": "docker compose -f docker-compose.dev.yml down",
         "docker:start": "yarn docker:down && yarn docker:up",
-        "docker:watch": "yarn docker:down && yarn docker:up -d"
+        "docker:watch": "yarn docker:down && yarn docker:up -d",
+        "docker:test": "docker compose -f docker-compose.dev.yml exec kodus-service-ast node --inspect=0.0.0.0:9301 node_modules/.bin/jest --watchAll --runInBand"
     },
     "dependencies": {
         "@grpc/grpc-js": "^1.13.4",
         "@grpc/proto-loader": "^0.7.15",
         "@grpc/reflection": "^1.0.4",
-        "@kodus/kodus-proto": "2.0.3",
+        "@kodus/kodus-common": "^1.0.0",
+        "@kodus/kodus-proto": "^3.1.0",
         "@nestjs/common": "^11.1.3",
         "@nestjs/core": "^11.1.3",
         "@nestjs/microservices": "^11.1.3",
         "@nestjs/platform-express": "^11.1.3",
+        "@nestjs/schedule": "^6.0.0",
+        "diff": "^8.0.2",
         "fast-xml-parser": "^5.2.5",
         "minimatch": "^10.0.3",
+        "nanoid": "^5.1.5",
         "nestjs-pino": "^4.4.0",
         "pino": "^9.7.0",
         "pino-http": "^10.5.0",
@@ -46,7 +51,7 @@
         "rxjs": "^7.8.2",
         "simple-git": "^3.28.0",
         "toml": "^3.0.0",
-        "tree-sitter": "0.25.0",
+        "tree-sitter": "^0.25.0",
         "tree-sitter-c-sharp": "^0.23.1",
         "tree-sitter-go": "^0.23.4",
         "tree-sitter-java": "^0.23.5",
@@ -71,6 +76,7 @@
         "@types/jest": "^30.0.0",
         "@types/node": "^24.0.3",
         "@types/supertest": "^6.0.3",
+        "dotenv": "^16.5.0",
         "eslint": "^9.29.0",
         "eslint-config-prettier": "^10.1.5",
         "eslint-plugin-prettier": "^5.5.0",
@@ -85,29 +91,5 @@
         "tsconfig-paths": "^4.2.0",
         "typescript": "^5.8.3",
         "typescript-eslint": "^8.34.1"
-    },
-    "jest": {
-        "moduleNameMapper": {
-            "^@/(.*)$": "<rootDir>/src/$1",
-            "^test/mocks/(.*)$": "<rootDir>/test/mocks/$1"
-        },
-        "moduleFileExtensions": [
-            "js",
-            "json",
-            "ts"
-        ],
-        "roots": [
-            "src",
-            "test"
-        ],
-        "testRegex": ".*\\.spec\\.ts$",
-        "transform": {
-            "^.+\\.(t|j)s$": "ts-jest"
-        },
-        "collectCoverageFrom": [
-            "**/*.(t|j)s"
-        ],
-        "coverageDirectory": "../coverage",
-        "testEnvironment": "node"
     }
 }

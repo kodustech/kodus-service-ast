@@ -12,5 +12,16 @@
         "localRoot": "${workspaceFolder}",
         "remoteRoot": "/usr/src/app",
       },
+    {
+        "type": "node",
+        "request": "attach",
+        "name": "Docker: Debug Jest Tests",
+        "port": 9301,
+        "address": "0.0.0.0",
+        "sourceMaps": true,
+        "restart": true,
+        "localRoot": "${workspaceFolder}",
+        "remoteRoot": "/usr/src/app",
+      },
     ]
   }

@@ -8,7 +8,6 @@ services:
                 max-file: '10'
         ports:
             - 3002:3002
-            - 3003:3003
             - 5001:5001 # Porta para o health check HTTP
         env_file:
             - .env.prod

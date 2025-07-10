@@ -13,7 +13,7 @@ import { PinoLoggerService } from './core/infrastructure/adapters/services/logge
 
 async function bootstrap() {
     const containerName = getEnvVariableOrExit('CONTAINER_NAME');
-    const grpcASTPort = getEnvVariableAsNumberOrExit('API_AST_PORT');
+    const grpcASTPort = getEnvVariableAsNumberOrExit('API_PORT');
     const healthPort = getEnvVariableAsNumberOrExit('API_HEALTH_PORT');
 
     /* ------------ validação simples de intervalo ---------------- */
@@ -28,7 +28,7 @@ async function bootstrap() {
     }
 
     if (grpcASTPort === healthPort) {
-        console.error('API_AST_PORT and API_HEALTH_PORT cannot be the same');
+        console.error('API_PORT and API_HEALTH_PORT cannot be the same');
         process.exit(1);
     }
     /* ------------------------------------------------------------ */

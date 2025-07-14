@@ -397,11 +397,11 @@ export class GraphAnalyzerService {
             const functionsAffect: FunctionsAffect[] = affectedMethods.map(
                 (node) => {
                     const analysis = this.findFunctionAnalysisById(
-                        node.id.toString(),
+                        node.id,
                         newFunctionAnalyses,
                     );
                     return {
-                        functionName: node.id.toString(),
+                        functionName: node.name,
                         filePath: analysis?.file || '',
                         functionBody: this.generateFunctionWithLines(
                             analysis?.fullText,

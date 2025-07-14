@@ -1518,10 +1518,10 @@
   resolved "https://registry.yarnpkg.com/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz#9299f82874bab9e4c7f9c48d865becbfe8d6907c"
   integrity sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==
 
-"@kodus/kodus-common@^1.0.1":
-  version "1.0.1"
-  resolved "https://us-central1-npm.pkg.dev/kodus-infra-prod/kodus-common/@kodus/kodus-common/-/@kodus/kodus-common-1.0.1.tgz#01b5a5b70fa2841691993689636bfcbd9de34921"
-  integrity sha512-NEIdhL3z/xsD7NQA9N631JHbZUOE1GpD3BiawB3bH6VJu65OaFdZS8haldOysYL/BphZQ3Ijzk/jai8yXFhuXw==
+"@kodus/kodus-common@^1.1.0":
+  version "1.1.0"
+  resolved "https://us-central1-npm.pkg.dev/kodus-infra-prod/kodus-common/@kodus/kodus-common/-/@kodus/kodus-common-1.1.0.tgz#0750e02a7d0188e3aa5b646f090cd5343957ee44"
+  integrity sha512-JtWcdpt2SkbS3Qj8mdX4ljPq2ND4mH8ReI0J1fXema6fG5WXTA4tXn0JVdZj2J8Sr8m7mBWvE7n2rRydXNHpCw==
   dependencies:
     "@langchain/anthropic" "^0.3.24"
     "@langchain/cohere" "^0.3.4"

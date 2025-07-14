@@ -217,12 +217,17 @@ export class PinoLoggerService implements LoggerService {
         metadata: Record<string, any>,
         error?: unknown,
     ) {
+        const err = handleError(error);
+
         return {
             environment: process.env.API_NODE_ENV || 'unknown',
             serviceName,
             ...metadata,
             metadata,
-            error: handleError(error),
+            error: {
+                message: err.message,
+                stack: err.stack,
+            },
         };
     }
 }

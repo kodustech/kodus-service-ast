@@ -82,6 +82,16 @@ export class TaskManagerService implements ITaskManagerService {
     }
 
     getTask(taskId: string): Task | null {
+        this.logger.log({
+            message: 'Retrieving task: ' + taskId + JSON.stringify(this.tasks),
+            context: TaskManagerService.name,
+            metadata: {
+                taskId,
+                tasks: this.tasks,
+            },
+            serviceName: TaskManagerService.name,
+        });
+
         const task = this.tasks.get(taskId);
 
         if (!task) {

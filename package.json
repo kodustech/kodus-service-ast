@@ -28,6 +28,14 @@
         "docker:test": "docker compose -f docker-compose.dev.yml exec kodus-service-ast node --inspect=0.0.0.0:9301 node_modules/.bin/jest --watchAll --runInBand"
     },
     "dependencies": {
+        "@langchain/anthropic": "^0.3.22",
+        "@langchain/cohere": "^0.3.4",
+        "@langchain/community": "^0.3.46",
+        "@langchain/core": "^0.3.58",
+        "@langchain/google-genai": "^0.2.11",
+        "@langchain/google-vertexai": "^0.2.10",
+        "@langchain/mongodb": "^0.1.0",
+        "@langchain/openai": "^0.5.13",
         "@grpc/grpc-js": "^1.13.4",
         "@grpc/proto-loader": "^0.8.0",
         "@grpc/reflection": "^1.0.4",

@@ -20,7 +20,12 @@ import {
     ImpactResult,
 } from '@/core/domain/diff/types/diff-analyzer.types';
 import { DiffAnalyzerService } from '../diff/diff-analyzer.service';
-import { LLMModelProvider, PromptRunnerService } from '@kodus/kodus-common/llm';
+import {
+    LLMModelProvider,
+    ParserType,
+    PromptRole,
+    PromptRunnerService,
+} from '@kodus/kodus-common/llm';
 import { prompt_checkSimilarFunctions_system } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt';
 import { GetImpactAnalysisResponse } from '@kodus/kodus-proto/ast';
 
@@ -661,18 +666,22 @@ export class GraphAnalyzerService {
             })),
         };
 
-        const result = await this.promptRunnerService.runPrompt<
-            string,
-            FunctionSimilar[]
-        >({
-            provider: LLMModelProvider.NOVITA_DEEPSEEK_V3_0324,
-            fallbackProvider: LLMModelProvider.OPENAI_GPT_4O,
-            jsonMode: true,
-            systemPromptFn: prompt_checkSimilarFunctions_system,
-            userPromptFn: null,
-            payload: JSON.stringify(functions),
-            runName: 'checkFunctionSimilarityWithLLM',
-        });
+        const result = await this.promptRunnerService
+            .builder()
+            .setProviders({
+                main: LLMModelProvider.NOVITA_DEEPSEEK_V3_0324,
+                fallback: LLMModelProvider.OPENAI_GPT_4O,
+            })
+            .setParser<FunctionSimilar[]>(ParserType.JSON)
+            .setLLMJsonMode(true)
+            .setTemperature(0)
+            .setPayload(JSON.stringify(functions))
+            .addPrompt({
+                prompt: prompt_checkSimilarFunctions_system,
+                role: PromptRole.SYSTEM,
+            })
+            .setRunName('checkFunctionSimilarityWithLLM')
+            .execute();
 
         return result;
     }

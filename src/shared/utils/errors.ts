@@ -7,6 +7,9 @@ export function isString(value: unknown): value is string {
 }
 
 export function handleError(error: unknown): Error {
+    if (!error) {
+        return null;
+    }
     if (isError(error)) {
         return error;
     }

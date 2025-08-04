@@ -183,12 +183,25 @@ export class InitializeRepositoryUseCase {
 
         const graphsJson = JSON.stringify(graphs, null, 2);
 
-        await this.repositoryManagerService.writeFile({
+        const ok = await this.repositoryManagerService.writeFile({
             repoData,
             filePath: fileName,
             data: graphsJson,
             inKodusDir: true,
         });
+        if (!ok) {
+            this.logger.error({
+                message: `Failed to write graphs to ${fileName} for repository ${repoData.repositoryName}`,
+                context: InitializeRepositoryUseCase.name,
+                metadata: {
+                    request: JSON.stringify(repoData),
+                },
+                serviceName: InitializeRepositoryUseCase.name,
+            });
+            throw new GrpcInternalException(
+                `Failed to write graphs to ${fileName} for repository ${repoData.repositoryName}`,
+            );
+        }
 
         this.logger.log({
             message: `Stored graphs in ${fileName} for repository ${repoData.repositoryName}`,

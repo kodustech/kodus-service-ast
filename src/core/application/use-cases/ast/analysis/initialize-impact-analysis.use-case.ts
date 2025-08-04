@@ -1,6 +1,7 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
 import {
+    GrpcInternalException,
     GrpcInvalidArgumentException,
     GrpcNotFoundException,
 } from '@/shared/utils/grpc/exceptions';
@@ -150,12 +151,26 @@ export class InitializeImpactAnalysisUseCase {
         };
         const jsonData = JSON.stringify(data, null, 2);
 
-        await this.repositoryManagerService.writeFile({
+        const ok = await this.repositoryManagerService.writeFile({
             repoData,
             filePath: fileName,
             data: jsonData,
             inKodusDir: true,
         });
+        if (!ok) {
+            this.logger.error({
+                message: `Failed to write impact analysis for repository ${repoData.repositoryName}`,
+                context: InitializeImpactAnalysisUseCase.name,
+                metadata: {
+                    repoName: repoData.repositoryName,
+                    filePath: fileName,
+                },
+                serviceName: InitializeImpactAnalysisUseCase.name,
+            });
+            throw new GrpcInternalException(
+                `Failed to write impact analysis for repository ${repoData.repositoryName}`,
+            );
+        }
 
         this.logger.log({
             message: `Stored impact analysis for repository ${repoData.repositoryName}`,

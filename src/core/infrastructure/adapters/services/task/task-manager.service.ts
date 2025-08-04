@@ -3,7 +3,10 @@ import { PinoLoggerService } from '../logger/pino.service';
 import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract';
 import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/task';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { SerializeDateToTimeStamp } from '@kodus/kodus-proto/serialization';
+import {
+    DeserializeTimeStampToDate,
+    SerializeDateToTimeStamp,
+} from '@kodus/kodus-proto/serialization';
 import {
     deepMerge,
     DeepPartial,
@@ -700,15 +703,40 @@ export class TaskManagerService implements ITaskManagerService {
         });
 
         const now = new Date();
-        const threshold = SerializeDateToTimeStamp(
-            new Date(now.getTime() - 8 * 60 * 60 * 1000),
-        ); // 8 hours ago
+        const threshold = new Date(now.getTime() - 8 * 60 * 60 * 1000); // 8 hours ago
 
         let deletedCount = 0;
         const deletedIds: string[] = [];
 
+        const endStates = [
+            TaskStatus.TASK_STATUS_CANCELLED,
+            TaskStatus.TASK_STATUS_COMPLETED,
+            TaskStatus.TASK_STATUS_FAILED,
+        ];
+
         for (const [taskId, task] of this.tasks.entries()) {
-            if (task.updatedAt < threshold) {
+            if (DeserializeTimeStampToDate(task.updatedAt) < threshold) {
+                if (!endStates.includes(task.status)) {
+                    this.logger.warn({
+                        message: `Task ${taskId} is not in an end state, but is older than 8 hours, marking as cancelled. Will be deleted in next cleanup.`,
+                        context: TaskManagerService.name,
+                        metadata: {
+                            taskId,
+                            status: task.status,
+                        },
+                        serviceName: TaskManagerService.name,
+                    });
+
+                    this.updateTask(task, {
+                        status: TaskStatus.TASK_STATUS_CANCELLED,
+                        metadata: {
+                            error: 'Task automatically marked as cancelled due to inactivity',
+                        },
+                    });
+
+                    continue;
+                }
+
                 this.tasks.delete(taskId);
 
                 deletedCount++;

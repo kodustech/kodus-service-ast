@@ -1548,10 +1548,10 @@
   resolved "https://registry.yarnpkg.com/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz#9299f82874bab9e4c7f9c48d865becbfe8d6907c"
   integrity sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==
 
-"@kodus/kodus-common@^1.2.0":
-  version "1.2.0"
-  resolved "https://us-central1-npm.pkg.dev/kodus-infra-prod/kodus-pkg/@kodus/kodus-common/-/@kodus/kodus-common-1.2.0.tgz#23c91c16c763a73279229f782f892e27b0667cc4"
-  integrity sha512-wH6yvuYLR83df6SJXQj4o5LdGJZFi/VaBV5eKN1PPUynesoaCq78PP7Um3Q+om9x9TmlwTO/COgOQrILSbA0PQ==
+"@kodus/kodus-common@^1.2.3":
+  version "1.2.3"
+  resolved "https://us-central1-npm.pkg.dev/kodus-infra-prod/kodus-pkg/@kodus/kodus-common/-/@kodus/kodus-common-1.2.3.tgz#8bd050bceb9a0b3009f8f484e819000f85855ac3"
+  integrity sha512-wZeSfWZwcUEXfAWO4cKE41J+z3qDmwY9UTqTEI4jbvgJ4SmlWvCaJryuKyye9irLMm61gDSNAJVLw84QZhjyzQ==
 
 "@kodus/kodus-proto@https://registry.npmjs.org/@kodus/kodus-proto/-/kodus-proto-3.1.2.tgz":
   version "3.1.2"

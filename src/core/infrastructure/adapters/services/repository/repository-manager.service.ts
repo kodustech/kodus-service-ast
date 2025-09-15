@@ -205,7 +205,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         let cloneUrl = repoData.url;
 
         if (repoData.auth) {
-            const { token } = repoData.auth;
+            const { token, username } = repoData.auth;
             const urlObj = new URL(repoData.url);
 
             if (token) {
@@ -214,6 +214,12 @@ export class RepositoryManagerService implements IRepositoryManager {
                     ProtoPlatformType.PROTO_PLATFORM_TYPE_GITHUB
                 ) {
                     urlObj.username = token;
+                } else if (
+                    repoData.provider ===
+                    ProtoPlatformType.PROTO_PLATFORM_TYPE_BITBUCKET
+                ) {
+                    urlObj.username = (username as string) || 'oauth2';
+                    urlObj.password = token;
                 } else {
                     urlObj.username = 'oauth2';
                     urlObj.password = token;

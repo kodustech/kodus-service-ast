@@ -18,7 +18,7 @@ export class GetTaskInfoUseCase {
         private readonly logger: PinoLoggerService,
     ) {}
 
-    execute(request: GetTaskInfoRequest): GetTaskInfoResponse {
+    async execute(request: GetTaskInfoRequest): Promise<GetTaskInfoResponse> {
         const { taskId } = request;
 
         if (!taskId || taskId.trim() === '') {
@@ -31,7 +31,7 @@ export class GetTaskInfoUseCase {
             throw new GrpcInvalidArgumentException('Task ID is required');
         }
 
-        const task = this.taskManagerService.getTask(taskId);
+        const task = await this.taskManagerService.getTask(taskId);
         if (!task) {
             this.logger.error({
                 message: `Task with ID ${taskId} not found`,

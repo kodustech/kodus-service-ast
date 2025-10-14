@@ -124,6 +124,24 @@ GET    /api/status/:id  # Check analysis status
 | `API_PORT`         | 3002       | API port                                 |
 | `API_HEALTH_PORT`  | 5001       | Health check port                        |
 | `UV_THREADPOOL_SIZE`| Auto      | Node.js thread pool size                 |
+| `DB_URL`           | -          | Postgres connection string (takes precedence over host/port vars) |
+| `DB_HOST`          | localhost  | Postgres host (used when `DB_URL` is not set) |
+| `DB_PORT`          | 5432       | Postgres port                             |
+| `DB_USER`          | -          | Postgres username                         |
+| `DB_PASSWORD`      | -          | Postgres password                         |
+| `DB_NAME`          | -          | Postgres database                         |
+| `DB_SCHEMA`        | kodus_workflow | Schema dedicated a armazenar workflows/tarefas compartilhados |
+| `DB_SSL`           | true       | Enables TLS (set `false` only in trusted local setups) |
+| `DB_SSL_REJECT_UNAUTHORIZED` | true | Reject self-signed/invalid certs (set `false` apenas se tiver CA interna conhecida) |
+| `DB_POOL_MAX`      | 10         | Máximo de conexões simultâneas no pool    |
+| `DB_POOL_IDLE_TIMEOUT_MS` | 30000 | Tempo para fechar conexões ociosas (ms)  |
+| `DB_POOL_CONNECTION_TIMEOUT_MS` | 5000 | Timeout para adquirir conexão (ms)    |
+| `DB_STATEMENT_TIMEOUT_MS` | 0    | Timeout por query (ms). 0 = ilimitado    |
+| `API_DATABASE_ENV` | production | Define se estamos em `development`/`local` (desativa TLS por padrão) |
+
+> Os campos `DB_*` também aceitam as variáveis utilizadas pelos demais serviços (`API_PG_DB_HOST`, `API_PG_DB_USERNAME`, etc.) como fallback.
+
+> Observação: o serviço inicializa automaticamente o schema/tabelas (com `CREATE IF NOT EXISTS`) na primeira execução. Para ambientes gerenciados, execute as DDLs do diretório `docs/architecture` antes do deploy.
 
 ## 🧪 Testing
 
@@ -140,7 +158,7 @@ yarn test:e2e
 
 ## 🚀 Deployment
 
-Deployment is automated via GitHub Actions to GCP. The service is designed to be deployed in a containerized environment.
+O deploy pode ser feito via pipelines CI/CD (GitHub Actions, Jenkins, etc.), gerando imagem container e aplicando-a na infraestrutura escolhida (ECS, Kubernetes, VMs, etc.).
 
 ### Production Deployment
 

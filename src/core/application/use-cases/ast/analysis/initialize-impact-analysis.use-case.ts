@@ -47,7 +47,7 @@ export class InitializeImpactAnalysisUseCase {
         }
 
         try {
-            this.startTask(taskId, 'Getting graphs');
+            await this.startTask(taskId, 'Getting graphs');
             const graphs = await this.getGraphsUseCase.execute(request, false);
 
             if (!graphs) {
@@ -56,7 +56,7 @@ export class InitializeImpactAnalysisUseCase {
                 );
             }
 
-            this.updateTaskState(taskId, 'Analyzing graphs');
+            await this.updateTaskState(taskId, 'Analyzing graphs');
             const analysisResult =
                 this.graphAnalyzerService.analyzeCodeWithGraph(
                     codeChunk,
@@ -70,7 +70,7 @@ export class InitializeImpactAnalysisUseCase {
                 );
             }
 
-            this.updateTaskState(taskId, 'Generating impact analysis');
+            await this.updateTaskState(taskId, 'Generating impact analysis');
             const impactAnalysis =
                 await this.graphAnalyzerService.generateImpactAnalysis(
                     graphs,
@@ -83,14 +83,17 @@ export class InitializeImpactAnalysisUseCase {
                 );
             }
 
-            this.updateTaskState(taskId, 'Storing impact analysis');
+            await this.updateTaskState(taskId, 'Storing impact analysis');
             await this.storeImpactAnalysis(
                 headRepo,
                 analysisResult,
                 impactAnalysis,
             );
 
-            this.completeTask(taskId, 'Impact analysis completed successfully');
+            await this.completeTask(
+                taskId,
+                'Impact analysis completed successfully',
+            );
         } catch (error) {
             this.logger.error({
                 message: 'Error during impact analysis initialization',
@@ -103,7 +106,7 @@ export class InitializeImpactAnalysisUseCase {
                 serviceName: InitializeImpactAnalysisUseCase.name,
             });
 
-            this.failTask(
+            await this.failTask(
                 taskId,
                 handleError(error).message,
                 'Impact analysis initialization failed',
@@ -111,31 +114,43 @@ export class InitializeImpactAnalysisUseCase {
         }
     }
 
-    private startTask(taskId: string | undefined, state?: string): void {
+    private async startTask(
+        taskId: string | undefined,
+        state?: string,
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.startTask(taskId, state);
+            await this.taskManagerService.startTask(taskId, state);
         }
     }
 
-    private updateTaskState(taskId: string | undefined, state?: string): void {
+    private async updateTaskState(
+        taskId: string | undefined,
+        state?: string,
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.updateTaskState(taskId, state);
+            await this.taskManagerService.updateTaskState(
+                taskId,
+                state ?? 'Unknown',
+            );
         }
     }
 
-    private completeTask(taskId: string | undefined, state?: string): void {
+    private async completeTask(
+        taskId: string | undefined,
+        state?: string,
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.completeTask(taskId, state);
+            await this.taskManagerService.completeTask(taskId, state);
         }
     }
 
-    private failTask(
+    private async failTask(
         taskId: string | undefined,
         error: string,
         state?: string,
-    ): void {
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.failTask(taskId, error, state);
+            await this.taskManagerService.failTask(taskId, error, state);
         }
     }
 

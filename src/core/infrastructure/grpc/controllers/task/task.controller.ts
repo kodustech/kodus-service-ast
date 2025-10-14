@@ -15,12 +15,9 @@ import { Observable } from 'rxjs';
 export class TaskController implements TaskManagerServiceController {
     constructor(private readonly getTaskInfoUseCase: GetTaskInfoUseCase) {}
 
-    getTaskInfo(
+    async getTaskInfo(
         request: GetTaskInfoRequest,
-    ):
-        | Promise<GetTaskInfoResponse>
-        | Observable<GetTaskInfoResponse>
-        | GetTaskInfoResponse {
+    ): Promise<GetTaskInfoResponse> {
         return this.getTaskInfoUseCase.execute(request);
     }
 }

@@ -47,31 +47,31 @@ export class InitializeRepositoryUseCase {
         }
 
         try {
-            this.startTask(taskId, 'Cloning base repository');
+            await this.startTask(taskId, 'Cloning base repository');
             const baseDirPath = await this.cloneRepo(baseRepo);
 
-            this.updateTaskState(taskId, 'Cloning head repository');
+            await this.updateTaskState(taskId, 'Cloning head repository');
             const headDirPath = await this.cloneRepo(headRepo);
 
-            this.updateTaskState(taskId, 'Building head graph');
+            await this.updateTaskState(taskId, 'Building head graph');
             const headGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     headDirPath,
                     filePaths,
                 );
 
-            this.updateTaskState(taskId, 'Building base graph');
+            await this.updateTaskState(taskId, 'Building base graph');
             const baseGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     baseDirPath,
                     filePaths,
                 );
 
-            this.updateTaskState(taskId, 'Building enriched head graph');
+            await this.updateTaskState(taskId, 'Building enriched head graph');
             const enrichedHeadGraph =
                 this.codeAnalyzerService.enrichGraph(headGraph);
 
-            this.updateTaskState(taskId, 'Storing graphs');
+            await this.updateTaskState(taskId, 'Storing graphs');
             await this.storeGraphs(
                 headRepo,
                 baseGraph,
@@ -81,7 +81,10 @@ export class InitializeRepositoryUseCase {
                 enrichedHeadGraph,
             );
 
-            this.completeTask(taskId, 'Repository initialized successfully');
+            await this.completeTask(
+                taskId,
+                'Repository initialized successfully',
+            );
 
             return;
         } catch (error) {
@@ -95,7 +98,7 @@ export class InitializeRepositoryUseCase {
                 serviceName: InitializeRepositoryUseCase.name,
             });
 
-            this.failTask(
+            await this.failTask(
                 taskId,
                 handleError(error).message,
                 'Initialization failed',
@@ -103,31 +106,43 @@ export class InitializeRepositoryUseCase {
         }
     }
 
-    private startTask(taskId: string | undefined, state?: string): void {
+    private async startTask(
+        taskId: string | undefined,
+        state?: string,
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.startTask(taskId, state);
+            await this.taskManagerService.startTask(taskId, state);
         }
     }
 
-    private updateTaskState(taskId: string | undefined, state?: string): void {
+    private async updateTaskState(
+        taskId: string | undefined,
+        state?: string,
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.updateTaskState(taskId, state);
+            await this.taskManagerService.updateTaskState(
+                taskId,
+                state ?? 'Unknown',
+            );
         }
     }
 
-    private completeTask(taskId: string | undefined, state?: string): void {
+    private async completeTask(
+        taskId: string | undefined,
+        state?: string,
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.completeTask(taskId, state);
+            await this.taskManagerService.completeTask(taskId, state);
         }
     }
 
-    private failTask(
+    private async failTask(
         taskId: string | undefined,
         error: string,
         state?: string,
-    ): void {
+    ): Promise<void> {
         if (taskId) {
-            this.taskManagerService.failTask(taskId, error, state);
+            await this.taskManagerService.failTask(taskId, error, state);
         }
     }
 

@@ -37,10 +37,12 @@ export class ASTController implements ASTAnalyzerServiceController {
         private readonly getImpactAnalysisUseCase: GetImpactAnalysisUseCase,
     ) {}
 
-    initializeRepository(
+    async initializeRepository(
         request: InitializeRepositoryRequest,
-    ): InitializeRepositoryResponse {
-        const taskId = this.taskManagerService.createTask(request.priority);
+    ): Promise<InitializeRepositoryResponse> {
+        const taskId = await this.taskManagerService.createTask(
+            request.priority,
+        );
 
         setImmediate(() => {
             void this.initializeRepositoryUseCase.execute(request, taskId);
@@ -63,10 +65,12 @@ export class ASTController implements ASTAnalyzerServiceController {
         );
     }
 
-    initializeImpactAnalysis(
+    async initializeImpactAnalysis(
         request: InitializeImpactAnalysisRequest,
-    ): InitializeImpactAnalysisResponse {
-        const taskId = this.taskManagerService.createTask(request.priority);
+    ): Promise<InitializeImpactAnalysisResponse> {
+        const taskId = await this.taskManagerService.createTask(
+            request.priority,
+        );
 
         setImmediate(() => {
             void this.initializeImpactAnalysisUseCase.execute(request, taskId);

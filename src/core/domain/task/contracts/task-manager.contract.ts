@@ -3,41 +3,41 @@ import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/task';
 
 export interface ITaskManagerService {
     // Task Management
-    createTask(priority?: number): string;
+    createTask(priority?: number): Promise<string>;
     updateTask(
         task: Task,
         updates: DeepPartial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>,
-    ): void;
-    getTask(taskId: string): Task | null;
-    getAllTasks(): Task[];
-    queryTasksAll(query: Partial<Task>): Task[];
-    queryTasks(query: Partial<Task>): Task | null;
-    deleteTask(taskId: string): void;
-    clearAllTasks(): void;
+    ): Promise<void>;
+    getTask(taskId: string): Promise<Task | null>;
+    getAllTasks(): Promise<Task[]>;
+    queryTasksAll(query: Partial<Task>): Promise<Task[]>;
+    queryTasks(query: Partial<Task>): Promise<Task | null>;
+    deleteTask(taskId: string): Promise<void>;
+    clearAllTasks(): Promise<void>;
 
     // Task Status
-    getTaskStatus(taskId: string): TaskStatus;
-    startTask(taskId: string, state?: string): void;
-    pauseTask(taskId: string, progress?: number, state?: string): void;
-    resumeTask(taskId: string, state?: string): void;
-    completeTask(taskId: string, state?: string): void;
-    failTask(taskId: string, error: string, state?: string): void;
-    cancelTask(taskId: string, state?: string): void;
+    getTaskStatus(taskId: string): Promise<TaskStatus | null>;
+    startTask(taskId: string, state?: string): Promise<void>;
+    pauseTask(taskId: string, progress?: number, state?: string): Promise<void>;
+    resumeTask(taskId: string, state?: string): Promise<void>;
+    completeTask(taskId: string, state?: string): Promise<void>;
+    failTask(taskId: string, error: string, state?: string): Promise<void>;
+    cancelTask(taskId: string, state?: string): Promise<void>;
 
     // Task State
-    getTaskState(taskId: string): string;
-    updateTaskState(taskId: string, state: string): void;
+    getTaskState(taskId: string): Promise<string>;
+    updateTaskState(taskId: string, state: string): Promise<void>;
 
     // Task Metadata
-    getTaskError(taskId: string): string | null;
-    updateTaskError(taskId: string, error: string): void;
+    getTaskError(taskId: string): Promise<string | null>;
+    updateTaskError(taskId: string, error: string): Promise<void>;
 
-    getTaskProgress(taskId: string): number;
-    updateTaskProgress(taskId: string, progress: number): void;
+    getTaskProgress(taskId: string): Promise<number>;
+    updateTaskProgress(taskId: string, progress: number): Promise<void>;
 
-    getTaskPriority(taskId: string): number;
-    updateTaskPriority(taskId: string, priority: TaskPriority): void;
+    getTaskPriority(taskId: string): Promise<TaskPriority>;
+    updateTaskPriority(taskId: string, priority: TaskPriority): Promise<void>;
 
     // Cron
-    periodicTaskCleanup(): void;
+    periodicTaskCleanup(): Promise<void>;
 }

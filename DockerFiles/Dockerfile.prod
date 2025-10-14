@@ -1,5 +1,5 @@
 # Etapa de build
-FROM --platform=linux/amd64 node:22.14.0-slim AS builder
+FROM node:22.14.0-slim AS builder
 
 # Argumento de build
 ARG RELEASE_VERSION

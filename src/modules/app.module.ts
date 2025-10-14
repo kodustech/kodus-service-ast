@@ -10,9 +10,11 @@ import { LLMModule } from '@kodus/kodus-common/llm';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
 import { GraphAnalysisModule } from './graph-analysis.module';
 import { TaskModule } from './task.module';
+import { DatabaseModule } from '@/core/infrastructure/database/database.module';
 
 @Module({
     imports: [
+        DatabaseModule,
         LogModule,
         ASTModule,
         RepositoryModule,

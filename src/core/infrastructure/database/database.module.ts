@@ -1,10 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { Pool } from 'pg';
-import { DATABASE_POOL, DATABASE_SCHEMA } from './database.constants';
-import { getEnvVariable, getEnvVariableAsNumber } from '@/shared/utils/env';
-import { DatabaseMigrationRunner } from './database.schema-initializer';
-import { DatabasePoolCleanup } from './database.pool-cleanup';
-import { sanitizeIdentifier } from './database.utils';
+import { DATABASE_POOL, DATABASE_SCHEMA } from './database.constants.js';
+import { getEnvVariable, getEnvVariableAsNumber } from '@/shared/utils/env.js';
+import { DatabaseMigrationRunner } from './database.schema-initializer.js';
+import { DatabasePoolCleanup } from './database.pool-cleanup.js';
+import { sanitizeIdentifier } from './database.utils.js';
 
 function getConfigValue(
     primary: string,
@@ -49,14 +49,13 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                         'DB_SCHEMA',
                         'API_PG_DB_SCHEMA',
                         DEFAULT_SCHEMA,
-                    ) ??
-                        DEFAULT_SCHEMA,
+                    ) ?? DEFAULT_SCHEMA,
                 ),
         },
         {
             provide: DATABASE_POOL,
             inject: [DATABASE_SCHEMA],
-            useFactory: (schema: string) => {
+            useFactory: () => {
                 const url = getEnvVariable('DB_URL');
 
                 const databaseEnv = getConfigValue(
@@ -112,6 +111,7 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
 
                 return new Pool({
                     ...poolConfig,
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
                     application_name: 'kodus-service-ast',
                     max: getEnvVariableAsNumber('DB_POOL_MAX', 10),
                     idleTimeoutMillis: getEnvVariableAsNumber(
@@ -122,6 +122,7 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                         'DB_POOL_CONNECTION_TIMEOUT_MS',
                         5_000,
                     ),
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
                     statement_timeout: getEnvVariableAsNumber(
                         'DB_STATEMENT_TIMEOUT_MS',
                         0,

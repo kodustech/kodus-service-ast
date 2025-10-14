@@ -1,13 +1,13 @@
-import { UseCases } from '@/core/application/use-cases/task';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
-import { TaskController } from '@/core/infrastructure/grpc/controllers/task/task.controller';
+import { useCases } from '@/core/application/use-cases/task/index.js';
+import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import { TaskHttpController } from '@/core/infrastructure/http/controllers/task.controller.js';
 import { Module } from '@nestjs/common';
-import { TaskPersistenceModule } from '@/core/infrastructure/persistence/task/task-persistence.module';
+import { TaskPersistenceModule } from '@/core/infrastructure/persistence/task/task-persistence.module.js';
 
 @Module({
     imports: [TaskPersistenceModule],
-    providers: [...UseCases, TaskManagerService],
-    exports: [...UseCases, TaskManagerService],
-    controllers: [TaskController],
+    providers: [...useCases, TaskManagerService],
+    exports: [...useCases, TaskManagerService],
+    controllers: [TaskHttpController],
 })
 export class TaskModule {}

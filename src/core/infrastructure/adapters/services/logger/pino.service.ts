@@ -1,4 +1,4 @@
-import { handleError } from '@/shared/utils/errors';
+import { handleError } from '@/shared/utils/errors.js';
 import { ExecutionContext, Injectable, LoggerService } from '@nestjs/common';
 import pino from 'pino';
 
@@ -213,18 +213,18 @@ export class PinoLoggerService implements LoggerService {
     }
 
     private buildLogObject(
-        serviceName: string,
+        serviceName: string | undefined,
         metadata: Record<string, any>,
         error?: unknown,
     ) {
-        let err: Error;
+        let err: Error | null = null;
         if (error) {
             err = handleError(error);
         }
 
         return {
             environment: process.env.API_NODE_ENV || 'unknown',
-            serviceName,
+            serviceName: serviceName ?? 'UnknownService',
             ...metadata,
             metadata,
             error: err ? { message: err.message, stack: err.stack } : undefined,

@@ -1,12 +1,12 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Pool } from 'pg';
-import { DATABASE_POOL, DATABASE_SCHEMA } from './database.constants';
+import { DATABASE_POOL, DATABASE_SCHEMA } from './database.constants.js';
 import {
     CREATE_MIGRATIONS_TABLE,
     DATABASE_MIGRATIONS,
     MIGRATIONS_TABLE,
-} from './database.migrations';
-import { quoteIdentifier } from './database.utils';
+} from './database.migrations.js';
+import { quoteIdentifier } from './database.utils.js';
 
 @Injectable()
 export class DatabaseMigrationRunner implements OnModuleInit {

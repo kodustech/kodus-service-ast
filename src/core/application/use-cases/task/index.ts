@@ -1,3 +1,3 @@
-import { GetTaskInfoUseCase } from './get-task-info.use-case';
+import { GetTaskInfoUseCase } from './get-task-info.use-case.js';
 
-export const UseCases = [GetTaskInfoUseCase];
+export const useCases = [GetTaskInfoUseCase];

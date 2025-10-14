@@ -8,7 +8,7 @@ export function isString(value: unknown): value is string {
 
 export function handleError(error: unknown): Error {
     if (!error) {
-        return null;
+        return new Error('No error provided');
     }
     if (isError(error)) {
         return error;

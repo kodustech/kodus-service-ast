@@ -1,5 +1,5 @@
-import { REPOSITORY_MANAGER_TOKEN } from '@/core/domain/repository/contracts/repository-manager.contract';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
+import { REPOSITORY_MANAGER_TOKEN } from '@/core/domain/repository/contracts/repository-manager.contract.js';
+import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service.js';
 import { Module } from '@nestjs/common';
 
 @Module({

@@ -1,5 +1,5 @@
-import { ParserAnalysis } from '@/core/domain/parsing/types/parser';
-import { SourceFileAnalyzer } from '../analyze-source-file';
+import { ParserAnalysis } from '@/core/domain/parsing/types/parser.js';
+import { SourceFileAnalyzer } from '../analyze-source-file.js';
 import * as path from 'path';
 
 export type WorkerInput = {

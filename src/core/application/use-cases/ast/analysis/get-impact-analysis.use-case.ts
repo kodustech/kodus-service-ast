@@ -1,17 +1,13 @@
-import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types';
+import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types.js';
 import {
     IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
-} from '@/core/domain/repository/contracts/repository-manager.contract';
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import {
-    GrpcInvalidArgumentException,
-    GrpcNotFoundException,
-} from '@/shared/utils/grpc/exceptions';
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 import {
     GetImpactAnalysisRequest,
     GetImpactAnalysisResponse,
-} from '@kodus/kodus-proto/ast';
+} from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { Observable } from 'rxjs';
 
@@ -37,9 +33,7 @@ export class GetImpactAnalysisUseCase {
                     metadata: { request },
                 });
 
-                throw new GrpcInvalidArgumentException(
-                    'Both headRepo and baseRepo must be provided',
-                );
+                throw new Error('Both headRepo and baseRepo must be provided');
             }
 
             const fileName = `impact-analysis`;
@@ -59,7 +53,7 @@ export class GetImpactAnalysisUseCase {
                     serviceName: GetImpactAnalysisUseCase.name,
                 });
 
-                throw new GrpcNotFoundException(
+                throw new Error(
                     `No impact analysis found for repository ${headRepo.repositoryName}`,
                 );
             }

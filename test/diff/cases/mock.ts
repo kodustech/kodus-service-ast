@@ -1,6 +1,6 @@
 import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
 import { TestCaseData } from '.';
-import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
+import { RepositoryData } from '@/shared/types/ast';
 
 type MockData = {
     [key in SupportedLanguage]: TestCaseData[];

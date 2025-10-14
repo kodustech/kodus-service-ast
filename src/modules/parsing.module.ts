@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service';
+import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
 
 @Module({
     imports: [],

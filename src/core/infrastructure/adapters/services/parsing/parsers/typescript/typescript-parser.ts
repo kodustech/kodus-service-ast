@@ -1,11 +1,11 @@
-import { BaseParser } from '../base-parser';
+import { BaseParser } from '../base-parser.js';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
-import { typeScriptQueries } from './typescript-queries';
+import { typeScriptQueries } from './typescript-queries.js';
 import { Language, SyntaxNode } from 'tree-sitter';
-import { ParserQuery, QueryType } from '../query';
-import { CallChain, ChainType } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { ParserQuery, QueryType } from '../query.js';
+import { CallChain, ChainType } from '@/core/domain/parsing/types/parser.js';
+import { NodeType, Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class TypeScriptParser extends BaseParser {
     private static readonly language = TypeScriptLang as Language;
@@ -43,7 +43,7 @@ export class TypeScriptParser extends BaseParser {
         return TypeScriptParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         class_declaration: NodeType.NODE_TYPE_CLASS,
         abstract_class_declaration: NodeType.NODE_TYPE_CLASS,
         interface_declaration: NodeType.NODE_TYPE_INTERFACE,
@@ -102,7 +102,7 @@ export class TypeScriptParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = TypeScriptParser.SCOPE_TYPES[node.type];
+        const scopeType = TypeScriptParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

@@ -1,11 +1,11 @@
 import { Language, SyntaxNode } from 'tree-sitter';
-import { BaseParser } from '../base-parser';
+import { BaseParser } from '../base-parser.js';
 import * as RustLang from 'tree-sitter-rust';
-import { rustQueries } from './rust-queries';
-import { ParserQuery, QueryType } from '../query';
-import { CallChain, ChainType } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { rustQueries } from './rust-queries.js';
+import { ParserQuery, QueryType } from '../query.js';
+import { CallChain, ChainType } from '@/core/domain/parsing/types/parser.js';
+import { NodeType, Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class RustParser extends BaseParser {
     private static readonly language = RustLang as Language;
@@ -43,7 +43,7 @@ export class RustParser extends BaseParser {
         return RustParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         struct_item: NodeType.NODE_TYPE_CLASS,
         impl_item: NodeType.NODE_TYPE_CLASS,
         trait_item: NodeType.NODE_TYPE_INTERFACE,
@@ -106,7 +106,7 @@ export class RustParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = RustParser.SCOPE_TYPES[node.type];
+        const scopeType = RustParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

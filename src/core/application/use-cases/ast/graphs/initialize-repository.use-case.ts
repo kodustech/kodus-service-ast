@@ -1,25 +1,22 @@
-import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service';
-import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service';
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { handleError } from '@/shared/utils/errors';
+import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service.js';
+import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { handleError } from '@/shared/utils/errors.js';
+
 import {
-    GrpcInternalException,
-    GrpcInvalidArgumentException,
-} from '@/shared/utils/grpc/exceptions';
-import {
-    RepositoryData,
-    EnrichedGraph,
     CodeGraph,
-} from '@kodus/kodus-proto/ast/v2';
+    EnrichedGraph,
+    InitializeRepositoryRequest,
+    RepositoryData,
+} from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
-import { InitializeRepositoryRequest } from '@kodus/kodus-proto/ast';
-import { ASTSerializer } from '@kodus/kodus-proto/serialization/ast';
+import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import { astSerializer } from '@/shared/utils/ast-serialization.js';
 import {
     IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
-} from '@/core/domain/repository/contracts/repository-manager.contract';
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 
 @Injectable()
 export class InitializeRepositoryUseCase {
@@ -41,9 +38,7 @@ export class InitializeRepositoryUseCase {
         const { baseRepo, headRepo, filePaths = [] } = request;
 
         if (!baseRepo || !headRepo) {
-            throw new GrpcInvalidArgumentException(
-                'Both baseRepo and headRepo must be provided',
-            );
+            throw new Error('Both baseRepo and headRepo must be provided');
         }
 
         try {
@@ -160,7 +155,7 @@ export class InitializeRepositoryUseCase {
                 },
                 serviceName: InitializeRepositoryUseCase.name,
             });
-            throw new GrpcInternalException('Failed to clone repository');
+            throw new Error('Failed to clone repository');
         }
 
         this.logger.log({
@@ -184,7 +179,7 @@ export class InitializeRepositoryUseCase {
         enrichHeadGraph: EnrichedGraph,
     ): Promise<void> {
         const fileName = this.repositoryManagerService.graphsFileName;
-        const graphs = ASTSerializer.serializeGetGraphsResponseData({
+        const graphs = astSerializer.serializeGetGraphsResponseData({
             baseGraph: {
                 graph: baseGraph,
                 dir: baseGraphDir,
@@ -213,7 +208,7 @@ export class InitializeRepositoryUseCase {
                 },
                 serviceName: InitializeRepositoryUseCase.name,
             });
-            throw new GrpcInternalException(
+            throw new Error(
                 `Failed to write graphs to ${fileName} for repository ${repoData.repositoryName}`,
             );
         }

@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service';
-import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract';
-import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/task';
+import { PinoLoggerService } from '../logger/pino.service.js';
+import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract.js';
+import { Task, TaskPriority, TaskStatus } from '@/shared/types/task.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { SerializeDateToTimeStamp } from '@kodus/kodus-proto/serialization';
-import { DeepPartial, matchesPartial } from '@/shared/utils/deep-partial';
-import { TaskPersistenceService } from '@/core/infrastructure/persistence/task/task-persistence.service';
+import { serializeDateToTimeStamp } from '@/shared/types/serialization.js';
+import { DeepPartial, matchesPartial } from '@/shared/utils/deep-partial.js';
+import { TaskPersistenceService } from '@/core/infrastructure/persistence/task/task-persistence.service.js';
 import {
     TaskRecord,
     UpdateTaskInput,
-} from '@/core/infrastructure/persistence/task/task-persistence.types';
+} from '@/core/infrastructure/persistence/task/task-persistence.types.js';
 
 @Injectable()
 export class TaskManagerService implements ITaskManagerService {
@@ -108,7 +108,9 @@ export class TaskManagerService implements ITaskManagerService {
     async queryTasks(query: DeepPartial<Task>): Promise<Task | null> {
         const tasks = await this.queryTasksAll(query);
 
-        if (tasks.length === 0) return null;
+        if (tasks.length === 0) {
+            return null;
+        }
 
         if (tasks.length > 1) {
             this.logger.warn({
@@ -167,7 +169,9 @@ export class TaskManagerService implements ITaskManagerService {
             'startTask',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task started successfully',
@@ -196,7 +200,9 @@ export class TaskManagerService implements ITaskManagerService {
             'pauseTask',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task paused successfully',
@@ -219,7 +225,9 @@ export class TaskManagerService implements ITaskManagerService {
             'resumeTask',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task resumed successfully',
@@ -244,7 +252,9 @@ export class TaskManagerService implements ITaskManagerService {
             'completeTask',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task completed successfully',
@@ -274,7 +284,9 @@ export class TaskManagerService implements ITaskManagerService {
             'failTask',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.error({
             message: 'Task failed',
@@ -297,7 +309,9 @@ export class TaskManagerService implements ITaskManagerService {
             'cancelTask',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task cancelled successfully',
@@ -328,7 +342,9 @@ export class TaskManagerService implements ITaskManagerService {
             'updateTaskState',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task state updated',
@@ -360,7 +376,9 @@ export class TaskManagerService implements ITaskManagerService {
             'updateTaskError',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task error updated',
@@ -402,7 +420,9 @@ export class TaskManagerService implements ITaskManagerService {
             'updateTaskProgress',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task progress updated',
@@ -443,7 +463,9 @@ export class TaskManagerService implements ITaskManagerService {
             'updateTaskPriority',
         );
 
-        if (!updated) return;
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task priority updated',
@@ -622,8 +644,8 @@ export class TaskManagerService implements ITaskManagerService {
             id: record.id,
             status: record.status,
             state: record.state ?? 'Unknown',
-            createdAt: SerializeDateToTimeStamp(record.createdAt),
-            updatedAt: SerializeDateToTimeStamp(record.updatedAt),
+            createdAt: serializeDateToTimeStamp(record.createdAt),
+            updatedAt: serializeDateToTimeStamp(record.updatedAt),
             metadata,
         };
     }

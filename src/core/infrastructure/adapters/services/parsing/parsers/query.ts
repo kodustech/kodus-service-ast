@@ -1,4 +1,4 @@
-import { NodeType } from '@kodus/kodus-proto/ast/v2';
+import { NodeType } from '@/shared/types/ast.js';
 
 export enum QueryType {
     IMPORT = 'import',

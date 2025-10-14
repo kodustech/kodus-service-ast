@@ -10,13 +10,13 @@ import {
     TaskRecord,
     UpdateTaskInput,
     UpdateTaskStatusInput,
-} from './task-persistence.types';
-import { TaskStatus } from '@/core/domain/task/enums/task-status.enum';
+} from './task-persistence.types.js';
+import { TaskStatus } from '@/core/domain/task/enums/task-status.enum.js';
 import {
     DATABASE_POOL,
     DATABASE_SCHEMA,
-} from '@/core/infrastructure/database/database.constants';
-import { qualifiedName } from '@/core/infrastructure/database/database.utils';
+} from '@/core/infrastructure/database/database.constants.js';
+import { qualifiedName } from '@/core/infrastructure/database/database.utils.js';
 
 const STATUS_TO_DB: Record<TaskStatus, string> = {
     [TaskStatus.TASK_STATUS_UNSPECIFIED]: 'PENDING',
@@ -37,21 +37,28 @@ const DB_TO_STATUS: Record<string, TaskStatus> = {
 };
 
 function statusToDb(status: TaskStatus | undefined): string {
-    if (status === undefined)
+    if (status === undefined) {
         return STATUS_TO_DB[TaskStatus.TASK_STATUS_UNSPECIFIED];
+    }
     return (
         STATUS_TO_DB[status] ?? STATUS_TO_DB[TaskStatus.TASK_STATUS_UNSPECIFIED]
     );
 }
 
 function statusFromDb(value: string | null | undefined): TaskStatus {
-    if (!value) return TaskStatus.TASK_STATUS_UNSPECIFIED;
+    if (!value) {
+        return TaskStatus.TASK_STATUS_UNSPECIFIED;
+    }
     return DB_TO_STATUS[value] ?? TaskStatus.TASK_STATUS_UNSPECIFIED;
 }
 
 function clampProgress(progress?: number): number | undefined {
-    if (progress === undefined || progress === null) return undefined;
-    if (Number.isNaN(progress)) return undefined;
+    if (progress === undefined || progress === null) {
+        return undefined;
+    }
+    if (Number.isNaN(progress)) {
+        return undefined;
+    }
     return Math.min(100, Math.max(0, progress));
 }
 
@@ -251,7 +258,9 @@ export class TaskPersistenceService {
     }
 
     async deleteTasks(taskIds: string[]): Promise<void> {
-        if (taskIds.length === 0) return;
+        if (taskIds.length === 0) {
+            return;
+        }
         const placeholders = taskIds.map((_, idx) => `$${idx + 1}`).join(',');
         await this.pool.query(
             `DELETE FROM ${this.tasksTable} WHERE id IN (${placeholders})`,
@@ -266,7 +275,9 @@ export class TaskPersistenceService {
     async findTaskById(taskId: string): Promise<TaskRecord | null> {
         const query = `SELECT * FROM ${this.tasksTable} WHERE id = $1`;
         const result = await this.pool.query(query, [taskId]);
-        if (result.rowCount === 0) return null;
+        if (result.rowCount === 0) {
+            return null;
+        }
         return this.mapTaskRow(result.rows[0]);
     }
 

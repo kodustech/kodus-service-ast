@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import * as fg from 'fast-glob';
+import fg from 'fast-glob';
 import * as fs from 'fs';
 import * as os from 'os';
 import {
@@ -7,13 +7,13 @@ import {
     FileAnalysis,
     FunctionAnalysis,
     TypeAnalysis,
-} from '@kodus/kodus-proto/ast/v2';
+} from '@/shared/types/ast.js';
 
 import { Piscina } from 'piscina';
 import * as path from 'path';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
-import { PinoLoggerService } from '../logger/pino.service';
-import { analyzeBatch, WorkerInput, WorkerOutput } from './worker/worker';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
+import { PinoLoggerService } from '../logger/pino.service.js';
+import { WorkerInput, WorkerOutput } from './worker/worker.js';
 
 @Injectable()
 export class CodeKnowledgeGraphService {

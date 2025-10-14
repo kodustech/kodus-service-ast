@@ -1,17 +1,16 @@
-/* eslint-disable @typescript-eslint/no-base-to-string */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
     isMap,
     isPlainObject,
     isSerializedMap,
     isSerializedSet,
     isSet,
-} from './type-guards';
-import { Serializable, SerializablePrimitive } from './types';
+} from './type-guards.js';
+import { Serializable, SerializablePrimitive } from './types.js';
 
 export function serializeObject(input: any): Serializable {
     if (isMap(input)) {
         return {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
             __type: 'Map',
             value: Array.from(input.entries()).map(([k, v]) => [
                 String(k),
@@ -22,6 +21,7 @@ export function serializeObject(input: any): Serializable {
 
     if (isSet(input)) {
         return {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
             __type: 'Set',
             value: Array.from(input).map(serializeObject),
         };

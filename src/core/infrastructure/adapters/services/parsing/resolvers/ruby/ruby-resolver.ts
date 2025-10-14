@@ -1,22 +1,22 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     ImportedModule,
     ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
+} from '@/core/domain/parsing/types/language-resolver.js';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
 import {
     doesFileExist,
     tryReadFile,
     doesFileExistSync,
-} from '@/shared/utils/files';
+} from '@/shared/utils/files.js';
 import * as path from 'path';
 
 export class RubyResolver implements LanguageResolver {
-    private gemfilePath: string;
-    private gemfileLockPath: string;
+    private gemfilePath!: string;
+    private gemfileLockPath!: string;
 
     protected dependencies: Record<string, string> = {};
-    protected projectRoot: string;
+    protected projectRoot!: string;
 
     async canHandle(projectRoot: string): Promise<boolean> {
         this.projectRoot = projectRoot;
@@ -27,8 +27,12 @@ export class RubyResolver implements LanguageResolver {
         const hasGemfile = await doesFileExist(gemfile);
         const hasGemfileLock = await doesFileExist(gemfileLock);
 
-        if (hasGemfile) this.gemfilePath = gemfile;
-        if (hasGemfileLock) this.gemfileLockPath = gemfileLock;
+        if (hasGemfile) {
+            this.gemfilePath = gemfile;
+        }
+        if (hasGemfileLock) {
+            this.gemfileLockPath = gemfileLock;
+        }
 
         return hasGemfile || hasGemfileLock;
     }
@@ -44,7 +48,9 @@ export class RubyResolver implements LanguageResolver {
 
     private async loadGemfile() {
         const content = await tryReadFile(this.gemfilePath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         // Simple regex for `gem 'gem_name', 'version'`
         const gemRegex = /gem\s+['"]([^'"]+)['"](?:,\s*['"]([^'"]+)['"])?/g;
@@ -58,7 +64,9 @@ export class RubyResolver implements LanguageResolver {
 
     private async loadGemfileLock() {
         const content = await tryReadFile(this.gemfileLockPath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         // Parse Gemfile.lock simple format (top-level gems only)
         // Sections start with "GEM"
@@ -66,7 +74,9 @@ export class RubyResolver implements LanguageResolver {
         //   gem_name (version)
         // For simplicity, parse lines with pattern: `  gem_name (version)`
         const gemSectionStart = content.indexOf('GEM');
-        if (gemSectionStart === -1) return;
+        if (gemSectionStart === -1) {
+            return;
+        }
 
         const gemSection = content.slice(gemSectionStart);
         const gemLines = gemSection

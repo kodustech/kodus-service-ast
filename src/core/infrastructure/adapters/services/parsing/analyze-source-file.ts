@@ -1,18 +1,18 @@
 import * as fs from 'fs';
-import { getParserByFilePath } from './parsers';
-import { BaseParser } from './parsers/base-parser';
+import { getParserByFilePath } from './parsers/index.js';
+import { BaseParser } from './parsers/base-parser.js';
 import {
     ParseContext,
     ParserAnalysis,
-} from '@/core/domain/parsing/types/parser';
-import { getLanguageResolver } from './resolvers';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+} from '@/core/domain/parsing/types/parser.js';
+import { getLanguageResolver } from './resolvers/index.js';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     AnalysisNode,
     Call,
     FunctionAnalysis,
     TypeAnalysis,
-} from '@kodus/kodus-proto/ast/v2';
+} from '@/shared/types/ast.js';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;
@@ -153,7 +153,9 @@ export class SourceFileAnalyzer {
 
     private async initializeImportResolver(rootDir: string): Promise<void> {
         const resolver = await getLanguageResolver(rootDir);
-        if (!resolver) return;
+        if (!resolver) {
+            return;
+        }
         this.importPathResolver = resolver;
         await resolver.initialize();
     }

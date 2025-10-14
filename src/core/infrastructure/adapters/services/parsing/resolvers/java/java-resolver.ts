@@ -1,15 +1,15 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     ImportedModule,
     ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
+} from '@/core/domain/parsing/types/language-resolver.js';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
 import {
     doesFileExist,
     tryReadFile,
     doesFileExistSync,
-} from '@/shared/utils/files';
-import { tryParseXml } from '@/shared/utils/parsers';
+} from '@/shared/utils/files.js';
+import { tryParseXml } from '@/shared/utils/parsers.js';
 import * as path from 'path';
 
 type MavenPom = {
@@ -22,21 +22,10 @@ type MavenPom = {
     };
 };
 
-type GradleDependencies = Array<{
-    group: string;
-    name: string;
-    version?: string;
-}>;
-
-type JMSModule = {
-    requires: string[];
-    exports: string[];
-};
-
 export class JavaResolver implements LanguageResolver {
-    private pomPath: string;
-    private gradlePath: string;
-    private moduleInfoPath: string;
+    private pomPath!: string;
+    private gradlePath!: string | null;
+    private moduleInfoPath!: string;
 
     protected dependencies: Record<string, string> = {};
     protected modules: string[] = [];
@@ -58,14 +47,16 @@ export class JavaResolver implements LanguageResolver {
             (await doesFileExist(gradle)) || (await doesFileExist(gradleKts));
         const hasModuleInfo = await doesFileExist(moduleInfo);
 
-        if (hasPom) this.pomPath = pom;
-        if (hasGradle)
-            this.gradlePath = hasGradle
-                ? (await doesFileExist(gradle))
-                    ? gradle
-                    : gradleKts
-                : null;
-        if (hasModuleInfo) this.moduleInfoPath = moduleInfo;
+        if (hasPom) {
+            this.pomPath = pom;
+        }
+        if (hasGradle) {
+            const hasGradleFile = await doesFileExist(gradle);
+            this.gradlePath = hasGradleFile ? gradle : gradleKts;
+        }
+        if (hasModuleInfo) {
+            this.moduleInfoPath = moduleInfo;
+        }
 
         return hasPom || hasGradle || hasModuleInfo;
     }
@@ -86,10 +77,14 @@ export class JavaResolver implements LanguageResolver {
 
     private async loadMavenDependencies() {
         const content = await tryReadFile(this.pomPath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         const parsed = tryParseXml<MavenPom>(content);
-        if (!parsed?.dependencies?.dependency) return;
+        if (!parsed?.dependencies?.dependency) {
+            return;
+        }
 
         for (const dep of parsed.dependencies.dependency) {
             const key = `${dep.groupId}:${dep.artifactId}`;
@@ -98,8 +93,13 @@ export class JavaResolver implements LanguageResolver {
     }
 
     private async loadGradleDependencies() {
+        if (!this.gradlePath) {
+            return;
+        }
         const content = await tryReadFile(this.gradlePath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         const regex =
             /['"]([a-zA-Z0-9_.-]+):([a-zA-Z0-9_.-]+):?([a-zA-Z0-9_.-]*)['"]/g;
@@ -112,7 +112,9 @@ export class JavaResolver implements LanguageResolver {
 
     private async loadJavaModules() {
         const content = await tryReadFile(this.moduleInfoPath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         const requiresRegex = /requires\s+([a-zA-Z0-9_.]+);/g;
         let match: RegExpExecArray | null;

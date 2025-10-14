@@ -1,24 +1,20 @@
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
-import {
-    GrpcInternalException,
-    GrpcInvalidArgumentException,
-    GrpcNotFoundException,
-} from '@/shared/utils/grpc/exceptions';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+
 import {
     GetImpactAnalysisResponse,
     InitializeImpactAnalysisRequest,
-} from '@kodus/kodus-proto/ast';
+    RepositoryData,
+} from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
-import { GetGraphsUseCase } from '../graphs/get-graphs.use-case';
-import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service';
-import { handleError } from '@/shared/utils/errors';
-import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types';
-import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
+import { GetGraphsUseCase } from '../graphs/get-graphs.use-case.js';
+import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service.js';
+import { handleError } from '@/shared/utils/errors.js';
+import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types.js';
 import {
     IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
-} from '@/core/domain/repository/contracts/repository-manager.contract';
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 
 @Injectable()
 export class InitializeImpactAnalysisUseCase {
@@ -41,9 +37,7 @@ export class InitializeImpactAnalysisUseCase {
         const { baseRepo, headRepo, codeChunk, fileName } = request;
 
         if (!baseRepo || !headRepo) {
-            throw new GrpcInvalidArgumentException(
-                'Both baseRepo and headRepo must be provided',
-            );
+            throw new Error('Both baseRepo and headRepo must be provided');
         }
 
         try {
@@ -51,7 +45,7 @@ export class InitializeImpactAnalysisUseCase {
             const graphs = await this.getGraphsUseCase.execute(request, false);
 
             if (!graphs) {
-                throw new GrpcNotFoundException(
+                throw new Error(
                     `No graphs found for repository ${headRepo.repositoryName}`,
                 );
             }
@@ -65,7 +59,7 @@ export class InitializeImpactAnalysisUseCase {
                 );
 
             if (!analysisResult) {
-                throw new GrpcNotFoundException(
+                throw new Error(
                     `No analysis result found for code chunk in file ${fileName}`,
                 );
             }
@@ -78,7 +72,7 @@ export class InitializeImpactAnalysisUseCase {
                 );
 
             if (!impactAnalysis) {
-                throw new GrpcNotFoundException(
+                throw new Error(
                     `No impact analysis generated for code chunk in file ${fileName}`,
                 );
             }
@@ -182,7 +176,7 @@ export class InitializeImpactAnalysisUseCase {
                 },
                 serviceName: InitializeImpactAnalysisUseCase.name,
             });
-            throw new GrpcInternalException(
+            throw new Error(
                 `Failed to write impact analysis for repository ${repoData.repositoryName}`,
             );
         }

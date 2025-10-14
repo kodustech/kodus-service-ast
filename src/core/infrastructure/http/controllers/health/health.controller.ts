@@ -1,6 +1,6 @@
 import * as os from 'os';
 import { Controller, Get } from '@nestjs/common';
-import { HealthService } from '../../../../domain/health/health.service';
+import { HealthService } from '../../../../domain/health/health.service.js';
 
 /**
  * Controller responsável por verificar a saúde da aplicação

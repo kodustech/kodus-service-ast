@@ -1,4 +1,4 @@
-import { ParserQuery, QueryType } from '../query';
+import { ParserQuery, QueryType } from '../query.js';
 
 const classAuxiliaryQuery = () => `
 	name: (type_identifier) @objName

@@ -1,5 +1,4 @@
-/* eslint-disable no-useless-escape */
-import { ParserQuery, QueryType } from '../query';
+import { ParserQuery, QueryType } from '../query.js';
 
 const declarationListQuery = () => `
 (declaration_list

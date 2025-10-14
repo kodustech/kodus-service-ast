@@ -8,25 +8,31 @@ import {
     Method,
     ObjectProperties,
     ParseContext,
-} from '@/core/domain/parsing/types/parser';
+} from '@/core/domain/parsing/types/parser.js';
 import {
     objQueries,
     ParserQuery,
     queryToNodeTypeMap,
     QueryType,
-} from './query';
+} from './query.js';
 import {
     AnalysisNode,
     Call,
-    Scope,
-    TypeAnalysis,
     NodeType,
     Range,
-} from '@kodus/kodus-proto/ast/v2';
-import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
-import { appendOrUpdateElement, findLastIndexOf } from '@/shared/utils/arrays';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
-import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver';
+    Scope,
+    TypeAnalysis,
+} from '@/shared/types/ast.js';
+import {
+    normalizeAST,
+    normalizeSignature,
+} from '@/shared/utils/ast-helpers.js';
+import {
+    appendOrUpdateElement,
+    findLastIndexOf,
+} from '@/shared/utils/arrays.js';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver.js';
 import { nanoid } from 'nanoid';
 
 export abstract class BaseParser {
@@ -119,10 +125,14 @@ export abstract class BaseParser {
 
     protected collectImports(rootNode: SyntaxNode, filePath: string): void {
         const query = this.getQuery(QueryType.IMPORT);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const captures = match.captures;
@@ -130,7 +140,9 @@ export abstract class BaseParser {
             const importCap = captures.find(
                 (capture) => capture.name === 'import',
             );
-            if (!importCap || !importCap.node) continue;
+            if (!importCap || !importCap.node) {
+                continue;
+            }
 
             const analysisNode = this.newAnalysisNode(
                 importCap.node,
@@ -150,7 +162,9 @@ export abstract class BaseParser {
                 imported,
                 filePath,
             );
-            if (!resolvedImport) continue;
+            if (!resolvedImport) {
+                continue;
+            }
 
             const normalizedPath = resolvedImport.normalizedPath || originName;
             this.context.fileImports.add(normalizedPath);
@@ -166,7 +180,9 @@ export abstract class BaseParser {
         const originCapture = match.captures.find(
             (capture) => capture.name === 'origin',
         );
-        if (!originCapture || !originCapture.node) return;
+        if (!originCapture || !originCapture.node) {
+            return;
+        }
         const originNode = originCapture.node;
 
         this.addChildSyntaxNodeToNode(parentNode, originNode);
@@ -256,10 +272,14 @@ export abstract class BaseParser {
         type: QueryType,
     ): void {
         const query = this.getQuery(type);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const objAnalysis = this.processObjMatch(match, absolutePath, type);
@@ -342,7 +362,9 @@ export abstract class BaseParser {
         objProps: ObjectProperties,
     ): void {
         const node = capture.node;
-        if (!node) return;
+        if (!node) {
+            return;
+        }
 
         const text = node.text;
 
@@ -409,13 +431,14 @@ export abstract class BaseParser {
                 break;
             }
             default: {
-                if (this.processExtraObjCapture)
+                if (this.processExtraObjCapture) {
                     this.processExtraObjCapture(
                         capture,
                         objAnalysis,
                         methods,
                         objProps,
                     );
+                }
                 break;
             }
         }
@@ -469,7 +492,9 @@ export abstract class BaseParser {
     }
 
     protected addNewMethod(methods: Method[], node: SyntaxNode): void {
-        if (!node || !node.id) return;
+        if (!node || !node.id) {
+            return;
+        }
 
         methods.push({
             nodeId: this.mapNodeId(node),
@@ -484,10 +509,14 @@ export abstract class BaseParser {
 
     protected processMethodParameters(method: Method, node: SyntaxNode) {
         const query = this.getQuery(QueryType.FUNCTION_PARAMETERS);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(node);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             for (const capture of match.captures) {
@@ -511,7 +540,9 @@ export abstract class BaseParser {
     }
 
     protected setMethodReturnType(method: Method, returnType: string): void {
-        if (!method) return;
+        if (!method) {
+            return;
+        }
         method.returnType = returnType;
     }
 
@@ -545,7 +576,9 @@ export abstract class BaseParser {
         }
 
         for (const property of objProps.properties) {
-            if (!property.name) continue;
+            if (!property.name) {
+                continue;
+            }
             objAnalysis.fields[property.name] =
                 property.type || objProps.type || 'unknown';
         }
@@ -558,7 +591,9 @@ export abstract class BaseParser {
         const constructor = methods.find(
             (method) => method.name === this.getConstructorName(),
         );
-        if (!constructor) return;
+        if (!constructor) {
+            return;
+        }
 
         for (const { nodeId, name, type } of constructor.params) {
             if (nodeId && name && type && objAnalysis.scope) {
@@ -577,14 +612,20 @@ export abstract class BaseParser {
         absolutePath: string,
     ): void {
         const query = this.getQuery(QueryType.FUNCTION);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const captures = match.captures;
-            if (captures.length === 0) continue;
+            if (captures.length === 0) {
+                continue;
+            }
 
             const method: Method = {
                 nodeId: '',
@@ -598,7 +639,9 @@ export abstract class BaseParser {
             captures.forEach((capture) =>
                 this.processFunctionCapture(capture, method),
             );
-            if (!method.name) continue;
+            if (!method.name) {
+                continue;
+            }
 
             const key = `${absolutePath}::${this.scopeToString(method.scope)}`;
 
@@ -666,7 +709,9 @@ export abstract class BaseParser {
         method: Method,
     ): void {
         const node = capture.node;
-        if (!node) return;
+        if (!node) {
+            return;
+        }
 
         switch (capture.name) {
             case 'func': {
@@ -716,10 +761,14 @@ export abstract class BaseParser {
         className: string,
     ): Call[] {
         const query = this.getQuery(QueryType.FUNCTION_CALL);
-        if (!query) return [];
+        if (!query) {
+            return [];
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return [];
+        if (matches.length === 0) {
+            return [];
+        }
 
         const calls: Call[] = [];
         // Use a Set to track processed nodes to avoid reprocessing children of a matched chain
@@ -735,7 +784,9 @@ export abstract class BaseParser {
             }
 
             const chain = this.getMemberChain(node, new Map());
-            if (chain.length === 0) continue;
+            if (chain.length === 0) {
+                continue;
+            }
 
             // Mark all nodes in this chain as processed so we don't create duplicate calls
             chain.forEach((link) => {
@@ -797,14 +848,20 @@ export abstract class BaseParser {
         absolutePath: string,
     ): void {
         const query = this.getQuery(QueryType.TYPE_ALIAS);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const captures = match.captures;
-            if (captures.length === 0) continue;
+            if (captures.length === 0) {
+                continue;
+            }
 
             const typeAnalysis: TypeAnalysis = {
                 nodeId: '',
@@ -822,7 +879,9 @@ export abstract class BaseParser {
 
             for (const capture of captures) {
                 const node = capture.node;
-                if (!node) continue;
+                if (!node) {
+                    continue;
+                }
 
                 const typeFields = [] as string[];
 
@@ -908,7 +967,9 @@ export abstract class BaseParser {
         node: SyntaxNode,
         chains: Map<number, CallChain[]>,
     ): CallChain[] {
-        if (!node) return [];
+        if (!node) {
+            return [];
+        }
 
         const chain: CallChain[] = [];
         let currentNode: SyntaxNode | null = node;
@@ -921,7 +982,9 @@ export abstract class BaseParser {
             }
 
             const processed = this.processChainNode(currentNode, chain);
-            if (!processed) return chain;
+            if (!processed) {
+                return chain;
+            }
 
             chains.set(currentNode.id, [...chain]);
             currentNode = currentNode.parent;
@@ -936,7 +999,9 @@ export abstract class BaseParser {
         chain: CallChain[],
         nodeId: string,
     ) {
-        if (!field) return;
+        if (!field) {
+            return;
+        }
 
         const validTypes =
             type === ChainType.FUNCTION
@@ -1013,7 +1078,9 @@ export abstract class BaseParser {
         type: NodeType,
         name?: string,
     ): AnalysisNode | null {
-        if (!node) return null;
+        if (!node) {
+            return null;
+        }
         const newNode = {
             id: this.mapNodeId(node),
             name: name || '',
@@ -1032,7 +1099,9 @@ export abstract class BaseParser {
     }
 
     protected addNameToAnalysisNode(node: AnalysisNode, name: string): void {
-        if (!node || !name) return;
+        if (!node || !name) {
+            return;
+        }
         if (node.name && node.name !== name) {
             node.name = `${node.name}::${name}`;
         } else {
@@ -1045,7 +1114,9 @@ export abstract class BaseParser {
             parent.children = [];
         }
 
-        if (parent.id === child.id) return;
+        if (parent.id === child.id) {
+            return;
+        }
 
         parent.children.push(child);
     }
@@ -1060,7 +1131,9 @@ export abstract class BaseParser {
             parent.children = [];
         }
 
-        if (parent.id === this.mapNodeId(child)) return null;
+        if (parent.id === this.mapNodeId(child)) {
+            return null;
+        }
 
         const childNode = this.newAnalysisNode(child, type, name);
         if (childNode) {
@@ -1070,7 +1143,9 @@ export abstract class BaseParser {
     }
 
     protected registerAnalysisNode(node: AnalysisNode): void {
-        if (!node || !node.id) return;
+        if (!node || !node.id) {
+            return;
+        }
 
         if (this.context.analysisNodes.has(node.id)) {
             return;

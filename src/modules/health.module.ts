@@ -1,5 +1,5 @@
-import { HealthService } from '@/core/domain/health/health.service';
-import { HealthController } from '@/core/infrastructure/http/controllers/health/health.controller';
+import { HealthService } from '@/core/domain/health/health.service.js';
+import { HealthController } from '@/core/infrastructure/http/controllers/health/health.controller.js';
 import { Module } from '@nestjs/common';
 
 /**

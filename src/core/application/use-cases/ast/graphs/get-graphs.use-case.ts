@@ -1,21 +1,16 @@
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import {
-    GrpcInternalException,
-    GrpcNotFoundException,
-} from '@/shared/utils/grpc/exceptions';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+
 import { Inject, Injectable } from '@nestjs/common';
-import {
-    ASTDeserializer,
-    SerializedGetGraphsResponseData,
-} from '@kodus/kodus-proto/serialization/ast';
 import {
     GetGraphsRequest,
     GetGraphsResponseData,
-} from '@kodus/kodus-proto/ast/v2';
+    SerializedGetGraphsResponseData,
+} from '@/shared/types/ast.js';
+import { astDeserializer } from '@/shared/utils/ast-serialization.js';
 import {
     IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
-} from '@/core/domain/repository/contracts/repository-manager.contract';
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 
 @Injectable()
 export class GetGraphsUseCase {
@@ -58,7 +53,7 @@ export class GetGraphsUseCase {
                 },
                 serviceName: GetGraphsUseCase.name,
             });
-            throw new GrpcNotFoundException(
+            throw new Error(
                 `No graphs found for repository ${headRepo.repositoryName}`,
             );
         }
@@ -84,7 +79,7 @@ export class GetGraphsUseCase {
                 },
                 serviceName: GetGraphsUseCase.name,
             });
-            throw new GrpcInternalException(
+            throw new Error(
                 `Failed to parse graphs for repository ${headRepo.repositoryName}`,
             );
         }
@@ -95,7 +90,7 @@ export class GetGraphsUseCase {
         }
 
         const deserialized =
-            ASTDeserializer.deserializeGetGraphsResponseData(parsedGraphs);
+            astDeserializer.deserializeGetGraphsResponseData(parsedGraphs);
 
         return deserialized;
     }

@@ -1,5 +1,5 @@
 import { DeepPartial } from '@/shared/utils/deep-partial';
-import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/task';
+import { Task, TaskPriority, TaskStatus } from '@/shared/types/task';
 
 export interface ITaskManagerService {
     // Task Management

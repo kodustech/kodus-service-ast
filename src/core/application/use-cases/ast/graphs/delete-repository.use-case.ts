@@ -1,15 +1,14 @@
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { GrpcInvalidArgumentException } from '@/shared/utils/grpc/exceptions';
-import { RepositoryData } from '@kodus/kodus-proto/ast/v2';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 import {
     DeleteRepositoryRequest,
     DeleteRepositoryResponse,
-} from '@kodus/kodus-proto/ast';
+    RepositoryData,
+} from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import {
     IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
-} from '@/core/domain/repository/contracts/repository-manager.contract';
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 
 @Injectable()
 export class DeleteRepositoryUseCase {
@@ -26,9 +25,7 @@ export class DeleteRepositoryUseCase {
         const { baseRepo, headRepo } = request;
 
         if (!baseRepo || !headRepo) {
-            throw new GrpcInvalidArgumentException(
-                'Both baseRepo and headRepo must be provided',
-            );
+            throw new Error('Both baseRepo and headRepo must be provided');
         }
 
         try {

@@ -1,14 +1,14 @@
-import { BaseParser } from '../base-parser';
+import { BaseParser } from '../base-parser.js';
 import { Language, SyntaxNode } from 'tree-sitter';
 import * as PythonLang from 'tree-sitter-python';
-import { pythonQueries } from './python-queries';
-import { ParserQuery, QueryType } from '../query';
-import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { pythonQueries } from './python-queries.js';
+import { ParserQuery, QueryType } from '../query.js';
+import { ChainType, CallChain } from '@/core/domain/parsing/types/parser.js';
+import { NodeType, Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class PythonParser extends BaseParser {
-    private static readonly language = PythonLang as Language;
+    private static readonly language = PythonLang as unknown as Language;
     private static readonly rawQueries = pythonQueries;
     private static readonly constructorName =
         SUPPORTED_LANGUAGES.python.properties.constructorName;
@@ -38,7 +38,7 @@ export class PythonParser extends BaseParser {
         return PythonParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         class_definition: NodeType.NODE_TYPE_CLASS,
         function_definition: NodeType.NODE_TYPE_FUNCTION,
         assignment: NodeType.NODE_TYPE_FUNCTION,
@@ -77,7 +77,7 @@ export class PythonParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = PythonParser.SCOPE_TYPES[node.type];
+        const scopeType = PythonParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

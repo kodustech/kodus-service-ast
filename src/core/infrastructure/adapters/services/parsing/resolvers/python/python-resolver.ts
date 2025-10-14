@@ -1,21 +1,22 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     ImportedModule,
     ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
+} from '@/core/domain/parsing/types/language-resolver.js';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
 import {
     doesFileExist,
     tryReadFile,
     doesFileExistSync,
-} from '@/shared/utils/files';
-import { tryParseToml } from '@/shared/utils/parsers';
+} from '@/shared/utils/files.js';
+import { tryParseToml } from '@/shared/utils/parsers.js';
 import * as path from 'path';
 
 type PyprojectToml = {
     tool?: {
         poetry?: {
-            dependencies?: Record<string, string>;
+            'dependencies'?: Record<string, string>;
+            // eslint-disable-next-line @typescript-eslint/naming-convention
             'dev-dependencies'?: Record<string, string>;
         };
         hatch?: {
@@ -29,12 +30,12 @@ type PyprojectToml = {
 };
 
 export class PythonResolver implements LanguageResolver {
-    private pyprojectPath: string;
-    private requirementsPath: string;
-    private setupPath: string;
+    private pyprojectPath!: string;
+    private requirementsPath!: string;
+    private setupPath!: string;
 
     protected dependencies: Record<string, string> = {};
-    protected projectRoot: string;
+    protected projectRoot!: string;
 
     async canHandle(projectRoot: string): Promise<boolean> {
         this.projectRoot = projectRoot;
@@ -47,27 +48,43 @@ export class PythonResolver implements LanguageResolver {
         const hasRequirements = await doesFileExist(requirements);
         const hasSetup = await doesFileExist(setup);
 
-        if (hasPyproject) this.pyprojectPath = pyproject;
-        if (hasRequirements) this.requirementsPath = requirements;
-        if (hasSetup) this.setupPath = setup;
+        if (hasPyproject) {
+            this.pyprojectPath = pyproject;
+        }
+        if (hasRequirements) {
+            this.requirementsPath = requirements;
+        }
+        if (hasSetup) {
+            this.setupPath = setup;
+        }
 
         return hasPyproject || hasRequirements || hasSetup;
     }
 
     async initialize(): Promise<boolean> {
-        if (this.pyprojectPath) await this.loadPyproject();
-        if (this.requirementsPath) await this.loadRequirements();
-        if (this.setupPath) await this.loadSetup();
+        if (this.pyprojectPath) {
+            await this.loadPyproject();
+        }
+        if (this.requirementsPath) {
+            await this.loadRequirements();
+        }
+        if (this.setupPath) {
+            await this.loadSetup();
+        }
 
         return true;
     }
 
     private async loadPyproject() {
         const content = await tryReadFile(this.pyprojectPath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         const parsed = tryParseToml<PyprojectToml>(content);
-        if (!parsed) return;
+        if (!parsed) {
+            return;
+        }
 
         const poetryDeps = parsed.tool?.poetry?.dependencies || {};
         const poetryDevDeps = parsed.tool?.poetry?.['dev-dependencies'] || {};
@@ -76,7 +93,9 @@ export class PythonResolver implements LanguageResolver {
         const optionalDeps = parsed.project?.optionalDependencies || {};
 
         for (const [pkg, version] of Object.entries(poetryDeps)) {
-            if (pkg !== 'python') this.dependencies[pkg] = version;
+            if (pkg !== 'python') {
+                this.dependencies[pkg] = version;
+            }
         }
         for (const [pkg, version] of Object.entries(poetryDevDeps)) {
             this.dependencies[pkg] = version;
@@ -99,7 +118,9 @@ export class PythonResolver implements LanguageResolver {
 
     private async loadRequirements() {
         const content = await tryReadFile(this.requirementsPath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         const lines = content
             .split('\n')
@@ -113,11 +134,15 @@ export class PythonResolver implements LanguageResolver {
 
     private async loadSetup() {
         const content = await tryReadFile(this.setupPath);
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
         const regex = /install_requires\s*=\s*\[(.*?)\]/s;
         const match = regex.exec(content);
-        if (!match) return;
+        if (!match) {
+            return;
+        }
 
         const depsString = match[1];
         const deps = depsString

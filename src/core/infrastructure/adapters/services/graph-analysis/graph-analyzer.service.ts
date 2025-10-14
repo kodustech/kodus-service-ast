@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service';
+import { PinoLoggerService } from '../logger/pino.service.js';
 import {
     EnrichedGraph,
     EnrichedGraphEdge,
     FunctionAnalysis,
     GetGraphsResponseData,
+    GetImpactAnalysisResponse,
     NodeType,
     RelationshipType,
-} from '@kodus/kodus-proto/ast/v2';
+} from '@/shared/types/ast.js';
 import * as path from 'path';
 import {
     ChangeResult,
@@ -18,16 +19,15 @@ import {
     FunctionSimilarity,
     ImpactedNode,
     ImpactResult,
-} from '@/core/domain/diff/types/diff-analyzer.types';
-import { DiffAnalyzerService } from '../diff/diff-analyzer.service';
+} from '@/core/domain/diff/types/diff-analyzer.types.js';
+import { DiffAnalyzerService } from '../diff/diff-analyzer.service.js';
 import {
     LLMModelProvider,
     ParserType,
     PromptRole,
     PromptRunnerService,
 } from '@kodus/kodus-common/llm';
-import { prompt_checkSimilarFunctions_system } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt';
-import { GetImpactAnalysisResponse } from '@kodus/kodus-proto/ast';
+import { promptCheckSimilarFunctionsSystem } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt.js';
 
 @Injectable()
 export class GraphAnalyzerService {
@@ -88,9 +88,12 @@ export class GraphAnalyzerService {
             .split(/\r?\n/)
             .map((line) => {
                 const trimmed = line.trim();
-                if (!trimmed) return '';
-                if (trimmed === '__new hunk__' || trimmed === '__old hunk__')
+                if (!trimmed) {
                     return '';
+                }
+                if (trimmed === '__new hunk__' || trimmed === '__old hunk__') {
+                    return '';
+                }
                 const match = trimmed.match(/^(\d+)\s+([+\- ])(.*)/);
                 if (match) {
                     const sign = match[2];
@@ -226,7 +229,9 @@ export class GraphAnalyzerService {
         direction: 'both' | 'forward' | 'backward',
         allowedTypes: RelationshipType[],
     ) {
-        if (visited.has(currentNode)) return; // Evita loops infinitos
+        if (visited.has(currentNode)) {
+            return;
+        } // Evita loops infinitos
         visited.add(currentNode);
 
         for (const edge of graph.relationships) {
@@ -302,12 +307,14 @@ export class GraphAnalyzerService {
                 }
             }
 
+            const similarFunctions = await this.checkFunctionSimilarityWithLLM(
+                addedFunction,
+                candidateSimilarFunctions,
+            );
+
             functionsResult.push({
                 functionName: addedFunction.fullName,
-                similarFunctions: await this.checkFunctionSimilarityWithLLM(
-                    addedFunction,
-                    candidateSimilarFunctions,
-                ),
+                similarFunctions: similarFunctions || [],
             });
         }
 
@@ -379,13 +386,13 @@ export class GraphAnalyzerService {
             );
 
             const oldFunctionCode = this.generateFunctionWithLines(
-                oldAnalysis?.fullText,
-                oldAnalysis?.startLine,
+                oldAnalysis?.fullText || '',
+                oldAnalysis?.startLine || 0,
             );
 
             const newFunctionCode = this.generateFunctionWithLines(
-                newAnalysis?.fullText,
-                newAnalysis?.startLine,
+                newAnalysis?.fullText || '',
+                newAnalysis?.startLine || 0,
             );
 
             // 3) Pegar todos os nós (flatten dos groupedByLevel)
@@ -409,8 +416,8 @@ export class GraphAnalyzerService {
                         functionName: node.name,
                         filePath: analysis?.file || '',
                         functionBody: this.generateFunctionWithLines(
-                            analysis?.fullText,
-                            analysis?.startLine,
+                            analysis?.fullText || '',
+                            analysis?.startLine || 0,
                         ),
                     };
                 },
@@ -506,14 +513,14 @@ export class GraphAnalyzerService {
                 return {
                     id: nodeId,
                     name: node?.name || '',
-                    type: node?.type,
+                    type: node?.type || NodeType.NODE_TYPE_FUNCTION,
                     severity: this.determineSeverity(graph, nodeId),
                     level: Number(
                         Object.entries(levels).find(([, nodes]) =>
                             nodes.includes(nodeId),
                         )?.[0] ?? -1,
                     ),
-                    filePath: node?.filePath,
+                    filePath: node?.filePath || '',
                     calledBy: this.getCalledByMethods(graph, nodeId).map((i) =>
                         i.toString(),
                     ),
@@ -536,11 +543,15 @@ export class GraphAnalyzerService {
         const visited = new Set<string>();
 
         while (queue.length) {
-            const { node, level } = queue.shift();
-            if (visited.has(node)) continue;
+            const { node, level } = queue.shift() || { node: '', level: 0 };
+            if (visited.has(node)) {
+                continue;
+            }
             visited.add(node);
 
-            if (!levels[level]) levels[level] = [];
+            if (!levels[level]) {
+                levels[level] = [];
+            }
             levels[level].push(node);
 
             for (const edge of graph.relationships) {
@@ -677,7 +688,7 @@ export class GraphAnalyzerService {
             .setTemperature(0)
             .setPayload(JSON.stringify(functions))
             .addPrompt({
-                prompt: prompt_checkSimilarFunctions_system,
+                prompt: promptCheckSimilarFunctionsSystem,
                 role: PromptRole.SYSTEM,
             })
             .setRunName('checkFunctionSimilarityWithLLM')

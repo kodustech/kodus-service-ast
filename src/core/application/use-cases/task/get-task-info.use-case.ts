@@ -4,10 +4,7 @@ import {
     GrpcInvalidArgumentException,
     GrpcNotFoundException,
 } from '@/shared/utils/grpc/exceptions';
-import {
-    GetTaskInfoRequest,
-    GetTaskInfoResponse,
-} from '@kodus/kodus-proto/task';
+import { GetTaskInfoRequest, GetTaskInfoResponse } from '@/shared/types/task';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

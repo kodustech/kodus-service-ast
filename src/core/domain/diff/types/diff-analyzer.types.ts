@@ -1,4 +1,4 @@
-import { FunctionAnalysis, NodeType } from '@kodus/kodus-proto/ast/v2';
+import { FunctionAnalysis, NodeType } from '@/shared/types/ast';
 
 export interface ChangeResult {
     added: FunctionResult[];

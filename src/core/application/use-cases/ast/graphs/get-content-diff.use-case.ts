@@ -1,9 +1,8 @@
-import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/diff/diff-analyzer.service';
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { GetContentFromDiffRequest } from '@kodus/kodus-proto/ast';
-import { GetGraphsUseCase } from './get-graphs.use-case';
+import { DiffAnalyzerService } from '@/core/infrastructure/adapters/services/diff/diff-analyzer.service.js';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { GetContentFromDiffRequest } from '@/shared/types/ast.js';
+import { GetGraphsUseCase } from './get-graphs.use-case.js';
 import { Injectable } from '@nestjs/common';
-import { GrpcNotFoundException } from '@/shared/utils/grpc/exceptions';
 import * as path from 'path';
 
 @Injectable()
@@ -31,9 +30,7 @@ export class GetContentFromDiffUseCase {
                     serviceName: GetContentFromDiffUseCase.name,
                 });
 
-                throw new GrpcNotFoundException(
-                    'No graphs found for the provided repository',
-                );
+                throw new Error('No graphs found for the provided repository');
             }
 
             let absoluteFilePath = filePath;

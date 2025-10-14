@@ -6,23 +6,25 @@ import {
     parseJsonConfigFileContent,
     resolveModuleName,
 } from 'typescript';
-import { JavaScriptResolver } from '../javascript/javascript-resolver';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { JavaScriptResolver } from '../javascript/javascript-resolver.js';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     ImportedModule,
     ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
+} from '@/core/domain/parsing/types/language-resolver.js';
 
 export class TypeScriptResolver
     extends JavaScriptResolver
     implements LanguageResolver
 {
-    private tsConfig: CompilerOptions;
-    private tsConfigPath: string;
+    private tsConfig!: CompilerOptions;
+    private tsConfigPath!: string;
 
     override async canHandle(projectRoot: string): Promise<boolean> {
-        if (!(await super.canHandle(projectRoot))) return false;
+        if (!(await super.canHandle(projectRoot))) {
+            return false;
+        }
 
         const tsConfigPath = path.join(projectRoot, 'tsconfig.json');
 
@@ -36,9 +38,10 @@ export class TypeScriptResolver
     }
 
     override async initialize(): Promise<boolean> {
-        if (!(await super.initialize())) return false;
+        if (!(await super.initialize())) {
+            return false;
+        }
 
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         const tsConfigFile = readConfigFile(this.tsConfigPath, tsSys.readFile);
         if (tsConfigFile.error) {
             console.error(

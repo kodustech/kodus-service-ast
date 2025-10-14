@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Pool } from 'pg';
-import { DATABASE_POOL } from './database.constants';
+import { DATABASE_POOL } from './database.constants.js';
 
 @Injectable()
 export class DatabasePoolCleanup implements OnModuleDestroy {

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service';
+import { PinoLoggerService } from '../logger/pino.service.js';
 import {
     EnrichedGraphEdge,
     EnrichedGraphNode,
@@ -10,24 +10,24 @@ import {
     Range,
     RelationshipType,
     RepositoryData,
-} from '@kodus/kodus-proto/ast/v2';
+} from '@/shared/types/ast.js';
 import {
     ChangeResult,
     DiffHunk,
     ExtendedFunctionInfo,
-} from '@/core/domain/diff/types/diff-analyzer.types';
+} from '@/core/domain/diff/types/diff-analyzer.types.js';
 import * as path from 'path';
 import { parsePatch } from 'diff';
 import {
     REPOSITORY_MANAGER_TOKEN,
     IRepositoryManager,
-} from '@/core/domain/repository/contracts/repository-manager.contract';
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import {
     getLanguageConfigForFilePath,
     LanguageConfig,
-} from '@/core/domain/parsing/types/supported-languages';
-import { getLanguageResolver } from '../parsing/resolvers';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+} from '@/core/domain/parsing/types/supported-languages.js';
+import { getLanguageResolver } from '../parsing/resolvers/index.js';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 
 enum RelatedNodeDirection {
     TO,
@@ -97,7 +97,7 @@ export class DiffAnalyzerService {
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
-                return null;
+                return '';
             }
 
             const mainFileContent =
@@ -114,7 +114,7 @@ export class DiffAnalyzerService {
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
-                return null;
+                return '';
             }
 
             const ranges = this.getModifiedRanges(diff, mainFileContent);
@@ -125,7 +125,7 @@ export class DiffAnalyzerService {
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
-                return null;
+                return '';
             }
 
             const mainFileNodes = this.getFileNodes(graphs, filePath);
@@ -136,7 +136,7 @@ export class DiffAnalyzerService {
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
-                return null;
+                return '';
             }
 
             const mainNodes = this.getNodesForRanges(mainFileNodes, ranges);
@@ -147,7 +147,7 @@ export class DiffAnalyzerService {
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
-                return null;
+                return '';
             }
 
             const relationships = graphs.enrichHeadGraph.relationships;
@@ -215,7 +215,8 @@ export class DiffAnalyzerService {
 
             const result: string[] = [];
             for (const [file, nodes] of Object.entries(groupedByFilePath)) {
-                let fileContent: string;
+                let fileContent: string | null;
+
                 if (file === filePath) {
                     fileContent = mainFileContent;
                 } else {
@@ -282,7 +283,7 @@ export class DiffAnalyzerService {
                 metadata,
                 serviceName: DiffAnalyzerService.name,
             });
-            return null;
+            return '';
         }
     }
 
@@ -404,27 +405,29 @@ export class DiffAnalyzerService {
                 );
 
                 // Merge the ranges of all methods except the constructor
-                const ranges = noConstructor.map((m) => m.position);
+                const ranges = noConstructor
+                    .map((m) => m.position)
+                    .filter((position): position is Range => position !== null);
                 const mergedRanges = this.mergeRanges(ranges);
 
                 // Remove the methods ranges from the class range
-                const finalRanges = this.diffRanges(
-                    [classRange],
-                    mergedRanges,
-                    content,
-                );
+                const finalRanges = classRange
+                    ? this.diffRanges([classRange], mergedRanges, content)
+                    : [];
 
                 // Return class range with only the constructor, fields, etc.
                 return finalRanges;
             }
             default: {
-                return [node.position];
+                return node.position ? [node.position] : [];
             }
         }
     }
 
     private mergeRanges(ranges: Range[]): Range[] {
-        if (ranges.length < 2) return ranges;
+        if (ranges.length < 2) {
+            return ranges;
+        }
 
         // Sort ranges by startIndex, then by endIndex
         const sortedRanges = [...ranges].sort(
@@ -516,7 +519,9 @@ export class DiffAnalyzerService {
                 }
 
                 pieces = nextPieces;
-                if (pieces.length === 0) continue outer;
+                if (pieces.length === 0) {
+                    continue outer;
+                }
             }
 
             result.push(...pieces);
@@ -765,7 +770,7 @@ export class DiffAnalyzerService {
         const hunks: DiffHunk[] = [];
         const hunkRegex = /@@ -(\d+),(\d+) \+(\d+),(\d+) @@([\s\S]+?)(?=@@|$)/g;
 
-        let match: string[];
+        let match: RegExpExecArray | null;
         while ((match = hunkRegex.exec(diff)) !== null) {
             hunks.push({
                 oldStart: parseInt(match[1], 10),
@@ -834,20 +839,31 @@ export class DiffAnalyzerService {
 
         for (const range of ranges) {
             // Find all nodes that fully contain the range
-            const containingNodes = fileNodes.filter((def) => {
-                return (
-                    def.position.startIndex <= range.startIndex &&
-                    def.position.endIndex >= range.endIndex
-                );
-            });
+            const containingNodes = fileNodes.filter(
+                (def: EnrichedGraphNode) => {
+                    return (
+                        def?.position?.startIndex !== undefined &&
+                        def?.position?.endIndex !== undefined &&
+                        def.position.startIndex <= range.startIndex &&
+                        def.position.endIndex >= range.endIndex
+                    );
+                },
+            );
 
-            if (containingNodes.length === 0) continue;
+            if (containingNodes.length === 0) {
+                continue;
+            }
 
             // Pick the smallest node (by range size)
             const smallestNode = containingNodes.reduce((min, curr) => {
-                const minSize = min.position.endIndex - min.position.startIndex;
+                const minSize =
+                    min?.position?.endIndex && min?.position?.startIndex
+                        ? min.position.endIndex - min.position.startIndex
+                        : 0;
                 const currSize =
-                    curr.position.endIndex - curr.position.startIndex;
+                    curr?.position?.endIndex && curr?.position?.startIndex
+                        ? curr.position.endIndex - curr.position.startIndex
+                        : 0;
                 return currSize < minSize ? curr : min;
             });
 
@@ -896,7 +912,7 @@ export class DiffAnalyzerService {
         const { direction = RelatedNodeDirection.TO, nodeTypeFilter = [] } =
             options ?? {};
 
-        const relatedNodes = relations
+        const relatedNodes: EnrichedGraphNode[] = relations
             .filter((relation) => {
                 // filter relations based on direction and type
                 const isToRelation =
@@ -942,20 +958,25 @@ export class DiffAnalyzerService {
 
                 // find the related node in the file nodes
                 const relatedNode = fileNodes.find(
-                    (n) => n.id === relatedNodeId,
+                    (node: EnrichedGraphNode) => node?.id === relatedNodeId,
                 );
 
                 return relatedNode || null;
             })
-            .filter((n) => {
+            .filter((node): node is EnrichedGraphNode => {
                 // filter out null nodes and apply node type filter
-                if (!n) return false;
-                if (nodeTypeFilter.length === 0) return true;
-                return nodeTypeFilter.includes(n.type);
+                if (!node) {
+                    return false;
+                }
+                if (nodeTypeFilter.length === 0) {
+                    return true;
+                }
+                return nodeTypeFilter.includes(node.type);
             });
 
         const otherFileFunctions = relatedNodes.filter(
-            (n) =>
+            (n: EnrichedGraphNode | null) =>
+                n &&
                 n.filePath !== filePath &&
                 n.type === NodeType.NODE_TYPE_FUNCTION,
         );
@@ -966,7 +987,10 @@ export class DiffAnalyzerService {
                 return (
                     relation.type ===
                         RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD &&
-                    otherFileFunctions.some((f) => f.id === relation.to)
+                    otherFileFunctions.some(
+                        (f: EnrichedGraphNode | null) =>
+                            f && f.id === relation.to,
+                    )
                 );
             })
             .map((relation) => {
@@ -979,10 +1003,14 @@ export class DiffAnalyzerService {
 
                 return classNode || null;
             })
-            .filter((n) => n !== null);
+            .filter((n: EnrichedGraphNode | null) => n !== null);
 
         // Combine related nodes from the same file and classes from other files
-        relatedNodes.push(...otherFileFunctionsClass);
+        relatedNodes.push(
+            ...otherFileFunctionsClass.filter(
+                (node): node is EnrichedGraphNode => node !== null,
+            ),
+        );
 
         return relatedNodes;
     }
@@ -1013,14 +1041,18 @@ export class DiffAnalyzerService {
         }
 
         return fileNodes.filter((node) => {
-            if (node.type !== NodeType.NODE_TYPE_IMPORT) return false;
+            if (node.type !== NodeType.NODE_TYPE_IMPORT) {
+                return false;
+            }
 
             const resolvedPath = resolver.resolveImport(
                 { origin: node.name, imported: [] },
                 fromFile,
             );
 
-            if (!resolvedPath.normalizedPath.startsWith(rootDir)) return false;
+            if (!resolvedPath.normalizedPath.startsWith(rootDir)) {
+                return false;
+            }
 
             return paths.some((path) =>
                 resolvedPath.normalizedPath.includes(path),

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { TaskPersistenceService } from './task-persistence.service';
-import { DatabaseModule } from '@/core/infrastructure/database/database.module';
+import { TaskPersistenceService } from './task-persistence.service.js';
+import { DatabaseModule } from '@/core/infrastructure/database/database.module.js';
 
 @Module({
     imports: [DatabaseModule],

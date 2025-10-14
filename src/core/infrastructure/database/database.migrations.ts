@@ -1,5 +1,5 @@
 import { PoolClient } from 'pg';
-import { qualifiedName, quoteIdentifier } from './database.utils';
+import { qualifiedName } from './database.utils.js';
 
 export interface DatabaseMigration {
     id: string;

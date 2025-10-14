@@ -37,7 +37,7 @@ COPY . .
 RUN yarn build
 
 # Etapa de produção
-FROM --platform=linux/amd64 node:22.14.0-slim
+FROM node:22.14.0-slim
 
 # Variáveis de ambiente
 ENV NODE_ENV=production

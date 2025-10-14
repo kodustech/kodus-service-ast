@@ -1,4 +1,4 @@
-import { TaskStatus } from '@/core/domain/task/enums/task-status.enum';
+import { TaskStatus } from '@/core/domain/task/enums/task-status.enum.js';
 
 export interface CreateTaskInput {
     type: string;

@@ -1,10 +1,10 @@
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+
 import {
-    GrpcInvalidArgumentException,
-    GrpcNotFoundException,
-} from '@/shared/utils/grpc/exceptions';
-import { GetTaskInfoRequest, GetTaskInfoResponse } from '@/shared/types/task';
+    GetTaskInfoRequest,
+    GetTaskInfoResponse,
+} from '@/shared/types/task.js';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class GetTaskInfoUseCase {
                 metadata: { request },
             });
 
-            throw new GrpcInvalidArgumentException('Task ID is required');
+            throw new Error('Task ID is required');
         }
 
         const task = await this.taskManagerService.getTask(taskId);
@@ -36,7 +36,7 @@ export class GetTaskInfoUseCase {
                 metadata: { request },
             });
 
-            throw new GrpcNotFoundException(`Task with ID ${taskId} not found`);
+            throw new Error(`Task with ID ${taskId} not found`);
         }
 
         return {

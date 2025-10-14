@@ -1,4 +1,4 @@
-import { ImportedModule, ResolvedImport } from '../types/language-resolver';
+import { ImportedModule, ResolvedImport } from '../types/language-resolver.js';
 
 export interface LanguageResolver {
     canHandle(projectRoot: string): Promise<boolean>;

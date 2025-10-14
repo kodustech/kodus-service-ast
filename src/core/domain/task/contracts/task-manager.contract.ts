@@ -1,5 +1,5 @@
-import { DeepPartial } from '@/shared/utils/deep-partial';
-import { Task, TaskPriority, TaskStatus } from '@/shared/types/task';
+import { DeepPartial } from '@/shared/utils/deep-partial.js';
+import { Task, TaskPriority, TaskStatus } from '@/shared/types/task.js';
 
 export interface ITaskManagerService {
     // Task Management

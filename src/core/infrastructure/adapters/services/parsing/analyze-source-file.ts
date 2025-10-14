@@ -94,7 +94,7 @@ export class SourceFileAnalyzer {
                     batch.map((imp) => {
                         try {
                             const resolved =
-                                this.languageParser.resolveImportWithCache(
+                                this.languageParser!.resolveImportWithCache(
                                     imp,
                                     [],
                                     filePath,

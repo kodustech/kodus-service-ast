@@ -6,7 +6,7 @@ import {
     Range,
     Scope,
     TypeAnalysis,
-} from '@/shared/types/ast';
+} from '@/shared/types/ast.js';
 import { SyntaxNode } from 'tree-sitter';
 
 export type ParseContext = {

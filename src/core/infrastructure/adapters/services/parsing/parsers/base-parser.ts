@@ -1,4 +1,4 @@
-import * as Parser from 'tree-sitter';
+import Parser from 'tree-sitter';
 import { Query, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
 import { Language } from 'tree-sitter';
 import {
@@ -42,8 +42,8 @@ export abstract class BaseParser {
         Map<QueryType, Query>
     >();
 
-    private parser: Parser;
-    private queries: Map<QueryType, Query>;
+    private parser?: Parser;
+    private queries?: Map<QueryType, Query>;
 
     protected abstract getLanguage(): Language;
     protected abstract getRawQueries(): Map<QueryType, ParserQuery>;
@@ -68,6 +68,10 @@ export abstract class BaseParser {
         if (!cached) {
             cached = new Parser();
 
+            if (!cached) {
+                throw new Error(`Failed to create parser for language ${id}`);
+            }
+
             cached.setLanguage(lang);
             BaseParser.parserByLang.set(id, cached);
         }
@@ -90,21 +94,24 @@ export abstract class BaseParser {
 
     public getParser(): Parser {
         if (!this.parser) {
-            throw new Error('Parser not set up');
+            this.setupParser();
+        }
+
+        if (!this.parser) {
+            throw new Error('Failed to initialize parser');
         }
 
         return this.parser;
     }
 
     protected getQuery(type: QueryType): Query | null {
-        if (!this.queries || this.queries.size === 0) {
-            throw new Error('Queries not set up');
+        if (!this.queries) {
+            this.setupQueries();
         }
-        const query = this.queries.get(type);
-        if (!query) {
+        if (!this.queries) {
             return null;
         }
-        return query;
+        return this.queries.get(type) || null;
     }
 
     public collectAllInOnePass(
@@ -148,9 +155,15 @@ export abstract class BaseParser {
                 importCap.node,
                 NodeType.NODE_TYPE_IMPORT,
             );
+            if (!analysisNode) {
+                continue;
+            }
             this.registerAnalysisNode(analysisNode);
 
             const originName = this.processImportOrigin(match, analysisNode);
+            if (!originName) {
+                continue;
+            }
             this.addNameToAnalysisNode(analysisNode, originName);
 
             const imported = this.processImportedSymbols(
@@ -181,7 +194,7 @@ export abstract class BaseParser {
             (capture) => capture.name === 'origin',
         );
         if (!originCapture || !originCapture.node) {
-            return;
+            return null;
         }
         const originNode = originCapture.node;
 
@@ -246,8 +259,10 @@ export abstract class BaseParser {
             const aliasCapture = captures.find(
                 (capture) => capture.name === 'alias',
             );
-            first.symbol = '*';
-            first.nodeId = this.mapNodeId(aliasCapture.node);
+            if (aliasCapture) {
+                first.symbol = '*';
+                first.nodeId = this.mapNodeId(aliasCapture.node);
+            }
         }
 
         return imported;
@@ -332,7 +347,8 @@ export abstract class BaseParser {
             implementedBy: [],
             scope: [],
             file: absolutePath,
-            type: queryToNodeTypeMap.get(type),
+            type:
+                queryToNodeTypeMap.get(type) ?? NodeType.NODE_TYPE_UNSPECIFIED,
         };
 
         const methods: Method[] = [];
@@ -350,7 +366,9 @@ export abstract class BaseParser {
         this.processConstructor(objAnalysis, methods);
 
         const analysisNode = this.context.analysisNodes.get(objAnalysis.nodeId);
-        this.addNameToAnalysisNode(analysisNode, objAnalysis.name);
+        if (analysisNode) {
+            this.addNameToAnalysisNode(analysisNode, objAnalysis.name);
+        }
 
         return objAnalysis;
     }
@@ -376,9 +394,11 @@ export abstract class BaseParser {
                     node,
                     objAnalysis.type,
                 );
-                this.registerAnalysisNode(analysisNode);
-                objAnalysis.nodeId = this.mapNodeId(node);
-                objAnalysis.position = this.getNodeRange(node);
+                if (analysisNode) {
+                    this.registerAnalysisNode(analysisNode);
+                    objAnalysis.nodeId = this.mapNodeId(node);
+                    objAnalysis.position = this.getNodeRange(node);
+                }
                 break;
             }
             case 'objName': {
@@ -634,7 +654,12 @@ export abstract class BaseParser {
                 returnType: null,
                 bodyNode: null,
                 scope: [],
-                position: null,
+                position: {
+                    startIndex: 0,
+                    endIndex: 0,
+                    startPosition: { row: 0, column: 0 },
+                    endPosition: { row: 0, column: 0 },
+                },
             };
             captures.forEach((capture) =>
                 this.processFunctionCapture(capture, method),
@@ -647,7 +672,9 @@ export abstract class BaseParser {
 
             const params = method.params.map((param) => param.name);
             const returnType = method.returnType || 'unknown';
-            const normalizedBody = normalizeAST(method.bodyNode);
+            const normalizedBody = method.bodyNode
+                ? normalizeAST(method.bodyNode)
+                : '';
             const signatureHash = normalizeSignature(params, returnType);
             const lines = method.bodyNode
                 ? method.bodyNode.endPosition.row -
@@ -695,8 +722,12 @@ export abstract class BaseParser {
                 returnType,
                 calls,
                 className,
-                startLine: method.bodyNode?.startPosition.row + 1 || 0,
-                endLine: method.bodyNode?.endPosition.row + 1 || 0,
+                startLine: method.bodyNode?.startPosition?.row
+                    ? method.bodyNode.startPosition.row + 1
+                    : 0,
+                endLine: method.bodyNode?.endPosition?.row
+                    ? method.bodyNode.endPosition.row + 1
+                    : 0,
                 functionHash: normalizedBody,
                 signatureHash,
                 fullText: method.bodyNode?.text || '',
@@ -719,9 +750,11 @@ export abstract class BaseParser {
                     node,
                     NodeType.NODE_TYPE_FUNCTION,
                 );
-                this.registerAnalysisNode(analysisNode);
-                method.nodeId = this.mapNodeId(node);
-                method.position = this.getNodeRange(node);
+                if (analysisNode) {
+                    this.registerAnalysisNode(analysisNode);
+                    method.nodeId = this.mapNodeId(node);
+                    method.position = this.getNodeRange(node);
+                }
                 break;
             }
             case 'funcName': {
@@ -749,7 +782,7 @@ export abstract class BaseParser {
             NodeType.NODE_TYPE_FUNCTION,
         );
         const parentNode = this.context.analysisNodes.get(method.nodeId);
-        if (parentNode) {
+        if (parentNode && analysisNode) {
             this.addChildToNode(parentNode, analysisNode);
         }
     }
@@ -891,9 +924,11 @@ export abstract class BaseParser {
                             node,
                             NodeType.NODE_TYPE_TYPE_ALIAS,
                         );
-                        this.registerAnalysisNode(analysisNode);
-                        typeAnalysis.nodeId = this.mapNodeId(node);
-                        typeAnalysis.position = this.getNodeRange(node);
+                        if (analysisNode) {
+                            this.registerAnalysisNode(analysisNode);
+                            typeAnalysis.nodeId = this.mapNodeId(node);
+                            typeAnalysis.position = this.getNodeRange(node);
+                        }
                         break;
                     }
                     case 'typeName': {
@@ -908,6 +943,9 @@ export abstract class BaseParser {
                     }
                     case 'typeValue': {
                         const typeName = node.text;
+                        if (!typeAnalysis.fields) {
+                            typeAnalysis.fields = {};
+                        }
                         if (typeFields.length > 0) {
                             typeAnalysis.fields[typeFields.pop() || ''] =
                                 typeName;

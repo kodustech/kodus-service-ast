@@ -1,1 +1,1 @@
-export { TaskStatus } from '@/shared/types/task';
+export { TaskStatus } from '@/shared/types/task.js';

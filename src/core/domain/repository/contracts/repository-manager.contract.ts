@@ -1,4 +1,4 @@
-import { RepositoryData } from '@/shared/types/ast';
+import { RepositoryData } from '@/shared/types/ast.js';
 
 export const REPOSITORY_MANAGER_TOKEN = Symbol('REPOSITORY_MANAGER_TOKEN');
 

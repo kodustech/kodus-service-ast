@@ -1,15 +1,15 @@
 import {
-    AnalysisNode,
-    CodeGraph,
-    EnrichedGraph,
-    FileAnalysis,
-    FunctionAnalysis,
-    GraphWithDir,
-    SerializedCodeGraph,
-    SerializedFileAnalysis,
-    SerializedGetGraphsResponseData,
-    SerializedGraphWithDir,
-    TypeAnalysis,
+    type AnalysisNode,
+    type CodeGraph,
+    type EnrichedGraph,
+    type FileAnalysis,
+    type FunctionAnalysis,
+    type GraphWithDir,
+    type SerializedCodeGraph,
+    type SerializedFileAnalysis,
+    type SerializedGetGraphsResponseData,
+    type SerializedGraphWithDir,
+    type TypeAnalysis,
 } from '@/shared/types/ast.js';
 
 function mapToRecord<T>(map: Map<string, T>): Record<string, T> {

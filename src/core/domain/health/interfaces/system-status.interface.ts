@@ -1,4 +1,4 @@
-import { MemoryMetrics } from './memory-metrics.interface.js';
+import { type MemoryMetrics } from './memory-metrics.interface.js';
 
 /**
  * Interface representing the complete system status

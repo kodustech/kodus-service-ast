@@ -1,4 +1,4 @@
-import { PoolClient } from 'pg';
+import { type PoolClient } from 'pg';
 import { qualifiedName } from './database.utils.js';
 
 export interface DatabaseMigration {

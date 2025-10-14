@@ -1,6 +1,6 @@
 import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types.js';
 import {
-    IRepositoryManager,
+    type IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';

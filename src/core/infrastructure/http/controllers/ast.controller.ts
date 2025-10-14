@@ -1,29 +1,26 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { InitializeRepositoryUseCase } from '@/core/application/use-cases/ast/graphs/initialize-repository.use-case.js';
 import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/graphs/delete-repository.use-case.js';
 import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/graphs/get-content-diff.use-case.js';
-import { InitializeImpactAnalysisUseCase } from '@/core/application/use-cases/ast/analysis/initialize-impact-analysis.use-case.js';
 import { GetImpactAnalysisUseCase } from '@/core/application/use-cases/ast/analysis/get-impact-analysis.use-case.js';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import { TaskService } from '@/core/application/services/task/task.service.js';
 import {
-    DeleteRepositoryRequest,
-    DeleteRepositoryResponse,
-    GetContentFromDiffRequest,
-    GetImpactAnalysisRequest,
-    GetImpactAnalysisResponse,
-    InitializeImpactAnalysisRequest,
-    InitializeImpactAnalysisResponse,
-    InitializeRepositoryRequest,
-    InitializeRepositoryResponse,
+    type DeleteRepositoryRequest,
+    type DeleteRepositoryResponse,
+    type GetContentFromDiffRequest,
+    type GetImpactAnalysisRequest,
+    type GetImpactAnalysisResponse,
+    type InitializeImpactAnalysisRequest,
+    type InitializeImpactAnalysisResponse,
+    type InitializeRepositoryRequest,
+    type InitializeRepositoryResponse,
 } from '@/shared/types/ast.js';
+
 @Controller('ast')
 export class AstHttpController {
     constructor(
-        private readonly taskManagerService: TaskManagerService,
-        private readonly initializeRepositoryUseCase: InitializeRepositoryUseCase,
+        private readonly taskService: TaskService,
         private readonly deleteRepositoryUseCase: DeleteRepositoryUseCase,
         private readonly getContentFromDiffUseCase: GetContentFromDiffUseCase,
-        private readonly initializeImpactAnalysisUseCase: InitializeImpactAnalysisUseCase,
         private readonly getImpactAnalysisUseCase: GetImpactAnalysisUseCase,
     ) {}
 
@@ -32,12 +29,10 @@ export class AstHttpController {
     async initializeRepository(
         @Body() request: InitializeRepositoryRequest,
     ): Promise<InitializeRepositoryResponse> {
-        const taskId = await this.taskManagerService.createTask(
-            request.priority,
-        );
-
-        setImmediate(() => {
-            void this.initializeRepositoryUseCase.execute(request, taskId);
+        const taskId = await this.taskService.createAsyncTask({
+            type: 'AST_INITIALIZE_REPOSITORY',
+            priority: request.priority,
+            payload: request,
         });
 
         return { taskId };
@@ -63,12 +58,10 @@ export class AstHttpController {
     async initializeImpactAnalysis(
         @Body() request: InitializeImpactAnalysisRequest,
     ): Promise<InitializeImpactAnalysisResponse> {
-        const taskId = await this.taskManagerService.createTask(
-            request.priority,
-        );
-
-        setImmediate(() => {
-            void this.initializeImpactAnalysisUseCase.execute(request, taskId);
+        const taskId = await this.taskService.createAsyncTask({
+            type: 'AST_INITIALIZE_IMPACT_ANALYSIS',
+            priority: request.priority,
+            payload: request,
         });
 
         return { taskId };

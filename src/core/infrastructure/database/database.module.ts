@@ -111,7 +111,7 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
 
                 return new Pool({
                     ...poolConfig,
-                    // eslint-disable-next-line @typescript-eslint/naming-convention
+
                     application_name: 'kodus-service-ast',
                     max: getEnvVariableAsNumber('DB_POOL_MAX', 10),
                     idleTimeoutMillis: getEnvVariableAsNumber(
@@ -122,7 +122,7 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                         'DB_POOL_CONNECTION_TIMEOUT_MS',
                         5_000,
                     ),
-                    // eslint-disable-next-line @typescript-eslint/naming-convention
+
                     statement_timeout: getEnvVariableAsNumber(
                         'DB_STATEMENT_TIMEOUT_MS',
                         0,

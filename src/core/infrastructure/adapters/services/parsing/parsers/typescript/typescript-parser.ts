@@ -1,10 +1,13 @@
 import { BaseParser } from '../base-parser.js';
 import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
 import { typeScriptQueries } from './typescript-queries.js';
-import { Language, SyntaxNode } from 'tree-sitter';
-import { ParserQuery, QueryType } from '../query.js';
-import { CallChain, ChainType } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, Scope } from '@/shared/types/ast.js';
+import { type Language, type SyntaxNode } from 'tree-sitter';
+import { type ParserQuery, type QueryType } from '../query.js';
+import {
+    type CallChain,
+    ChainType,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class TypeScriptParser extends BaseParser {

@@ -20,7 +20,7 @@ import * as path from 'path';
 import { parsePatch } from 'diff';
 import {
     REPOSITORY_MANAGER_TOKEN,
-    IRepositoryManager,
+    type IRepositoryManager,
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import {
     getLanguageConfigForFilePath,

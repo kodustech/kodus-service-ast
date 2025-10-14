@@ -9,20 +9,26 @@ ENV NODE_ENV=development \
 
 WORKDIR /usr/src/app
 
-# Instala dependências do sistema necessárias para build
+# Dependências do sistema
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    ca-certificates \
-    git \
-    python3 \
-    make \
-    g++ \
-    pkg-config \
+      ca-certificates git python3 make g++ pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+# Copiar package / lock
 COPY package.json yarn.lock ./
+
+# Instalar dependências
 RUN yarn install --network-timeout 600000 \
- && npx --yes node-gyp rebuild -C node_modules/tree-sitter
+    && npx --yes node-gyp rebuild -C node_modules/tree-sitter
+
+# Copiar todo o código fonte
+COPY . .
+
+# Build do projeto
+RUN yarn build
 
 EXPOSE ${PORT} ${API_HEALTH_PORT} 9300 9301
-CMD ["yarn","start:dev"]
+
+# Rodar o build (JS) no container
+CMD ["node", "dist/main.js"]

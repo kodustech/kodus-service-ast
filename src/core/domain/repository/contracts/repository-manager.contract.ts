@@ -1,6 +1,6 @@
-import { RepositoryData } from '@/shared/types/ast.js';
+import { type RepositoryData } from '@/shared/types/ast.js';
 
-export const REPOSITORY_MANAGER_TOKEN = Symbol('REPOSITORY_MANAGER_TOKEN');
+export const REPOSITORY_MANAGER_TOKEN = Symbol('RepositoryManager');
 
 export interface IRepositoryManager {
     readonly graphsFileName: string;

@@ -1,5 +1,11 @@
-import { DeepPartial } from '@/shared/utils/deep-partial.js';
-import { Task, TaskPriority, TaskStatus } from '@/shared/types/task.js';
+import { type DeepPartial } from '@/shared/utils/deep-partial.js';
+import {
+    type Task,
+    type TaskPriority,
+    type TaskStatus,
+} from '@/shared/types/task.js';
+
+export const TASK_MANAGER_TOKEN = Symbol('TaskManager');
 
 export interface ITaskManagerService {
     // Task Management

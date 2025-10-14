@@ -3,13 +3,16 @@
     "collection": "@nestjs/schematics",
     "sourceRoot": "src",
     "compilerOptions": {
-        "assets": [
-            {
-                "include": "../proto/**/*.proto",
-                "outDir": "dist/proto"
-            }
-        ],
+        "assets": [],
         "deleteOutDir": true,
-        "watchAssets": true
+        "watchAssets": true,
+        "tsConfigPath": "tsconfig.json",
+        "builder": {
+            "type": "swc",
+            "typeCheck": true,
+            "options": {
+                "swcrcPath": ".swcrc"
+            }
+        }
     }
 }

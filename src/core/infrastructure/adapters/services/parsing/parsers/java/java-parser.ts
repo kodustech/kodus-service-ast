@@ -1,10 +1,13 @@
-import { Language, SyntaxNode } from 'tree-sitter';
+import { type Language, type SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser.js';
 import { javaQueries } from './java-queries.js';
 import * as JavaLang from 'tree-sitter-java';
-import { ParserQuery, QueryType } from '../query.js';
-import { ChainType, CallChain } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, Scope } from '@/shared/types/ast.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import {
+    ChainType,
+    type CallChain,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class JavaParser extends BaseParser {

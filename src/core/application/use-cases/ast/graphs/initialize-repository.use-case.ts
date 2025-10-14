@@ -11,10 +11,13 @@ import {
 } from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import {
+    type ITaskManagerService,
+    TASK_MANAGER_TOKEN,
+} from '@/core/domain/task/contracts/task-manager.contract.js';
 import { astSerializer } from '@/shared/utils/ast-serialization.js';
 import {
-    IRepositoryManager,
+    type IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 
@@ -26,7 +29,8 @@ export class InitializeRepositoryUseCase {
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         private readonly codeAnalyzerService: GraphEnrichmentService,
 
-        private readonly taskManagerService: TaskManagerService,
+        @Inject(TASK_MANAGER_TOKEN)
+        private readonly taskManagerService: ITaskManagerService,
 
         private readonly logger: PinoLoggerService,
     ) {}

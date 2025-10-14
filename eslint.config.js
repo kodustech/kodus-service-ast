@@ -56,6 +56,16 @@ export default tseslint.config(
                 { argsIgnorePattern: '^_' },
             ],
 
+            // Força o uso de 'import type' para imports apenas de tipos
+            '@typescript-eslint/consistent-type-imports': [
+                'error',
+                {
+                    prefer: 'type-imports',
+                    disallowTypeAnnotations: true,
+                    fixStyle: 'inline-type-imports',
+                },
+            ],
+
             // Regras básicas de nomenclatura
             '@typescript-eslint/naming-convention': [
                 'error',
@@ -82,6 +92,14 @@ export default tseslint.config(
                     format: ['camelCase'],
                     leadingUnderscore: 'allow',
                 },
+                // Variáveis const que são funções podem ser camelCase
+                {
+                    selector: 'variable',
+                    modifiers: ['const'],
+                    types: ['function'],
+                    format: ['camelCase'],
+                },
+                // Outras constantes podem ser camelCase ou UPPER_CASE
                 {
                     selector: 'variable',
                     modifiers: ['const'],
@@ -102,10 +120,19 @@ export default tseslint.config(
                     format: ['camelCase', 'UPPER_CASE'],
                 },
                 {
-                    // Exceção para headers HTTP com hífens
+                    // Exceção para headers HTTP com hífens (X-...)
                     selector: 'objectLiteralProperty',
                     filter: {
                         regex: '^X-[A-Za-z-]+$',
+                        match: true,
+                    },
+                    format: null,
+                },
+                {
+                    // Exceção para propriedades RabbitMQ com hífens (x-...)
+                    selector: 'objectLiteralProperty',
+                    filter: {
+                        regex: '^x-[a-z-]+$',
                         match: true,
                     },
                     format: null,
@@ -138,6 +165,30 @@ export default tseslint.config(
                     format: null,
                 },
                 {
+                    // Exceção para variáveis que recebem classes/construtores (PascalCase)
+                    selector: 'variable',
+                    modifiers: ['const'],
+                    types: ['function'],
+                    format: ['PascalCase'],
+                },
+                {
+                    // Exceção para destructuring de classes importadas
+                    selector: 'variable',
+                    modifiers: ['const'],
+                    filter: {
+                        regex: '^[A-Z][a-zA-Z]*$',
+                        match: true,
+                    },
+                    format: ['PascalCase'],
+                },
+                {
+                    // Exceção para funções constantes nomeadas em PascalCase
+                    selector: 'variable',
+                    modifiers: ['const'],
+                    types: ['function'],
+                    format: ['PascalCase'],
+                },
+                {
                     // Exceção para nomes de nós AST (tree-sitter) com underscores
                     selector: 'objectLiteralProperty',
                     filter: {
@@ -145,6 +196,15 @@ export default tseslint.config(
                         match: true,
                     },
                     format: null,
+                },
+                {
+                    // Exceção para constantes que são funções SQL (nomes de tabelas)
+                    selector: 'variable',
+                    filter: {
+                        regex: '^(MIGRATIONS_TABLE|CREATE_MIGRATIONS_TABLE)$',
+                        match: true,
+                    },
+                    format: ['UPPER_CASE'],
                 },
             ],
 

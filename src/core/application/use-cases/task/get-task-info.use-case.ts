@@ -1,16 +1,20 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import {
+    type ITaskManagerService,
+    TASK_MANAGER_TOKEN,
+} from '@/core/domain/task/contracts/task-manager.contract.js';
 
 import {
     GetTaskInfoRequest,
     GetTaskInfoResponse,
 } from '@/shared/types/task.js';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GetTaskInfoUseCase {
     constructor(
-        private readonly taskManagerService: TaskManagerService,
+        @Inject(TASK_MANAGER_TOKEN)
+        private readonly taskManagerService: ITaskManagerService,
 
         private readonly logger: PinoLoggerService,
     ) {}

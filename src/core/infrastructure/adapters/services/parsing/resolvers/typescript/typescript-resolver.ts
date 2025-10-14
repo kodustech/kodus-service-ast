@@ -1,17 +1,17 @@
 import * as path from 'path';
 import {
     sys as tsSys,
-    CompilerOptions,
+    type CompilerOptions,
     readConfigFile,
     parseJsonConfigFileContent,
     resolveModuleName,
 } from 'typescript';
 import { JavaScriptResolver } from '../javascript/javascript-resolver.js';
 import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    ImportedModule,
-    ResolvedImport,
+    type ImportedModule,
+    type ResolvedImport,
 } from '@/core/domain/parsing/types/language-resolver.js';
 
 export class TypeScriptResolver

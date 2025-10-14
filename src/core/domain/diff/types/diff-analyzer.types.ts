@@ -1,4 +1,4 @@
-import { FunctionAnalysis, NodeType } from '@/shared/types/ast.js';
+import { type FunctionAnalysis, type NodeType } from '@/shared/types/ast.js';
 
 export interface ChangeResult {
     added: FunctionResult[];

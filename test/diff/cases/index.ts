@@ -1,6 +1,6 @@
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
-import { RepositoryData } from '@/shared/types/ast';
-import { mockData } from './mock';
+import { type SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
+import { type RepositoryData } from '@/shared/types/ast.js';
+import { mockData } from './mock.js';
 
 export type TestCaseData = {
     repoData: Partial<RepositoryData>;

@@ -8,7 +8,7 @@ import {
 } from '@/shared/types/ast.js';
 import { astDeserializer } from '@/shared/utils/ast-serialization.js';
 import {
-    IRepositoryManager,
+    type IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 

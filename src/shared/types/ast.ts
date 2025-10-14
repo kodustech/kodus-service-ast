@@ -1,4 +1,4 @@
-import { TaskPriority } from '@/shared/types/task.js';
+import { type TaskPriority } from './task.js';
 
 export enum ProtoPlatformType {
     PROTO_PLATFORM_TYPE_UNSPECIFIED = 'PROTO_PLATFORM_TYPE_UNSPECIFIED',

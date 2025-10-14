@@ -1,10 +1,10 @@
-import { Language, SyntaxNode } from 'tree-sitter';
+import { type Language, type SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser.js';
 import * as GoLang from 'tree-sitter-go';
 import { goQueries } from './go-queries.js';
-import { ParserQuery, QueryType } from '../query.js';
-import { CallChain } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, Scope } from '@/shared/types/ast.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import { type CallChain } from '@/core/domain/parsing/types/parser.js';
+import { type NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class GoParser extends BaseParser {

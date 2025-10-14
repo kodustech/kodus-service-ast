@@ -1,6 +1,6 @@
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
-import { TestCaseData } from '.';
-import { RepositoryData } from '@/shared/types/ast';
+import { type SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
+import { type TestCaseData } from './index.js';
+import { type RepositoryData } from '@/shared/types/ast.js';
 
 type MockData = {
     [key in SupportedLanguage]: TestCaseData[];

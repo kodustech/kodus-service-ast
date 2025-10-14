@@ -5,12 +5,11 @@ import {
     isSerializedSet,
     isSet,
 } from './type-guards.js';
-import { Serializable, SerializablePrimitive } from './types.js';
+import { type Serializable, type SerializablePrimitive } from './types.js';
 
 export function serializeObject(input: any): Serializable {
     if (isMap(input)) {
         return {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             __type: 'Map',
             value: Array.from(input.entries()).map(([k, v]) => [
                 String(k),
@@ -21,7 +20,6 @@ export function serializeObject(input: any): Serializable {
 
     if (isSet(input)) {
         return {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             __type: 'Set',
             value: Array.from(input).map(serializeObject),
         };

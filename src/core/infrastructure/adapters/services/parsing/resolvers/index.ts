@@ -1,4 +1,4 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import { TypeScriptResolver } from './typescript/typescript-resolver.js';
 import { JavaScriptResolver } from './javascript/javascript-resolver.js';
 import { PythonResolver } from './python/python-resolver.js';

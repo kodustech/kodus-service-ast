@@ -7,7 +7,7 @@ import { DiffModule } from './diff.module.js';
 import { EnrichmentModule } from './enrichment.module.js';
 import { ParsingModule } from './parsing.module.js';
 import { LLMModule } from '@kodus/kodus-common/llm';
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { PinoLoggerService } from '../core/infrastructure/adapters/services/logger/pino.service.js';
 import { GraphAnalysisModule } from './graph-analysis.module.js';
 import { TaskModule } from './task.module.js';
 import { DatabaseModule } from '../core/infrastructure/database/database.module.js';

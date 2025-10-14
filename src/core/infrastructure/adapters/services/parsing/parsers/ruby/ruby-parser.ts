@@ -1,15 +1,15 @@
 import { BaseParser } from '../base-parser.js';
 import * as RubyLang from 'tree-sitter-ruby';
 import { rubyQueries } from './ruby-queries.js';
-import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
-import { ParserQuery, QueryType } from '../query.js';
+import { type Language, type QueryCapture, type SyntaxNode } from 'tree-sitter';
+import { type ParserQuery, type QueryType } from '../query.js';
 import {
-    Method,
-    ObjectProperties,
+    type Method,
+    type ObjectProperties,
     ChainType,
-    CallChain,
+    type CallChain,
 } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, Scope, TypeAnalysis } from '@/shared/types/ast.js';
+import { NodeType, type Scope, type TypeAnalysis } from '@/shared/types/ast.js';
 import { appendOrUpdateElement } from '@/shared/utils/arrays.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 

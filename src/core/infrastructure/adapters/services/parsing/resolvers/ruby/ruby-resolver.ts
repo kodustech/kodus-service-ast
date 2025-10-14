@@ -1,7 +1,7 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    ImportedModule,
-    ResolvedImport,
+    type ImportedModule,
+    type ResolvedImport,
 } from '@/core/domain/parsing/types/language-resolver.js';
 import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
 import {

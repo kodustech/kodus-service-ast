@@ -1,10 +1,13 @@
-import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
+import { type Language, type QueryMatch, type SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser.js';
 import { phpQueries } from './php-queries.js';
 import * as PhpLang from 'tree-sitter-php/php';
-import { ParserQuery, QueryType } from '../query.js';
-import { ChainType, CallChain } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, Scope } from '@/shared/types/ast.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import {
+    ChainType,
+    type CallChain,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class PhpParser extends BaseParser {

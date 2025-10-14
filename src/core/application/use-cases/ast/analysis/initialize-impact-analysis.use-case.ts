@@ -1,5 +1,8 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import {
+    type ITaskManagerService,
+    TASK_MANAGER_TOKEN,
+} from '@/core/domain/task/contracts/task-manager.contract.js';
 
 import {
     GetImpactAnalysisResponse,
@@ -12,14 +15,15 @@ import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/gr
 import { handleError } from '@/shared/utils/errors.js';
 import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types.js';
 import {
-    IRepositoryManager,
+    type IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 
 @Injectable()
 export class InitializeImpactAnalysisUseCase {
     constructor(
-        private readonly taskManagerService: TaskManagerService,
+        @Inject(TASK_MANAGER_TOKEN)
+        private readonly taskManagerService: ITaskManagerService,
         private readonly graphAnalyzerService: GraphAnalyzerService,
 
         @Inject(REPOSITORY_MANAGER_TOKEN)

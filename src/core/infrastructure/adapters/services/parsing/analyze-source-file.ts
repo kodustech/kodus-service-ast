@@ -1,17 +1,17 @@
 import * as fs from 'fs';
 import { getParserByFilePath } from './parsers/index.js';
-import { BaseParser } from './parsers/base-parser.js';
+import { type BaseParser } from './parsers/base-parser.js';
 import {
-    ParseContext,
-    ParserAnalysis,
+    type ParseContext,
+    type ParserAnalysis,
 } from '@/core/domain/parsing/types/parser.js';
 import { getLanguageResolver } from './resolvers/index.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    AnalysisNode,
-    Call,
-    FunctionAnalysis,
-    TypeAnalysis,
+    type AnalysisNode,
+    type Call,
+    type FunctionAnalysis,
+    type TypeAnalysis,
 } from '@/shared/types/ast.js';
 
 export class SourceFileAnalyzer {

@@ -1,27 +1,32 @@
 import Parser from 'tree-sitter';
-import { Query, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
-import { Language } from 'tree-sitter';
 import {
-    CallChain,
+    Query,
+    type QueryCapture,
+    type QueryMatch,
+    type SyntaxNode,
+} from 'tree-sitter';
+import { type Language } from 'tree-sitter';
+import {
+    type CallChain,
     ChainType,
-    ImportedSymbol,
-    Method,
-    ObjectProperties,
-    ParseContext,
+    type ImportedSymbol,
+    type Method,
+    type ObjectProperties,
+    type ParseContext,
 } from '@/core/domain/parsing/types/parser.js';
 import {
     objQueries,
-    ParserQuery,
+    type ParserQuery,
     queryToNodeTypeMap,
     QueryType,
 } from './query.js';
 import {
-    AnalysisNode,
-    Call,
+    type AnalysisNode,
+    type Call,
     NodeType,
-    Range,
-    Scope,
-    TypeAnalysis,
+    type Range,
+    type Scope,
+    type TypeAnalysis,
 } from '@/shared/types/ast.js';
 import {
     normalizeAST,
@@ -31,8 +36,8 @@ import {
     appendOrUpdateElement,
     findLastIndexOf,
 } from '@/shared/utils/arrays.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
-import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type ResolvedImport } from '@/core/domain/parsing/types/language-resolver.js';
 import { nanoid } from 'nanoid';
 
 export abstract class BaseParser {

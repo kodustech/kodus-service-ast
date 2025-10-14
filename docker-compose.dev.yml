@@ -14,7 +14,7 @@ services:
             - .env
         restart: unless-stopped
         volumes:
-            - .:/usr/src/app
+            - ./:/usr/src/app
             - /usr/src/app/node_modules
         networks:
             - kodus-backend-services

@@ -10,16 +10,31 @@ import {
 } from '@/shared/types/ast.js';
 
 import { Piscina } from 'piscina';
-import * as path from 'path';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import { WorkerInput, WorkerOutput } from './worker/worker.js';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync } from 'fs';
 
 @Injectable()
 export class CodeKnowledgeGraphService {
     private piscina: Piscina<WorkerInput, WorkerOutput>;
 
     constructor(private readonly logger: PinoLoggerService) {
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
+
+        // Caminho do worker - verifica se existe .js compilado, senão usa .ts
+        const jsWorkerPath = join(__dirname, 'worker', 'worker.js');
+        const tsWorkerPath = join(__dirname, 'worker', 'worker.ts');
+
+        const workerPath = existsSync(jsWorkerPath)
+            ? jsWorkerPath
+            : tsWorkerPath;
+
+        console.log('Worker path =', workerPath);
+
         const cpuCount = os.cpus().length;
         const minThreads = cpuCount - 1;
         const maxThreads = cpuCount - 1;
@@ -28,7 +43,7 @@ export class CodeKnowledgeGraphService {
         const concurrentTasksPerWorker = 1;
 
         this.piscina = new Piscina({
-            filename: path.resolve(__dirname, 'worker/worker.js'),
+            filename: workerPath,
             minThreads,
             maxThreads,
             idleTimeout,
@@ -112,7 +127,9 @@ export class CodeKnowledgeGraphService {
             (_, i) => filteredFiles.slice(i * batchSize, (i + 1) * batchSize),
         );
 
-        const processBatch = async (batchFiles: string[]) => {
+        const processBatch = async (
+            batchFiles: string[],
+        ): Promise<WorkerOutput> => {
             try {
                 const timeoutPromise = new Promise<never>((_, reject) => {
                     setTimeout(() => {
@@ -128,10 +145,6 @@ export class CodeKnowledgeGraphService {
                         },
                         { name: 'analyzeBatch' },
                     ),
-                    // analyzeBatch({
-                    //     rootDir,
-                    //     batch: batchFiles,
-                    // }),
                     timeoutPromise,
                 ]);
 

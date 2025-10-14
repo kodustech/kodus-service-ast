@@ -1,10 +1,13 @@
-import { Language, SyntaxNode } from 'tree-sitter';
+import { type Language, type SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser.js';
 import * as RustLang from 'tree-sitter-rust';
 import { rustQueries } from './rust-queries.js';
-import { ParserQuery, QueryType } from '../query.js';
-import { CallChain, ChainType } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, Scope } from '@/shared/types/ast.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import {
+    type CallChain,
+    ChainType,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class RustParser extends BaseParser {

@@ -1,18 +1,18 @@
-import { BaseParser } from './base-parser.js';
+import { type BaseParser } from './base-parser.js';
 import * as Path from 'path';
 import { TypeScriptParser } from './typescript/typescript-parser.js';
 import { PythonParser } from './python/python-parser.js';
-import { ParseContext } from '../../../../../domain/parsing/types/parser.js';
+import { type ParseContext } from '../../../../../domain/parsing/types/parser.js';
 import { RubyParser } from './ruby/ruby-parser.js';
 import {
     SUPPORTED_LANGUAGES,
-    SupportedLanguage,
+    type SupportedLanguage,
 } from '@/core/domain/parsing/types/supported-languages.js';
 import { PhpParser } from './php/php-parser.js';
 import { CSharpParser } from './csharp/csharp-parser.js';
 import { JavaParser } from './java/java-parser.js';
 import { RustParser } from './rust/rust-parser.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 
 type ParserFactory = (
     resolver: LanguageResolver,

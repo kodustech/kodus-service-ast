@@ -11,6 +11,7 @@ import {
     TASK_MANAGER_TOKEN,
 } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { TaskQueueMessage } from '@/core/infrastructure/queue/task-queue.definition.js';
+import { TaskContextService } from '@/core/infrastructure/persistence/task/task-context.service.js';
 
 const WORKER_CONTEXT = 'TaskQueueProcessor';
 
@@ -21,21 +22,26 @@ export class TaskQueueProcessor {
         private readonly initializeImpactAnalysisUseCase: InitializeImpactAnalysisUseCase,
         @Inject(TASK_MANAGER_TOKEN)
         private readonly taskManagerService: ITaskManagerService,
+        private readonly taskContextService: TaskContextService,
         private readonly logger: PinoLoggerService,
     ) {}
 
     async process(message: TaskQueueMessage): Promise<void> {
+        const taskContext = this.taskContextService.createContext(
+            message.taskId,
+        );
+
         switch (message.type) {
             case 'AST_INITIALIZE_REPOSITORY':
                 await this.initializeRepositoryUseCase.execute(
                     message.payload as InitializeRepositoryRequest,
-                    message.taskId,
+                    taskContext,
                 );
                 return;
             case 'AST_INITIALIZE_IMPACT_ANALYSIS':
                 await this.initializeImpactAnalysisUseCase.execute(
                     message.payload as InitializeImpactAnalysisRequest,
-                    message.taskId,
+                    taskContext,
                 );
                 return;
             default:

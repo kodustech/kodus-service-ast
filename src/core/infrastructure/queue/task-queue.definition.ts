@@ -1,5 +1,6 @@
 import type { Channel } from 'amqplib';
 import type { RabbitMqConfig } from './rabbit.config.js';
+import { QUEUE_CONFIG } from './queue.constants.js';
 
 export interface QueueBinding {
     type: string;
@@ -17,18 +18,16 @@ export interface TaskQueueMessage<TPayload = unknown> {
     createdAt: string;
 }
 
-export const DELIVERY_LIMIT = 5;
-
 export const TASK_QUEUE_BINDINGS: ReadonlyArray<QueueBinding> = [
     {
         type: 'AST_INITIALIZE_REPOSITORY',
-        queue: 'ast.initialize.repo.q',
-        routingKey: 'ast.initialize.repo',
+        queue: QUEUE_CONFIG.REPO_QUEUE,
+        routingKey: QUEUE_CONFIG.REPO_ROUTING_KEY,
     },
     {
         type: 'AST_INITIALIZE_IMPACT_ANALYSIS',
-        queue: 'ast.initialize.impact.q',
-        routingKey: 'ast.initialize.impact',
+        queue: QUEUE_CONFIG.IMPACT_QUEUE,
+        routingKey: QUEUE_CONFIG.IMPACT_ROUTING_KEY,
     },
 ];
 
@@ -54,24 +53,24 @@ export async function ensureTaskQueueTopology(
     channel: Channel,
     config: RabbitMqConfig,
 ): Promise<void> {
-    await channel.assertExchange(config.exchange, 'topic', {
+    await channel.assertExchange(QUEUE_CONFIG.EXCHANGE, 'topic', {
         durable: true,
     });
 
-    await channel.assertExchange(config.deadLetterExchange, 'topic', {
+    await channel.assertExchange(QUEUE_CONFIG.DEAD_LETTER_EXCHANGE, 'topic', {
         durable: true,
     });
 
-    await channel.assertQueue(config.deadLetterQueue, {
+    await channel.assertQueue(QUEUE_CONFIG.DEAD_LETTER_QUEUE, {
         durable: true,
         arguments: {
-            'x-queue-type': 'quorum',
+            'x-queue-type': QUEUE_CONFIG.QUEUE_TYPE,
         },
     });
 
     await channel.bindQueue(
-        config.deadLetterQueue,
-        config.deadLetterExchange,
+        QUEUE_CONFIG.DEAD_LETTER_QUEUE,
+        QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
         '#',
     );
 
@@ -79,15 +78,15 @@ export async function ensureTaskQueueTopology(
         await channel.assertQueue(binding.queue, {
             durable: true,
             arguments: {
-                'x-queue-type': 'quorum',
-                'x-dead-letter-exchange': config.deadLetterExchange,
-                'x-delivery-limit': DELIVERY_LIMIT,
+                'x-queue-type': QUEUE_CONFIG.QUEUE_TYPE,
+                'x-dead-letter-exchange': QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+                'x-delivery-limit': QUEUE_CONFIG.DELIVERY_LIMIT,
             },
         });
 
         await channel.bindQueue(
             binding.queue,
-            config.exchange,
+            QUEUE_CONFIG.EXCHANGE,
             binding.routingKey,
         );
     }
@@ -96,7 +95,7 @@ export async function ensureTaskQueueTopology(
         await channel.assertQueue(config.retryQueue, {
             durable: true,
             arguments: {
-                'x-dead-letter-exchange': config.exchange,
+                'x-dead-letter-exchange': QUEUE_CONFIG.EXCHANGE,
                 ...(config.retryTtlMs
                     ? { 'x-message-ttl': config.retryTtlMs }
                     : {}),

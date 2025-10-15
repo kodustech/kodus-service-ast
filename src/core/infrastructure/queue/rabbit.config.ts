@@ -1,4 +1,5 @@
 import { getEnvVariable, getEnvVariableAsNumber } from '@/shared/utils/env.js';
+import { QUEUE_CONFIG } from './queue.constants.js';
 
 export interface RabbitMqConfig {
     enabled: boolean;
@@ -13,11 +14,6 @@ export interface RabbitMqConfig {
     connectionName: string;
 }
 
-const DEFAULT_EXCHANGE = 'ast.jobs.x';
-const DEFAULT_DLX = 'ast.jobs.dlx';
-const DEFAULT_DLQ = 'ast.jobs.dlq';
-const DEFAULT_RETRY_QUEUE = 'ast.jobs.retry.q';
-
 export function loadRabbitMqConfig(serviceName: string): RabbitMqConfig {
     const url = getEnvVariable('RABBIT_URL');
 
@@ -25,10 +21,10 @@ export function loadRabbitMqConfig(serviceName: string): RabbitMqConfig {
         return {
             enabled: false,
             url: '',
-            exchange: DEFAULT_EXCHANGE,
-            deadLetterExchange: DEFAULT_DLX,
-            deadLetterQueue: DEFAULT_DLQ,
-            retryQueue: DEFAULT_RETRY_QUEUE,
+            exchange: QUEUE_CONFIG.EXCHANGE,
+            deadLetterExchange: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+            deadLetterQueue: QUEUE_CONFIG.DEAD_LETTER_QUEUE,
+            retryQueue: getEnvVariable('RABBIT_RETRY_QUEUE'),
             retryTtlMs: getEnvVariableAsNumber('RABBIT_RETRY_TTL_MS', 30000),
             prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 1) ?? 1,
             publishTimeoutMs:
@@ -41,10 +37,16 @@ export function loadRabbitMqConfig(serviceName: string): RabbitMqConfig {
     return {
         enabled: true,
         url,
-        exchange: getEnvVariable('RABBIT_EXCHANGE', DEFAULT_EXCHANGE)!,
-        deadLetterExchange: getEnvVariable('RABBIT_DLX', DEFAULT_DLX)!,
-        deadLetterQueue: getEnvVariable('RABBIT_DLQ', DEFAULT_DLQ)!,
-        retryQueue: getEnvVariable('RABBIT_RETRY_QUEUE', DEFAULT_RETRY_QUEUE)!,
+        exchange: getEnvVariable('RABBIT_EXCHANGE', QUEUE_CONFIG.EXCHANGE)!,
+        deadLetterExchange: getEnvVariable(
+            'RABBIT_DLX',
+            QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+        )!,
+        deadLetterQueue: getEnvVariable(
+            'RABBIT_DLQ',
+            QUEUE_CONFIG.DEAD_LETTER_QUEUE,
+        )!,
+        retryQueue: getEnvVariable('RABBIT_RETRY_QUEUE'),
         retryTtlMs: getEnvVariableAsNumber('RABBIT_RETRY_TTL_MS', 30000),
         prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 1) ?? 1,
         publishTimeoutMs:

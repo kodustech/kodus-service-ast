@@ -29,5 +29,6 @@ import { LogModule } from './log.module.js';
         TaskQueueProcessor,
         TaskQueueConsumer,
     ],
+    exports: [TaskPersistenceModule], // Export TaskPersistenceModule to access TaskContextService
 })
 export class WorkerModule {}

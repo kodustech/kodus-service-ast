@@ -15,26 +15,27 @@ import {
     FunctionResult,
     FunctionsAffect,
     FunctionsAffectResult,
-    FunctionSimilar,
+    // FunctionSimilar,
     FunctionSimilarity,
     ImpactedNode,
     ImpactResult,
 } from '@/core/domain/diff/types/diff-analyzer.types.js';
 import { DiffAnalyzerService } from '../diff/diff-analyzer.service.js';
-import {
-    LLMModelProvider,
-    ParserType,
-    PromptRole,
-    PromptRunnerService,
-} from '@kodus/kodus-common/llm';
-import { promptCheckSimilarFunctionsSystem } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt.js';
+// import {
+//     LLMModelProvider,
+//     ParserType,
+//     PromptRole,
+//     PromptRunnerService,
+// } from '@kodus/kodus-common/llm';
+// import { promptCheckSimilarFunctionsSystem } from '@/core/domain/graph-analysis/prompts/similar-functions.prompt.js';
 
 @Injectable()
 export class GraphAnalyzerService {
     constructor(
         private readonly logger: PinoLoggerService,
         private readonly diffAnalyzerService: DiffAnalyzerService,
-        private readonly promptRunnerService: PromptRunnerService,
+        // TODO: Re-enable PromptRunnerService when LLM module is properly configured
+        // private readonly promptRunnerService: PromptRunnerService,
     ) {}
 
     analyzeCodeWithGraph(
@@ -664,36 +665,51 @@ export class GraphAnalyzerService {
         addedFunction: FunctionResult,
         existingFunctions: FunctionAnalysis[],
     ) {
-        const functions = {
-            addedFunction: {
-                name: addedFunction.name,
-                lines: addedFunction.lines,
-                fullText: addedFunction.fullText,
-            },
-            existingFunctions: existingFunctions.map((func) => ({
-                name: func.name,
-                lines: func.lines,
-                fullText: func.fullText,
-            })),
-        };
+        console.log(
+            'checkFunctionSimilarityWithLLM',
+            addedFunction,
+            existingFunctions,
+        );
+        // const functions = {
+        //     addedFunction: {
+        //         name: addedFunction.name,
+        //         lines: addedFunction.lines,
+        //         fullText: addedFunction.fullText,
+        //     },
+        //     existingFunctions: existingFunctions.map((func) => ({
+        //         name: func.name,
+        //         lines: func.lines,
+        //         fullText: func.fullText,
+        //     })),
+        // };
 
-        const result = await this.promptRunnerService
-            .builder()
-            .setProviders({
-                main: LLMModelProvider.NOVITA_DEEPSEEK_V3_0324,
-                fallback: LLMModelProvider.OPENAI_GPT_4O,
-            })
-            .setParser<FunctionSimilar[]>(ParserType.JSON)
-            .setLLMJsonMode(true)
-            .setTemperature(0)
-            .setPayload(JSON.stringify(functions))
-            .addPrompt({
-                prompt: promptCheckSimilarFunctionsSystem,
-                role: PromptRole.SYSTEM,
-            })
-            .setRunName('checkFunctionSimilarityWithLLM')
-            .execute();
+        // TODO: Re-enable LLM-based function similarity when PromptRunnerService is available
+        // const result = await this.promptRunnerService
+        //     .builder()
+        //     .setProviders({
+        //         main: LLMModelProvider.NOVITA_DEEPSEEK_V3_0324,
+        //         fallback: LLMModelProvider.OPENAI_GPT_4O,
+        //     })
+        //     .setParser<FunctionSimilar[]>(ParserType.JSON)
+        //     .setLLMJsonMode(true)
+        //     .setTemperature(0)
+        //     .setPayload(JSON.stringify(functions))
+        //     .addPrompt({
+        //         prompt: promptCheckSimilarFunctionsSystem,
+        //         role: PromptRole.SYSTEM,
+        //     })
+        //     .setRunName('checkFunctionSimilarityWithLLM')
+        //     .execute();
 
-        return result;
+        // return result;
+
+        // Temporary mock result - return empty similarity analysis
+        this.logger.warn({
+            message:
+                'Function similarity analysis disabled - PromptRunnerService not available',
+            context: 'GraphAnalyzerService.checkFunctionSimilarityWithLLM',
+        });
+
+        return [];
     }
 }

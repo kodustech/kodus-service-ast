@@ -47,3 +47,16 @@ export interface ITaskManagerService {
     // Cron
     periodicTaskCleanup(): Promise<void>;
 }
+
+// TaskContext para worker - interface mais simples e focada
+export interface TaskContext {
+    taskId: string;
+    start(state: string): Promise<void>;
+    update(
+        state: string,
+        progress?: number,
+        metadata?: Record<string, unknown>,
+    ): Promise<void>;
+    complete(state: string, result?: unknown): Promise<void>;
+    fail(error: string, state?: string): Promise<void>;
+}

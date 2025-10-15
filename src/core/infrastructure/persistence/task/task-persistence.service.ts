@@ -11,7 +11,7 @@ import {
     UpdateTaskInput,
     UpdateTaskStatusInput,
 } from './task-persistence.types.js';
-import { TaskStatus } from '@/core/domain/task/enums/task-status.enum.js';
+import { TaskStatus } from '@/shared/types/task.js';
 import {
     DATABASE_POOL,
     DATABASE_SCHEMA,

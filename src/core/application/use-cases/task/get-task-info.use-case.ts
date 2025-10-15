@@ -22,7 +22,11 @@ export class GetTaskInfoUseCase {
     async execute(request: GetTaskInfoRequest): Promise<GetTaskInfoResponse> {
         const { taskId } = request;
 
-        console.log('taskId', taskId);
+        this.logger.debug({
+            message: 'Getting task info',
+            context: GetTaskInfoUseCase.name,
+            metadata: { taskId },
+        });
         if (!taskId || taskId.trim() === '') {
             this.logger.error({
                 message: 'Task ID is required',

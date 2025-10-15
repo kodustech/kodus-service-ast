@@ -7,10 +7,9 @@ import {
 import { QueueConfigModule } from './queue-config.module.js';
 import { RABBITMQ_CONFIG } from './rabbit.constants.js';
 import { type RabbitMqConfig } from './rabbit.config.js';
-import { getEnvVariable } from '@/shared/utils/env.js';
+import { QUEUE_CONFIG, getQueueRuntimeConfig } from './queue.constants.js';
 
-const ENABLE_SAC = (getEnvVariable('RABBIT_SAC') ?? 'false') === 'true';
-const DELIVERY_LIMIT = Number(getEnvVariable('RABBIT_DELIVERY_LIMIT') ?? '5');
+const runtimeConfig = getQueueRuntimeConfig();
 
 @Module({
     imports: [
@@ -21,10 +20,10 @@ const DELIVERY_LIMIT = Number(getEnvVariable('RABBIT_DELIVERY_LIMIT') ?? '5');
             useFactory: (cfg: RabbitMqConfig) => ({
                 name: cfg.connectionName,
                 uri: cfg.url,
-                prefetchCount: cfg.prefetch ?? 1,
+                prefetchCount: runtimeConfig.prefetch,
                 channels: {
                     consumer: {
-                        prefetchCount: cfg.prefetch ?? 1,
+                        prefetchCount: runtimeConfig.prefetch,
                         default: true,
                     },
                 },
@@ -44,41 +43,28 @@ const DELIVERY_LIMIT = Number(getEnvVariable('RABBIT_DELIVERY_LIMIT') ?? '5');
                 },
                 exchanges: [
                     {
-                        name: cfg.exchange,
+                        name: QUEUE_CONFIG.EXCHANGE,
                         type: 'topic',
                         options: { durable: true },
                     },
                     {
-                        name: cfg.deadLetterExchange,
+                        name: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
                         type: 'topic',
                         options: { durable: true },
                     },
                 ],
                 queues: [
                     {
-                        name: cfg.deadLetterQueue,
-                        createQueueIfNotExists: true,
-                        options: {
-                            durable: true,
-                            arguments: { 'x-queue-type': 'quorum' },
-                        },
-                        exchange: cfg.deadLetterExchange,
-                        routingKey: '#',
-                    },
-                    // + dentro de queues: [ ... ] em queue.module.worker.ts
-                    {
-                        name: 'ast.test.echo.q',
+                        name: QUEUE_CONFIG.DEAD_LETTER_QUEUE,
                         createQueueIfNotExists: true,
                         options: {
                             durable: true,
                             arguments: {
-                                'x-queue-type': 'quorum',
-                                'x-dead-letter-exchange':
-                                    cfg.deadLetterExchange,
+                                'x-queue-type': QUEUE_CONFIG.QUEUE_TYPE,
                             },
                         },
-                        exchange: cfg.exchange,
-                        routingKey: 'ast.test.echo',
+                        exchange: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+                        routingKey: '#',
                     },
                     ...(cfg.retryQueue
                         ? [
@@ -95,48 +81,12 @@ const DELIVERY_LIMIT = Number(getEnvVariable('RABBIT_DELIVERY_LIMIT') ?? '5');
                                                 }
                                               : {}),
                                           'x-dead-letter-exchange':
-                                              cfg.exchange,
+                                              QUEUE_CONFIG.EXCHANGE,
                                       },
                                   },
                               },
                           ]
                         : []),
-                    {
-                        name: 'ast.initialize.repo.q',
-                        createQueueIfNotExists: true,
-                        options: {
-                            durable: true,
-                            arguments: {
-                                'x-queue-type': 'quorum',
-                                'x-dead-letter-exchange':
-                                    cfg.deadLetterExchange,
-                                'x-delivery-limit': DELIVERY_LIMIT,
-                                ...(ENABLE_SAC
-                                    ? { 'x-single-active-consumer': true }
-                                    : {}),
-                            },
-                        },
-                        exchange: cfg.exchange,
-                        routingKey: 'ast.initialize.repo',
-                    },
-                    {
-                        name: 'ast.initialize.impact.q',
-                        createQueueIfNotExists: true,
-                        options: {
-                            durable: true,
-                            arguments: {
-                                'x-queue-type': 'quorum',
-                                'x-dead-letter-exchange':
-                                    cfg.deadLetterExchange,
-                                'x-delivery-limit': DELIVERY_LIMIT,
-                                ...(ENABLE_SAC
-                                    ? { 'x-single-active-consumer': true }
-                                    : {}),
-                            },
-                        },
-                        exchange: cfg.exchange,
-                        routingKey: 'ast.initialize.impact',
-                    },
                 ],
                 registerHandlers: true,
                 defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,

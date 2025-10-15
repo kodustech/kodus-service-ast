@@ -11,10 +11,7 @@ import {
 } from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
-import {
-    type ITaskManagerService,
-    TASK_MANAGER_TOKEN,
-} from '@/core/domain/task/contracts/task-manager.contract.js';
+import { type TaskContext } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { astSerializer } from '@/shared/utils/ast-serialization.js';
 import {
     type IRepositoryManager,
@@ -28,16 +25,12 @@ export class InitializeRepositoryUseCase {
         private readonly repositoryManagerService: IRepositoryManager,
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         private readonly codeAnalyzerService: GraphEnrichmentService,
-
-        @Inject(TASK_MANAGER_TOKEN)
-        private readonly taskManagerService: ITaskManagerService,
-
         private readonly logger: PinoLoggerService,
     ) {}
 
     async execute(
         request: InitializeRepositoryRequest,
-        taskId?: string,
+        taskContext?: TaskContext,
     ): Promise<void> {
         const { baseRepo, headRepo, filePaths = [] } = request;
 
@@ -46,31 +39,43 @@ export class InitializeRepositoryUseCase {
         }
 
         try {
-            await this.startTask(taskId, 'Cloning base repository');
+            if (taskContext) {
+                await taskContext.start('Cloning base repository');
+            }
             const baseDirPath = await this.cloneRepo(baseRepo);
 
-            await this.updateTaskState(taskId, 'Cloning head repository');
+            if (taskContext) {
+                await taskContext.update('Cloning head repository');
+            }
             const headDirPath = await this.cloneRepo(headRepo);
 
-            await this.updateTaskState(taskId, 'Building head graph');
+            if (taskContext) {
+                await taskContext.update('Building head graph');
+            }
             const headGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     headDirPath,
                     filePaths,
                 );
 
-            await this.updateTaskState(taskId, 'Building base graph');
+            if (taskContext) {
+                await taskContext.update('Building base graph');
+            }
             const baseGraph =
                 await this.codeKnowledgeGraphService.buildGraphProgressively(
                     baseDirPath,
                     filePaths,
                 );
 
-            await this.updateTaskState(taskId, 'Building enriched head graph');
+            if (taskContext) {
+                await taskContext.update('Building enriched head graph');
+            }
             const enrichedHeadGraph =
                 this.codeAnalyzerService.enrichGraph(headGraph);
 
-            await this.updateTaskState(taskId, 'Storing graphs');
+            if (taskContext) {
+                await taskContext.update('Storing graphs');
+            }
             await this.storeGraphs(
                 headRepo,
                 baseGraph,
@@ -80,10 +85,11 @@ export class InitializeRepositoryUseCase {
                 enrichedHeadGraph,
             );
 
-            await this.completeTask(
-                taskId,
-                'Repository initialized successfully',
-            );
+            if (taskContext) {
+                await taskContext.complete(
+                    'Repository initialized successfully',
+                );
+            }
 
             return;
         } catch (error) {
@@ -97,51 +103,12 @@ export class InitializeRepositoryUseCase {
                 serviceName: InitializeRepositoryUseCase.name,
             });
 
-            await this.failTask(
-                taskId,
-                handleError(error).message,
-                'Initialization failed',
-            );
-        }
-    }
-
-    private async startTask(
-        taskId: string | undefined,
-        state?: string,
-    ): Promise<void> {
-        if (taskId) {
-            await this.taskManagerService.startTask(taskId, state);
-        }
-    }
-
-    private async updateTaskState(
-        taskId: string | undefined,
-        state?: string,
-    ): Promise<void> {
-        if (taskId) {
-            await this.taskManagerService.updateTaskState(
-                taskId,
-                state ?? 'Unknown',
-            );
-        }
-    }
-
-    private async completeTask(
-        taskId: string | undefined,
-        state?: string,
-    ): Promise<void> {
-        if (taskId) {
-            await this.taskManagerService.completeTask(taskId, state);
-        }
-    }
-
-    private async failTask(
-        taskId: string | undefined,
-        error: string,
-        state?: string,
-    ): Promise<void> {
-        if (taskId) {
-            await this.taskManagerService.failTask(taskId, error, state);
+            if (taskContext) {
+                await taskContext.fail(
+                    handleError(error).message,
+                    'Initialization failed',
+                );
+            }
         }
     }
 

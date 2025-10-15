@@ -1,42 +1,21 @@
-console.log('[WORKER] Loading dotenv...');
 import 'dotenv/config';
-console.log('[WORKER] Importing NestFactory...');
 import { NestFactory } from '@nestjs/core';
-console.log('[WORKER] Importing WorkerModule...');
-import { WorkerMinModule as WorkerModule } from '../modules/worker.min.module.js';
-// import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
-console.log('[WORKER] Importing PinoLoggerService...');
-
-console.log('[WORKER] All imports loaded');
+import { WorkerModule } from '../modules/worker.module.js';
 
 async function bootstrap(): Promise<void> {
     console.log('[WORKER] Starting bootstrap function...');
     console.log('[WORKER] Calling NestFactory.createApplicationContext...');
-
-    // createApplicationContext is better for workers (no HTTP server)
     const app = await NestFactory.createApplicationContext(WorkerModule, {
-        logger: ['log', 'error', 'warn', 'debug', 'verbose'], // mais verboso
+        logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     });
-
     console.log('[WORKER] Application context created');
-
-    await app.init(); // reforça a fase de init
-
+    await app.init();
     console.log('[WORKER] app.init() resolved');
-    console.log('[WORKER] Application context created');
-
-    // Wait a bit for RabbitMQ to finish registering subscribers
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('[WORKER] After timeout');
-
-    // app.useLogger(app.get(PinoLoggerService));
-
     console.log('[WORKER] Worker is ready');
 
     const shutdown = async (signal: NodeJS.Signals) => {
         try {
             await app.close();
-
             console.log('[WORKER] Worker shutdown complete', signal);
         } catch (error) {
             console.error('[WORKER] Error during worker shutdown:', error);

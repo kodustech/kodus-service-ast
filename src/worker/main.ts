@@ -1,17 +1,31 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from '../modules/worker.module.js';
+import { type INestApplicationContext } from '@nestjs/common';
 
 async function bootstrap(): Promise<void> {
-    console.log('[WORKER] Starting bootstrap function...');
-    console.log('[WORKER] Calling NestFactory.createApplicationContext...');
-    const app = await NestFactory.createApplicationContext(WorkerModule, {
-        logger: ['log', 'error', 'warn', 'debug', 'verbose'],
-    });
-    console.log('[WORKER] Application context created');
-    await app.init();
-    console.log('[WORKER] app.init() resolved');
-    console.log('[WORKER] Worker is ready');
+    let app: INestApplicationContext;
+    try {
+        console.log('[WORKER] Starting bootstrap function...');
+        console.log('[WORKER] Calling NestFactory.createApplicationContext...');
+        app = await NestFactory.createApplicationContext(WorkerModule, {
+            logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+        });
+        console.log('[WORKER] Application context created');
+
+        console.log('[WORKER] Calling app.init()...');
+        await app.init();
+        console.log('[WORKER] app.init() resolved');
+
+        console.log('[WORKER] Waiting 2 seconds for RabbitMQ setup...');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        console.log('[WORKER] Wait completed');
+
+        console.log('[WORKER] Worker is ready');
+    } catch (error) {
+        console.error('[WORKER] Error during bootstrap:', error);
+        throw error;
+    }
 
     const shutdown = async (signal: NodeJS.Signals) => {
         try {

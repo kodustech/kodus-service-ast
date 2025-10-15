@@ -11,7 +11,6 @@ import {
 
 @Injectable()
 export class GraphEnrichmentService {
-    private readonly logger: PinoLoggerService;
     private normalizedPathCache?: Map<string, string>;
     private extractPathCache?: Map<
         string,
@@ -22,9 +21,7 @@ export class GraphEnrichmentService {
     private nodes?: EnrichedGraphNode[];
     private relationships?: Map<string, EnrichedGraphEdge>;
 
-    constructor(logger: PinoLoggerService) {
-        this.logger = logger;
-    }
+    constructor(private readonly logger: PinoLoggerService) {}
 
     enrichGraph(data: CodeGraph): EnrichedGraph {
         this.normalizedPathCache = new Map();

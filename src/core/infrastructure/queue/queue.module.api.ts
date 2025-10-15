@@ -1,4 +1,3 @@
-// src/core/infrastructure/queue/queue.module.api.ts
 import { Module } from '@nestjs/common';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { QueueConfigModule } from './queue-config.module.js';
@@ -59,11 +58,6 @@ import { TASK_JOB_DISPATCHER } from '@/core/application/services/task/task.servi
         RabbitTaskDispatcher,
         { provide: TASK_JOB_DISPATCHER, useExisting: RabbitTaskDispatcher },
     ],
-    exports: [
-        // 🔴 estes exports são cruciais p/ o TaskModule enxergar o dispatcher
-        RabbitMQModule,
-        RabbitTaskDispatcher,
-        TASK_JOB_DISPATCHER,
-    ],
+    exports: [RabbitMQModule, RabbitTaskDispatcher, TASK_JOB_DISPATCHER],
 })
 export class QueueModuleApi {}

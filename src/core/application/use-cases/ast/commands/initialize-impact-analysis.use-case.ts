@@ -7,7 +7,7 @@ import {
     RepositoryData,
 } from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
-import { GetGraphsUseCase } from '../graphs/get-graphs.use-case.js';
+import { GetGraphsUseCase } from '../queries/get-graphs.use-case.js';
 import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service.js';
 import { handleError } from '@/shared/utils/errors.js';
 import { ChangeResult } from '@/core/domain/diff/types/diff-analyzer.types.js';

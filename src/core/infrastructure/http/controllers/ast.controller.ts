@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/graphs/delete-repository.use-case.js';
-import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/graphs/get-content-diff.use-case.js';
-import { GetImpactAnalysisUseCase } from '@/core/application/use-cases/ast/analysis/get-impact-analysis.use-case.js';
+import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/commands/delete-repository.use-case.js';
+import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/queries/get-content-diff.use-case.js';
+import { GetImpactAnalysisUseCase } from '@/core/application/use-cases/ast/queries/get-impact-analysis.use-case.js';
 import { TaskService } from '@/core/application/services/task/task.service.js';
 import {
     type DeleteRepositoryRequest,

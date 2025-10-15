@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { InitializeRepositoryUseCase } from '@/core/application/use-cases/ast/graphs/initialize-repository.use-case.js';
-import { InitializeImpactAnalysisUseCase } from '@/core/application/use-cases/ast/analysis/initialize-impact-analysis.use-case.js';
+import { InitializeRepositoryUseCase } from '@/core/application/use-cases/ast/commands/initialize-repository.use-case.js';
+import { InitializeImpactAnalysisUseCase } from '@/core/application/use-cases/ast/commands/initialize-impact-analysis.use-case.js';
 import {
     InitializeRepositoryRequest,
     InitializeImpactAnalysisRequest,

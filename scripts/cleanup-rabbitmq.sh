@@ -24,7 +24,14 @@ rabbitmqctl() {
 # Verificar se estamos usando Docker ou instalação local
 if command -v docker &> /dev/null && docker ps | grep -q rabbitmq; then
     echo "📦 Usando RabbitMQ via Docker"
-    RABBITMQCTL="docker exec rabbitmq rabbitmqctl"
+    # Tentar diferentes nomes de container
+    if docker ps | grep -q "rabbitmq-local"; then
+        RABBITMQCTL="docker exec rabbitmq-local rabbitmqctl"
+    elif docker ps | grep -q "rabbitmq$"; then
+        RABBITMQCTL="docker exec rabbitmq rabbitmqctl"
+    else
+        RABBITMQCTL="docker exec $(docker ps | grep rabbitmq | awk '{print $NF}') rabbitmqctl"
+    fi
 else
     echo "💻 Usando RabbitMQ local"
     RABBITMQCTL="rabbitmqctl"

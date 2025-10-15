@@ -1,4 +1,3 @@
-// src/core/infrastructure/queue/queue-config.module.ts
 import { Global, Module } from '@nestjs/common';
 import { RABBITMQ_CONFIG } from './rabbit.constants.js';
 import { loadRabbitMqConfig } from './rabbit.config.js';

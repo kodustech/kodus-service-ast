@@ -1,16 +1,8 @@
-import { DeleteRepositoryUseCase } from './graphs/delete-repository.use-case.js';
-import { GetContentFromDiffUseCase } from './graphs/get-content-diff.use-case.js';
-import { GetGraphsUseCase } from './graphs/get-graphs.use-case.js';
-import { GetImpactAnalysisUseCase } from './analysis/get-impact-analysis.use-case.js';
-import { InitializeImpactAnalysisUseCase } from './analysis/initialize-impact-analysis.use-case.js';
-import { InitializeRepositoryUseCase } from './graphs/initialize-repository.use-case.js';
+// Barrel exports for all use cases
+export * from './commands/index.js';
+export * from './queries/index.js';
 
-export const useCases = [
-    InitializeRepositoryUseCase,
-    DeleteRepositoryUseCase,
-    GetGraphsUseCase,
-    GetContentFromDiffUseCase,
+// Convenience exports for different contexts
+export { workerCommands, apiCommands } from './commands/index.js';
 
-    InitializeImpactAnalysisUseCase,
-    GetImpactAnalysisUseCase,
-];
+export { queries } from './queries/index.js';

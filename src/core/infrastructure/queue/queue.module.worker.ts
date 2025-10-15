@@ -1,4 +1,3 @@
-// src/core/infrastructure/queue/queue.module.worker.ts
 import { Module } from '@nestjs/common';
 import {
     RabbitMQModule,

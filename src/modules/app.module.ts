@@ -11,6 +11,7 @@ import { PinoLoggerService } from '../core/infrastructure/adapters/services/logg
 import { GraphAnalysisModule } from './graph-analysis.module.js';
 import { TaskModule } from './task.module.js';
 import { DatabaseModule } from '../core/infrastructure/database/database.module.js';
+import { QueueModuleApi } from '@/core/infrastructure/queue/queue.module.api.js';
 
 @Module({
     imports: [
@@ -28,6 +29,7 @@ import { DatabaseModule } from '../core/infrastructure/database/database.module.
             global: true,
         }),
         TaskModule,
+        QueueModuleApi,
     ],
     providers: [],
     exports: [],

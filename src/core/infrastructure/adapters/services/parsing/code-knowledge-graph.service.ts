@@ -25,15 +25,29 @@ export class CodeKnowledgeGraphService {
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = dirname(__filename);
 
-        // Caminho do worker - verifica se existe .js compilado, senão usa .ts
-        const jsWorkerPath = join(__dirname, 'worker', 'worker.js');
-        const tsWorkerPath = join(__dirname, 'worker', 'worker.ts');
+        // Se estamos rodando de src/ (tsx), precisamos apontar para dist/
+        // Se estamos rodando de dist/ (node), já estamos no lugar certo
+        const isRunningFromSource = __dirname.includes('/src/');
 
-        const workerPath = existsSync(jsWorkerPath)
-            ? jsWorkerPath
-            : tsWorkerPath;
+        const workerPath = isRunningFromSource
+            ? join(
+                  process.cwd(),
+                  'dist',
+                  'core',
+                  'infrastructure',
+                  'adapters',
+                  'services',
+                  'parsing',
+                  'worker',
+                  'worker.js',
+              )
+            : join(__dirname, 'worker', 'worker.js');
 
-        console.log('Worker path =', workerPath);
+        if (!existsSync(workerPath)) {
+            throw new Error(
+                `Worker file not found at ${workerPath}. Ensure 'yarn build' has been run.`,
+            );
+        }
 
         const cpuCount = os.cpus().length;
         const minThreads = cpuCount - 1;

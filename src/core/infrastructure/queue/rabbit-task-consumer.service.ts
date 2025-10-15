@@ -11,7 +11,7 @@ import {
     OnModuleDestroy,
     OnModuleInit,
 } from '@nestjs/common';
-import { RabbitMqConfig } from './rabbit.config.js';
+import { type RabbitMqConfig } from './rabbit.config.js';
 import { RABBITMQ_CONFIG } from './rabbit.constants.js';
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 import { TaskQueueProcessor } from '@/core/application/services/task/task-queue-processor.service.js';

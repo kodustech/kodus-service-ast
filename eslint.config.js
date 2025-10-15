@@ -138,6 +138,15 @@ export default tseslint.config(
                     format: null,
                 },
                 {
+                    // Exceção para métodos RabbitMQ com hífens (x-...)
+                    selector: 'objectLiteralMethod',
+                    filter: {
+                        regex: '^x-[a-z-]+$',
+                        match: true,
+                    },
+                    format: null,
+                },
+                {
                     // Exceção para variáveis com prefixo __
                     selector: 'variable',
                     filter: {

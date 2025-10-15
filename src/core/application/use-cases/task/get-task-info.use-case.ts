@@ -22,6 +22,7 @@ export class GetTaskInfoUseCase {
     async execute(request: GetTaskInfoRequest): Promise<GetTaskInfoResponse> {
         const { taskId } = request;
 
+        console.log('taskId', taskId);
         if (!taskId || taskId.trim() === '') {
             this.logger.error({
                 message: 'Task ID is required',

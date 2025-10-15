@@ -4,7 +4,7 @@
     "sourceRoot": "src",
     "compilerOptions": {
         "assets": [],
-        "deleteOutDir": true,
+        "deleteOutDir": false,
         "watchAssets": true,
         "tsConfigPath": "tsconfig.json",
         "builder": {

@@ -5,14 +5,15 @@ ENV NODE_ENV=development \
     PORT=3002 \
     API_HEALTH_PORT=5001 \
     TREE_SITTER_SKIP_PREBUILD_DOWNLOAD=1 \
-    npm_config_build_from_source=true
+    npm_config_build_from_source=true \
+    SHELL=/bin/sh
 
 WORKDIR /usr/src/app
 
 # Dependências do sistema
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates git python3 make g++ pkg-config \
+      ca-certificates git python3 make g++ pkg-config procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar package / lock
@@ -25,10 +26,10 @@ RUN yarn install --network-timeout 600000 \
 # Copiar todo o código fonte
 COPY . .
 
-# Build do projeto
-RUN yarn build
+# Build inicial (necessário para o worker do piscina)
+RUN npx nest build -b swc && npx tsc-alias -p tsconfig.json
 
 EXPOSE ${PORT} ${API_HEALTH_PORT} 9300 9301
 
-# Rodar o build (JS) no container
-CMD ["node", "dist/main.js"]
+# Rodar em modo watch para hot reload
+CMD ["yarn", "start:dev"]

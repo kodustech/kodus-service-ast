@@ -1,5 +1,5 @@
 services:
-    kodus-service-ast:
+    kodus-service-ast-api:
         image: kodus/service-ast:latest
         container_name: ${CONTAINER_NAME}
         build:
@@ -14,11 +14,45 @@ services:
             - .env
         restart: unless-stopped
         volumes:
-            - ./:/usr/src/app
+            - ./src:/usr/src/app/src
+            - ./package.json:/usr/src/app/package.json
+            - ./tsconfig.json:/usr/src/app/tsconfig.json
+            - ./nest-cli.json:/usr/src/app/nest-cli.json
+            - ./.swcrc:/usr/src/app/.swcrc
             - /usr/src/app/node_modules
+        environment:
+            - CHOKIDAR_USEPOLLING=true
         networks:
             - kodus-backend-services
+            - shared-network
+
+    kodus-service-ast-worker:
+        image: kodus/service-ast:latest
+        container_name: ${CONTAINER_NAME}-worker
+        build:
+            context: .
+            dockerfile: DockerFiles/Dockerfile.dev
+        command: ["yarn", "start:worker:dev"]
+        env_file:
+            - .env
+        restart: unless-stopped
+        volumes:
+            - ./src:/usr/src/app/src
+            - ./package.json:/usr/src/app/package.json
+            - ./tsconfig.json:/usr/src/app/tsconfig.json
+            - ./nest-cli.json:/usr/src/app/nest-cli.json
+            - ./.swcrc:/usr/src/app/.swcrc
+            - /usr/src/app/node_modules
+        environment:
+            - CHOKIDAR_USEPOLLING=true
+        networks:
+            - kodus-backend-services
+            - shared-network
+        depends_on:
+            - kodus-service-ast-api
 
 networks:
     kodus-backend-services:
+        external: true
+    shared-network:
         external: true

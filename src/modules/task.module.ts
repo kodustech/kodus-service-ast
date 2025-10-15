@@ -5,10 +5,10 @@ import { TaskHttpController } from '@/core/infrastructure/http/controllers/task.
 import { Module } from '@nestjs/common';
 import { TaskPersistenceModule } from '@/core/infrastructure/persistence/task/task-persistence.module.js';
 import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.contract.js';
-import { QueueModule } from './queue.module.js';
+import { QueueModuleApi } from '@/core/infrastructure/queue/queue.module.api.js';
 
 @Module({
-    imports: [TaskPersistenceModule, QueueModule],
+    imports: [TaskPersistenceModule, QueueModuleApi],
     providers: [
         ...useCases,
         {

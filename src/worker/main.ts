@@ -4,12 +4,10 @@ console.log('[WORKER] Importing NestFactory...');
 import { NestFactory } from '@nestjs/core';
 console.log('[WORKER] Importing WorkerModule...');
 import { WorkerMinModule as WorkerModule } from '../modules/worker.min.module.js';
+// import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 console.log('[WORKER] Importing PinoLoggerService...');
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 
 console.log('[WORKER] All imports loaded');
-
-const WORKER_CONTEXT = 'AstWorkerBootstrap';
 
 async function bootstrap(): Promise<void> {
     console.log('[WORKER] Starting bootstrap function...');
@@ -31,36 +29,17 @@ async function bootstrap(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log('[WORKER] After timeout');
 
-    const logger = app.get(PinoLoggerService);
+    // app.useLogger(app.get(PinoLoggerService));
 
-    logger.log({
-        context: WORKER_CONTEXT,
-        message: 'AST worker started and listening to RabbitMQ queues',
-        serviceName: WORKER_CONTEXT,
-    });
     console.log('[WORKER] Worker is ready');
 
     const shutdown = async (signal: NodeJS.Signals) => {
-        logger.warn({
-            context: WORKER_CONTEXT,
-            message: `Received ${signal}; shutting down worker`,
-            serviceName: WORKER_CONTEXT,
-        });
-
         try {
             await app.close();
-            logger.log({
-                context: WORKER_CONTEXT,
-                message: 'Worker shutdown complete',
-                serviceName: WORKER_CONTEXT,
-            });
+
+            console.log('[WORKER] Worker shutdown complete', signal);
         } catch (error) {
-            logger.error({
-                context: WORKER_CONTEXT,
-                message: 'Error during worker shutdown',
-                error,
-                serviceName: WORKER_CONTEXT,
-            });
+            console.error('[WORKER] Error during worker shutdown:', error);
         } finally {
             process.exit(0);
         }

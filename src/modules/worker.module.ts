@@ -10,6 +10,7 @@ import { GraphAnalysisModule } from './graph-analysis.module.js';
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
 import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { useCases } from '@/core/application/use-cases/ast/index.js';
+import { LogModule } from './log.module.js';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { useCases } from '@/core/application/use-cases/ast/index.js';
         ParsingModule,
         EnrichmentModule,
         GraphAnalysisModule,
+        LogModule,
     ],
     providers: [
         TaskManagerService,

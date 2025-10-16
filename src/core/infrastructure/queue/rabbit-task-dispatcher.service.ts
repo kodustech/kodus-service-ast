@@ -6,9 +6,8 @@ import {
     DispatchTaskPayload,
 } from '@/core/application/services/task/task.service.js';
 import { RABBITMQ_CONFIG } from './rabbit.constants.js';
+import { QUEUE_CONFIG } from './queue.constants.js';
 import { type RabbitMqConfig } from './rabbit.config.js';
-
-// aproveita seu resolveRoutingKey já existente
 import { resolveRoutingKey } from './task-queue.definition.js';
 
 @Injectable()
@@ -31,17 +30,26 @@ export class RabbitTaskDispatcher implements ITaskJobDispatcher {
         };
 
         try {
-            await this.amqp.publish(this.cfg.exchange, routingKey, message, {
-                persistent: true,
-                contentType: 'application/json',
-                contentEncoding: 'utf-8',
-                headers: {
-                    'x-task-id': payload.taskId,
-                    'x-task-type': payload.type,
-                    'x-retry-count': 0,
-                    ...payload.metadata,
+            await this.amqp.publish(
+                QUEUE_CONFIG.EXCHANGE,
+                routingKey,
+                message,
+                {
+                    persistent: true, // grava em disco
+                    contentType: 'application/json',
+                    contentEncoding: 'utf-8',
+                    messageId: payload.taskId,
+                    timestamp: Date.now(),
+                    correlationId: payload.taskId,
+                    appId: this.cfg.connectionName,
+                    // mandatory: true // opcional: combine com returns para detectar rota inválida
+                    headers: {
+                        'x-task-type': payload.type,
+                        'x-retry-count': 0,
+                        ...payload.metadata,
+                    },
                 },
-            });
+            );
         } catch (e) {
             throw handleError(e);
         }

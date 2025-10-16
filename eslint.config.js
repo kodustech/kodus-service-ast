@@ -14,14 +14,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default tseslint.config(
     // Arquivos a ignorar
     {
-        ignores: ['dist/**', 'node_modules/**', 'eslint.config.js'],
+        ignores: [
+            'dist/**',
+            'node_modules/**',
+            'eslint.config.js',
+            'jest.config.js',
+            'docs/**',
+        ],
     },
     // Configurações básicas
     {
         languageOptions: {
             parser: tseslint.parser,
             parserOptions: {
-                project: ['./tsconfig.json'],
+                project: ['./tsconfig.json', './tsconfig.test.json'],
                 sourceType: 'module',
                 tsconfigRootDir: __dirname,
                 ecmaVersion: 2020,

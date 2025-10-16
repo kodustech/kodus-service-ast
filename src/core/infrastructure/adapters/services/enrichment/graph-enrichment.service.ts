@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import {
     CodeGraph,
@@ -21,7 +21,9 @@ export class GraphEnrichmentService {
     private nodes?: EnrichedGraphNode[];
     private relationships?: Map<string, EnrichedGraphEdge>;
 
-    constructor(private readonly logger: PinoLoggerService) {}
+    constructor(
+        @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
+    ) {}
 
     enrichGraph(data: CodeGraph): EnrichedGraph {
         this.normalizedPathCache = new Map();

@@ -1,25 +1,27 @@
 import { Module } from '@nestjs/common';
 import { TaskPersistenceModule } from '@/core/infrastructure/persistence/task/task-persistence.module.js';
-import { LogModule } from './log.module.js';
 import { RepositoryModule } from './repository.module.js';
-import { TaskModule } from './task.module.js';
+import { ParsingModule } from './parsing.module.js';
+import { EnrichmentModule } from './enrichment.module.js';
+import { GraphAnalysisModule } from './graph-analysis.module.js';
 import { TaskQueueProcessor } from '@/core/application/services/task/task-queue-processor.service.js';
 import { TaskQueueConsumer } from '@/core/infrastructure/queue/task-queue.consumer.js';
-import { workerCommands } from '@/core/application/use-cases/ast/index.js';
+import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.contract.js';
+import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
 
 @Module({
     imports: [
         TaskPersistenceModule,
-        LogModule,
-        RepositoryModule, // Provides REPOSITORY_MANAGER_TOKEN needed by use cases
-        TaskModule, // Provides TASK_MANAGER_TOKEN needed by TaskQueueProcessor
-        // ASTModule.forWorker() - provides ParsingModule and other base dependencies
+        RepositoryModule,
+        ParsingModule,
+        EnrichmentModule,
+        GraphAnalysisModule,
     ],
     providers: [
-        ...workerCommands, // Only async commands for worker
+        { provide: TASK_MANAGER_TOKEN, useClass: TaskManagerService },
         TaskQueueProcessor,
         TaskQueueConsumer,
     ],
-    exports: [TaskQueueProcessor, TaskQueueConsumer, ...workerCommands],
+    exports: [TaskQueueProcessor, TaskQueueConsumer],
 })
 export class WorkerAstModule {}

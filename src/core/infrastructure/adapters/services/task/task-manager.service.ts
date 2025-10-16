@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { Task, TaskPriority, TaskStatus } from '@/shared/types/task.js';
@@ -16,7 +16,9 @@ export class TaskManagerService implements ITaskManagerService {
     private readonly defaultTaskType = 'AST_GENERIC';
 
     constructor(
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
+        @Inject(TaskPersistenceService)
         private readonly taskPersistence: TaskPersistenceService,
     ) {}
 

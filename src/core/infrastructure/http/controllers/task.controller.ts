@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Inject, Param } from '@nestjs/common';
 import {
     GetTaskInfoRequest,
     GetTaskInfoResponse,
@@ -6,7 +6,10 @@ import {
 import { GetTaskInfoUseCase } from '@/core/application/use-cases/task/get-task-info.use-case.js';
 @Controller('tasks')
 export class TaskHttpController {
-    constructor(private readonly getTaskInfoUseCase: GetTaskInfoUseCase) {}
+    constructor(
+        @Inject(GetTaskInfoUseCase)
+        private readonly getTaskInfoUseCase: GetTaskInfoUseCase,
+    ) {}
 
     @Get(':taskId')
     async getTaskInfo(

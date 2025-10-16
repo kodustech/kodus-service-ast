@@ -40,7 +40,7 @@ export class DiffAnalyzerService {
     constructor(
         @Inject(REPOSITORY_MANAGER_TOKEN)
         private readonly repositoryManagerService: IRepositoryManager,
-
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
 

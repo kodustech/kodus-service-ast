@@ -18,8 +18,9 @@ echo "VHost: $RABBIT_VHOST"
 
 # Função para executar comandos rabbitmqctl
 rabbitmqctl() {
-    docker exec rabbitmq rabbitmqctl "$@"
+    docker exec rabbitmq-local rabbitmqctl "$@"
 }
+
 
 # Verificar se estamos usando Docker ou instalação local
 if command -v docker &> /dev/null && docker ps | grep -q rabbitmq; then
@@ -43,7 +44,11 @@ QUEUES_TO_CLEAN=(
     "ast.initialize.repo.q"     # QUEUE_CONFIG.REPO_QUEUE
     "ast.initialize.impact.q"   # QUEUE_CONFIG.IMPACT_QUEUE
     "ast.jobs.dlq"             # QUEUE_CONFIG.DEAD_LETTER_QUEUE
+    "ast.jobs.retry.q"         # QUEUE_CONFIG.JOBS_RETRY_QUEUE (retry queue)
 )
+
+echo "🧹 Exchanges são automaticamente recriadas pelos módulos - pulando limpeza de exchanges..."
+# Exchanges serão recriadas automaticamente com configuração correta pelos RabbitMQModule
 
 echo "🧹 Removendo filas conflitantes..."
 
@@ -57,5 +62,5 @@ $RABBITMQCTL list_queues
 
 echo "✅ Limpeza concluída!"
 echo ""
-echo "💡 Agora você pode reiniciar a aplicação. As filas serão recriadas"
-echo "   com a configuração correta pelos @RabbitSubscribe decorators."
+echo "💡 Agora você pode reiniciar a aplicação. As exchanges e filas serão recriadas"
+echo "   com a configuração correta pelos RabbitMQModule e @RabbitSubscribe decorators."

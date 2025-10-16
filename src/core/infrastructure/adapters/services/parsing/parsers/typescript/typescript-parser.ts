@@ -1,5 +1,8 @@
 import { BaseParser } from '../base-parser.js';
-import * as TypeScriptLang from 'tree-sitter-typescript/typescript';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const TreeSitterTypeScript = require('tree-sitter-typescript');
+const TypeScriptLang = TreeSitterTypeScript.typescript;
 import { typeScriptQueries } from './typescript-queries.js';
 import { type Language, type SyntaxNode } from 'tree-sitter';
 import { type ParserQuery, type QueryType } from '../query.js';

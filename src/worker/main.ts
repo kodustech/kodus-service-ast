@@ -13,10 +13,6 @@ async function bootstrap(): Promise<void> {
         });
         console.log('[WORKER] Application context created');
 
-        console.log('[WORKER] Calling app.init()...');
-        await app.init();
-        console.log('[WORKER] app.init() resolved');
-
         console.log('[WORKER] Waiting 2 seconds for RabbitMQ setup...');
         await new Promise((resolve) => setTimeout(resolve, 2000));
         console.log('[WORKER] Wait completed');

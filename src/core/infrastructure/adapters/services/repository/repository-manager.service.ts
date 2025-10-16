@@ -1,5 +1,5 @@
 import { IRepositoryManager } from '@/core/domain/repository/contracts/repository-manager.contract.js';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,7 +20,9 @@ export class RepositoryManagerService implements IRepositoryManager {
     private readonly allowedProtocols = ['https:', 'http:']; // Only allow HTTP/HTTPS
     private readonly maxRepoSize = 1024 * 1024 * 900; // 900MB max repo size
 
-    constructor(private readonly logger: PinoLoggerService) {
+    constructor(
+        @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
+    ) {
         void this.ensureBaseDirExists();
     }
 

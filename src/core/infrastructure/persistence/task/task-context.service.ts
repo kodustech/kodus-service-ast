@@ -1,11 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { TaskContext } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { TaskPersistenceService } from './task-persistence.service.js';
 import { TaskStatus } from '@/shared/types/task.js';
 
 @Injectable()
 export class TaskContextService {
-    constructor(private readonly taskPersistence: TaskPersistenceService) {}
+    constructor(
+        @Inject(TaskPersistenceService)
+        private readonly taskPersistence: TaskPersistenceService,
+    ) {}
 
     createContext(taskId: string): TaskContext {
         return new TaskContextImpl(taskId, this.taskPersistence);

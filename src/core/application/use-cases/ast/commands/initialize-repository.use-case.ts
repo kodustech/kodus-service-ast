@@ -53,7 +53,7 @@ export class InitializeRepositoryUseCase {
                 await taskContext.update('Building head graph');
             }
             const headGraph =
-                await this.codeKnowledgeGraphService.buildGraphProgressively(
+                await this.codeKnowledgeGraphService.buildGraphStreaming(
                     headDirPath,
                     filePaths,
                 );
@@ -62,7 +62,7 @@ export class InitializeRepositoryUseCase {
                 await taskContext.update('Building base graph');
             }
             const baseGraph =
-                await this.codeKnowledgeGraphService.buildGraphProgressively(
+                await this.codeKnowledgeGraphService.buildGraphStreaming(
                     baseDirPath,
                     filePaths,
                 );

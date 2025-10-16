@@ -7,7 +7,7 @@
         "allowJs": true,
         "checkJs": false,
         "lib": ["ESNext"],
-        "types": ["node"],
+        "types": ["node", "jest"],
         "typeRoots": ["./src/types", "./node_modules/@types"],
         "module": "NodeNext",
         "target": "ESNext",
@@ -20,6 +20,7 @@
         "skipLibCheck": true,
         "strictNullChecks": true,
         "noImplicitAny": false,
+        "isolatedModules": true,
         "strictBindCallApply": true,
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": true,
@@ -49,7 +50,7 @@
     },
     "include": [
         "src/**/*",
-        "test/**/*.ts",
+        "test/**/*",
         "ecosystem.config.js",
         "tsconfig-paths-bootstrap.js"
     ],

@@ -1,7 +1,10 @@
 import { type Language, type QueryMatch, type SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser.js';
 import { phpQueries } from './php-queries.js';
-import * as PhpLang from 'tree-sitter-php/php';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const TreeSitterPhp = require('tree-sitter-php');
+const PhpLang = TreeSitterPhp.php;
 import { type ParserQuery, type QueryType } from '../query.js';
 import {
     ChainType,

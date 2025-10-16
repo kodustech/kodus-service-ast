@@ -1,5 +1,8 @@
 import { getEnvVariable } from '@/shared/utils/env.js';
 
+// Queue configuration versioning
+export const QUEUE_CONFIG_VERSION = 'v2.0.0';
+
 // Queue configuration constants and types
 export const QUEUE_CONFIG = {
     // Delivery limits
@@ -11,6 +14,7 @@ export const QUEUE_CONFIG = {
     // Exchanges
     EXCHANGE: 'ast.jobs.x',
     DEAD_LETTER_EXCHANGE: 'ast.jobs.dlx',
+    DELAYED_EXCHANGE: 'ast.jobs.delayed.x',
 
     // Queues
     REPO_QUEUE: 'ast.initialize.repo.q',
@@ -24,9 +28,13 @@ export const QUEUE_CONFIG = {
     ECHO_ROUTING_KEY: 'ast.test.echo',
 } as const;
 
-// Runtime configuration
+// Runtime configuration with feature flags
 export function getQueueRuntimeConfig() {
+    const enableExperimentalFeatures =
+        (getEnvVariable('RABBIT_EXPERIMENTAL') ?? 'false') === 'true';
+
     return {
+        version: QUEUE_CONFIG_VERSION,
         enableSingleActiveConsumer:
             (getEnvVariable('RABBIT_SAC') ?? 'false') === 'true',
         retryTtlMs: Number(getEnvVariable('RABBIT_RETRY_TTL_MS') ?? '30000'),
@@ -34,6 +42,13 @@ export function getQueueRuntimeConfig() {
         publishTimeoutMs: Number(
             getEnvVariable('RABBIT_PUBLISH_TIMEOUT_MS') ?? '5000',
         ),
+        // Feature flags for gradual rollout
+        enableExperimentalFeatures,
+        enableEnhancedRetry:
+            enableExperimentalFeatures &&
+            (getEnvVariable('RABBIT_ENHANCED_RETRY') ?? 'false') === 'true',
+        enableQueueMonitoring:
+            (getEnvVariable('RABBIT_QUEUE_MONITORING') ?? 'true') === 'true',
     };
 }
 

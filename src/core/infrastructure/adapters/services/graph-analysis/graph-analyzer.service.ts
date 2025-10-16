@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import {
     EnrichedGraph,
@@ -32,7 +32,9 @@ import { DiffAnalyzerService } from '../diff/diff-analyzer.service.js';
 @Injectable()
 export class GraphAnalyzerService {
     constructor(
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
+        @Inject(DiffAnalyzerService)
         private readonly diffAnalyzerService: DiffAnalyzerService,
         // TODO: Re-enable PromptRunnerService when LLM module is properly configured
         // private readonly promptRunnerService: PromptRunnerService,

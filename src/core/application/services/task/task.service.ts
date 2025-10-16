@@ -39,6 +39,7 @@ export class TaskService {
         input: CreateAsyncTaskInput<TPayload>,
     ): Promise<string> {
         const taskId = await this.taskManagerService.createTask(input.priority);
+
         await this.taskJobDispatcher.dispatch({
             taskId,
             type: input.type,

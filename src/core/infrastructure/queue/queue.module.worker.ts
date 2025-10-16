@@ -1,3 +1,4 @@
+// queue.module.worker.ts (ajustado)
 import { Module } from '@nestjs/common';
 import {
     RabbitMQModule,
@@ -5,27 +6,55 @@ import {
 } from '@golevelup/nestjs-rabbitmq';
 import { QueueConfigModule } from './queue-config.module.js';
 import { RABBITMQ_CONFIG } from './rabbit.constants.js';
-import { type RabbitMqConfig } from './rabbit.config.js';
+import type { RabbitMqConfig } from './rabbit.config.js';
 import { QUEUE_CONFIG, getQueueRuntimeConfig } from './queue.constants.js';
 
-const runtimeConfig = getQueueRuntimeConfig();
+const runtime = getQueueRuntimeConfig();
 
 @Module({
     imports: [
-        QueueConfigModule, // <-- disponibiliza o token no módulo
+        QueueConfigModule,
         RabbitMQModule.forRootAsync({
-            imports: [QueueConfigModule], // <-- disponibiliza o token no contexto do módulo dinâmico
+            imports: [QueueConfigModule],
             inject: [RABBITMQ_CONFIG],
             useFactory: (cfg: RabbitMqConfig) => ({
                 name: cfg.connectionName,
                 uri: cfg.url,
-                prefetchCount: runtimeConfig.prefetch,
+                prefetchCount: runtime.prefetch,
                 channels: {
                     consumer: {
-                        prefetchCount: runtimeConfig.prefetch,
+                        prefetchCount: runtime.prefetch,
                         default: true,
                     },
                 },
+                // 👇 exchanges só para validar existência (sem criar):
+                exchanges: [
+                    {
+                        name: QUEUE_CONFIG.EXCHANGE,
+                        type: 'topic',
+                        createExchangeIfNotExists: false,
+                        options: { durable: true },
+                    },
+                    {
+                        name: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+                        type: 'topic',
+                        createExchangeIfNotExists: false,
+                        options: { durable: true },
+                    },
+                    {
+                        name: QUEUE_CONFIG.DELAYED_EXCHANGE,
+                        type: 'x-delayed-message',
+                        createExchangeIfNotExists: false,
+                        options: {
+                            durable: true,
+                            arguments: { 'x-delayed-type': 'topic' },
+                        },
+                    },
+                ],
+                // 👇 NÃO declare queues aqui; definitions.json já fez isso
+                registerHandlers: true,
+                defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK, // nack => DLX decide
+                enableDirectReplyTo: false,
                 connectionInitOptions: {
                     wait: true,
                     timeout: 10_000,
@@ -40,59 +69,8 @@ const runtimeConfig = getQueueRuntimeConfig();
                         },
                     },
                 },
-                exchanges: [
-                    {
-                        name: QUEUE_CONFIG.EXCHANGE,
-                        type: 'topic',
-                        options: { durable: true },
-                    },
-                    {
-                        name: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
-                        type: 'topic',
-                        options: { durable: true },
-                    },
-                ],
-                queues: [
-                    {
-                        name: QUEUE_CONFIG.DEAD_LETTER_QUEUE,
-                        createQueueIfNotExists: true,
-                        options: {
-                            durable: true,
-                            arguments: {
-                                'x-queue-type': QUEUE_CONFIG.QUEUE_TYPE,
-                            },
-                        },
-                        exchange: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
-                        routingKey: '#',
-                    },
-                    ...(cfg.retryQueue
-                        ? [
-                              {
-                                  name: cfg.retryQueue,
-                                  createQueueIfNotExists: true,
-                                  options: {
-                                      durable: true,
-                                      arguments: {
-                                          ...(cfg.retryTtlMs
-                                              ? {
-                                                    'x-message-ttl':
-                                                        cfg.retryTtlMs,
-                                                }
-                                              : {}),
-                                          'x-dead-letter-exchange':
-                                              QUEUE_CONFIG.EXCHANGE,
-                                      },
-                                  },
-                              },
-                          ]
-                        : []),
-                ],
-                registerHandlers: true,
-                defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,
-                enableDirectReplyTo: true,
             }),
         }),
     ],
-    exports: [RabbitMQModule],
 })
 export class QueueModuleWorker {}

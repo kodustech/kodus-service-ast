@@ -586,7 +586,11 @@ export abstract class BaseParser {
                 .map((param) => param.name)
                 .join(', ')})`;
             const methodSignature = `${params}:${method.returnType || 'unknown'}`;
-            objAnalysis.fields[method.name] = methodSignature;
+            if (objAnalysis.fields instanceof Map) {
+                objAnalysis.fields.set(method.name, methodSignature);
+            } else {
+                objAnalysis.fields[method.name] = methodSignature;
+            }
 
             this.context.fileDefines.add(method.name);
         }
@@ -604,8 +608,15 @@ export abstract class BaseParser {
             if (!property.name) {
                 continue;
             }
-            objAnalysis.fields[property.name] =
-                property.type || objProps.type || 'unknown';
+            if (objAnalysis.fields instanceof Map) {
+                objAnalysis.fields.set(
+                    property.name,
+                    property.type || objProps.type || 'unknown',
+                );
+            } else {
+                objAnalysis.fields[property.name] =
+                    property.type || objProps.type || 'unknown';
+            }
         }
     }
 
@@ -952,10 +963,18 @@ export abstract class BaseParser {
                             typeAnalysis.fields = {};
                         }
                         if (typeFields.length > 0) {
-                            typeAnalysis.fields[typeFields.pop() || ''] =
-                                typeName;
+                            const fieldName = typeFields.pop() || '';
+                            if (typeAnalysis.fields instanceof Map) {
+                                typeAnalysis.fields.set(fieldName, typeName);
+                            } else {
+                                typeAnalysis.fields[fieldName] = typeName;
+                            }
                         } else {
-                            typeAnalysis.fields[typeName] = typeName;
+                            if (typeAnalysis.fields instanceof Map) {
+                                typeAnalysis.fields.set(typeName, typeName);
+                            } else {
+                                typeAnalysis.fields[typeName] = typeName;
+                            }
                         }
                         break;
                     }

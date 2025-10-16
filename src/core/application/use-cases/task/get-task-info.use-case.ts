@@ -15,7 +15,7 @@ export class GetTaskInfoUseCase {
     constructor(
         @Inject(TASK_MANAGER_TOKEN)
         private readonly taskManagerService: ITaskManagerService,
-
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
 

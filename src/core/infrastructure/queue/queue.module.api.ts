@@ -1,6 +1,8 @@
+// queue.module.api.ts (ajustado)
 import { Module } from '@nestjs/common';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { QueueConfigModule } from './queue-config.module.js';
+import { QUEUE_CONFIG } from './queue.constants.js';
 import { RABBITMQ_CONFIG } from './rabbit.constants.js';
 import type { RabbitMqConfig } from './rabbit.config.js';
 import { RabbitTaskDispatcher } from './rabbit-task-dispatcher.service.js';
@@ -15,13 +17,32 @@ import { TASK_JOB_DISPATCHER } from '@/core/application/services/task/task.servi
             useFactory: (cfg: RabbitMqConfig) => ({
                 name: cfg.connectionName,
                 uri: cfg.url,
-                prefetchCount: cfg.prefetch ?? 1,
-                channels: {
-                    producer: {
-                        prefetchCount: cfg.prefetch ?? 1,
-                        default: true,
+                prefetchCount: 0, // publisher não consome
+                exchanges: [
+                    {
+                        name: QUEUE_CONFIG.EXCHANGE,
+                        type: 'topic',
+                        createExchangeIfNotExists: false,
+                        options: { durable: true },
                     },
-                },
+                    {
+                        name: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+                        type: 'topic',
+                        createExchangeIfNotExists: false,
+                        options: { durable: true },
+                    },
+                    {
+                        name: QUEUE_CONFIG.DELAYED_EXCHANGE,
+                        type: 'x-delayed-message',
+                        createExchangeIfNotExists: false,
+                        options: {
+                            durable: true,
+                            arguments: { 'x-delayed-type': 'topic' },
+                        },
+                    },
+                ],
+                registerHandlers: false,
+                enableDirectReplyTo: false,
                 connectionInitOptions: {
                     wait: true,
                     timeout: 10_000,
@@ -36,28 +57,13 @@ import { TASK_JOB_DISPATCHER } from '@/core/application/services/task/task.servi
                         },
                     },
                 },
-                exchanges: [
-                    {
-                        name: cfg.exchange,
-                        type: 'topic',
-                        options: { durable: true },
-                    },
-                    {
-                        name: cfg.deadLetterExchange,
-                        type: 'topic',
-                        options: { durable: true },
-                    },
-                ],
-                registerHandlers: false, // API só publica
-                enableDirectReplyTo: true,
             }),
         }),
     ],
     providers: [
-        // publisher usando AmqpConnection.publish(...)
         RabbitTaskDispatcher,
         { provide: TASK_JOB_DISPATCHER, useExisting: RabbitTaskDispatcher },
     ],
-    exports: [RabbitMQModule, RabbitTaskDispatcher, TASK_JOB_DISPATCHER],
+    exports: [RabbitTaskDispatcher, TASK_JOB_DISPATCHER],
 })
 export class QueueModuleApi {}

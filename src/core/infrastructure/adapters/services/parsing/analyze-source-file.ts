@@ -88,10 +88,11 @@ export class SourceFileAnalyzer {
             const batchSize = 10;
             const normalizedImports: string[] = [];
 
+            // 🚀 FASE 1: Use original import resolution (cache disabled - causing overhead)
             for (let i = 0; i < uniqueImports.length; i += batchSize) {
                 const batch = uniqueImports.slice(i, i + batchSize);
                 const batchResults = await Promise.all(
-                    batch.map((imp) => {
+                    batch.map(async (imp) => {
                         try {
                             const resolved =
                                 this.languageParser!.resolveImportWithCache(
@@ -101,7 +102,10 @@ export class SourceFileAnalyzer {
                                 );
                             return resolved?.normalizedPath || imp;
                         } catch (err) {
-                            console.error(err);
+                            console.error(
+                                `[PERFORMANCE] Import resolution failed for ${imp}:`,
+                                err,
+                            );
                             return imp;
                         }
                     }),

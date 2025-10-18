@@ -21,6 +21,9 @@ export class GraphEnrichmentService {
     private nodes?: EnrichedGraphNode[];
     private relationships?: Map<string, EnrichedGraphEdge>;
 
+    // 🚀 OTIMIZAÇÃO REAL: Cache para findNode O(1) dentro da mesma execução
+    private nodesByNameAndPath?: Map<string, EnrichedGraphNode>;
+
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
     ) {}
@@ -32,6 +35,9 @@ export class GraphEnrichmentService {
         this.relationships = new Map();
         this.addedNodes = new Set();
         this.relationshipKeys = {};
+
+        // 🚀 INICIALIZAR CACHE O(1) para findNode
+        this.nodesByNameAndPath = new Map();
 
         this.processFiles(data);
 
@@ -322,6 +328,10 @@ export class GraphEnrichmentService {
         if (!this.addedNodes?.has(node.id)) {
             this.addedNodes?.add(node.id);
             this.nodes?.push(node);
+
+            // 🚀 POPULAR CACHE O(1) para findNode
+            const key = `${node.name}|${node.filePath}`;
+            this.nodesByNameAndPath?.set(key, node);
         }
     }
 
@@ -429,41 +439,40 @@ export class GraphEnrichmentService {
         methodName: string,
         data: CodeGraph,
     ): { id: string; filePath: string } | null {
-        const matchingClasses = Array.from(data.types.entries()).filter(
-            ([, type]) =>
+        // 🚀 OTIMIZAÇÃO: Iterar diretamente em vez de Array.from()
+        let matchingClass: any = null;
+        for (const [, type] of data.types) {
+            if (
                 type.type === NodeType.NODE_TYPE_CLASS &&
                 Array.isArray(type.implements) &&
                 type.implements.some((impl: string) =>
                     impl.startsWith(interfacePath),
-                ),
-        );
+                )
+            ) {
+                matchingClass = type;
+                break; // Pegar o primeiro match
+            }
+        }
 
-        if (matchingClasses.length === 0) {
+        if (!matchingClass || !matchingClass.name) {
             return null;
         }
 
-        const [, implClass] = matchingClasses[0];
-
-        if (!implClass.name) {
-            return null;
+        // 🚀 OTIMIZAÇÃO: Buscar função diretamente em vez de Array.from()
+        for (const [, func] of data.functions) {
+            if (
+                func.className === matchingClass.name &&
+                func.name === methodName
+            ) {
+                const normalizedFilePath = this.normalizePath(func.file);
+                return {
+                    id: func.nodeId,
+                    filePath: normalizedFilePath,
+                };
+            }
         }
 
-        const implMethodEntry = Array.from(data.functions.entries()).find(
-            ([, func]) =>
-                func.className === implClass.name && func.name === methodName,
-        );
-
-        if (!implMethodEntry) {
-            return null;
-        }
-
-        const [, func] = implMethodEntry;
-        const normalizedFilePath = this.normalizePath(func.file);
-
-        return {
-            id: func.nodeId,
-            filePath: normalizedFilePath,
-        };
+        return null;
     }
 
     private findNode(
@@ -473,35 +482,29 @@ export class GraphEnrichmentService {
     ): EnrichedGraphNode | null {
         const normalizedFilePath = this.normalizePath(filePath);
 
+        // 🚀 OTIMIZAÇÃO: O(1) lookup usando cache
         if (caller === undefined || caller === null) {
-            return (
-                this.nodes?.find(
-                    (node) =>
-                        node.name === name &&
-                        node.filePath === normalizedFilePath,
-                ) || null
-            );
+            const key = `${name}|${normalizedFilePath}`;
+            return this.nodesByNameAndPath?.get(key) || null;
         }
 
-        // Find the specific node that matches the name, file, and context.
-        const foundNode = this.nodes?.find((node) => {
-            // Basic match: name and file must align.
-            if (node.name !== name || node.filePath !== normalizedFilePath) {
-                return false;
-            }
+        // 🚀 Para casos com caller, ainda precisamos filtrar, mas otimizamos
+        const key = `${name}|${normalizedFilePath}`;
+        const candidateNode = this.nodesByNameAndPath?.get(key);
 
-            // Contextual match: use the caller to disambiguate.
-            if (caller) {
-                // A caller was provided (e.g., 'Foo'). We are looking for a method.
-                // The node's owner must match the caller.
-                return node.owner === caller;
-            } else {
-                // No caller was provided. We are looking for a standalone function.
-                // The node must NOT have an owner.
-                return !node.owner;
-            }
-        });
+        if (!candidateNode) {
+            return null;
+        }
 
-        return foundNode || null;
+        // Contextual match: use the caller to disambiguate.
+        if (caller) {
+            // A caller was provided (e.g., 'Foo'). We are looking for a method.
+            // The node's owner must match the caller.
+            return candidateNode.owner === caller ? candidateNode : null;
+        } else {
+            // No caller was provided. We are looking for a standalone function.
+            // The node must NOT have an owner.
+            return !candidateNode.owner ? candidateNode : null;
+        }
     }
 }

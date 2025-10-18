@@ -4,6 +4,7 @@ import {
     GetTaskInfoResponse,
 } from '@/shared/types/task.js';
 import { GetTaskInfoUseCase } from '@/core/application/use-cases/task/get-task-info.use-case.js';
+
 @Controller('tasks')
 export class TaskHttpController {
     constructor(

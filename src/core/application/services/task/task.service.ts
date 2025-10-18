@@ -16,7 +16,7 @@ export interface DispatchTaskPayload<TPayload = unknown> {
 export const TASK_JOB_DISPATCHER = Symbol('TaskJobDispatcher');
 
 export interface ITaskJobDispatcher {
-    dispatch<TPayload>(payload: DispatchTaskPayload<TPayload>): Promise<void>;
+    dispatch<TPayload>(payload: DispatchTaskPayload<TPayload>): void;
 }
 
 interface CreateAsyncTaskInput<TPayload> {
@@ -40,13 +40,14 @@ export class TaskService {
     ): Promise<string> {
         const taskId = await this.taskManagerService.createTask(input.priority);
 
-        await this.taskJobDispatcher.dispatch({
+        this.taskJobDispatcher.dispatch({
             taskId,
             type: input.type,
             payload: input.payload,
             priority: input.priority,
             metadata: input.metadata,
         });
+
         return taskId;
     }
 }

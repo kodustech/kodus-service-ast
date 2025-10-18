@@ -25,6 +25,15 @@ services:
         networks:
             - kodus-backend-services
             - shared-network
+        # 🚀 LIMITES DE RECURSOS - API (Leve)
+        deploy:
+            resources:
+                limits:
+                    cpus: '1.0'      # 1 CPU core
+                    memory: 1G       # 1GB RAM
+                reservations:
+                    cpus: '0.5'      # Mínimo 0.5 CPU
+                    memory: 512M     # Mínimo 512MB
 
     kodus-service-ast-worker:
         image: kodus/service-ast:latest
@@ -50,6 +59,15 @@ services:
             - shared-network
         depends_on:
             - kodus-service-ast-api
+        # 🚀 LIMITES DE RECURSOS - WORKER (Pesado)
+        deploy:
+            resources:
+                limits:
+                    cpus: '2.0'      # 2 CPU cores
+                    memory: 2G       # 2GB RAM
+                reservations:
+                    cpus: '1.0'      # Mínimo 1 CPU
+                    memory: 1G       # Mínimo 1GB
 
 networks:
     kodus-backend-services:

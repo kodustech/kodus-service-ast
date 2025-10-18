@@ -43,7 +43,6 @@ FROM node:22.14.0-slim
 ENV NODE_ENV=production
 ENV NODE_OPTIONS=--max-old-space-size=4096
 ENV PORT=3002
-ENV API_HEALTH_PORT=5001
 
 WORKDIR /usr/src/app
 
@@ -80,7 +79,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:5001/health || exit 1
 
 # Expõe as portas necessárias
-EXPOSE ${PORT} ${API_HEALTH_PORT}
+EXPOSE ${PORT}
 
 # Comando de inicialização
 CMD ["pm2-runtime", "start", "ecosystem.config.js"]

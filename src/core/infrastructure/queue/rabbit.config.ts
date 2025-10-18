@@ -10,7 +10,7 @@ export interface RabbitMqConfig {
     connectionName: string;
 }
 
-export function loadRabbitMqConfig(serviceName: string): RabbitMqConfig {
+export function loadRabbitMqConfig(): RabbitMqConfig {
     const url = getEnvVariable('RABBIT_URL');
 
     if (!url) {
@@ -23,7 +23,7 @@ export function loadRabbitMqConfig(serviceName: string): RabbitMqConfig {
             publishTimeoutMs:
                 getEnvVariableAsNumber('RABBIT_PUBLISH_TIMEOUT_MS', 5000) ??
                 5000,
-            connectionName: serviceName,
+            connectionName: 'kodus-service-ast-api',
         };
     }
 
@@ -35,6 +35,6 @@ export function loadRabbitMqConfig(serviceName: string): RabbitMqConfig {
         prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 1) ?? 1,
         publishTimeoutMs:
             getEnvVariableAsNumber('RABBIT_PUBLISH_TIMEOUT_MS', 5000) ?? 5000,
-        connectionName: serviceName,
+        connectionName: 'kodus-service-ast-api',
     };
 }

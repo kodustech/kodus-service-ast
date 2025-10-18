@@ -46,9 +46,13 @@ export class CodeKnowledgeGraphService {
         lastBatchTime: 0,
     };
 
-    // Configurações para streaming
-    private readonly memoryThreshold = 0.8; // 80% de uso de memória
-    private readonly batchPauseMs = 100; // Pausa entre lotes quando necessário
+    // Configurações para streaming - Otimizadas
+    private readonly memoryThreshold = 0.75; // 75% de uso de memória (mais conservador)
+    private readonly batchPauseMs = 50; // Pausa reduzida entre lotes
+    private readonly adaptivePauseMs = 200; // Pausa maior quando memória muito alta
+    private readonly gcThreshold = 0.7; // Threshold para forçar GC
+    private lastGcTime = 0;
+    private gcIntervalMs = 5000; // GC a cada 5s no máximo
 
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
@@ -144,32 +148,36 @@ export class CodeKnowledgeGraphService {
         const totalFiles = files.length;
         let processedFiles = 0;
 
-        this.logger.log({
-            message: 'Starting streaming file processing',
-            context: CodeKnowledgeGraphService.name,
-            metadata: {
-                totalFiles,
-                batchSize,
-                totalBatches: batches.length,
-            },
-            serviceName: CodeKnowledgeGraphService.name,
-        });
+        // 🚀 OTIMIZAÇÃO: Logs reduzidos para melhor performance
+        // this.logger.log({
+        //     message: 'Starting streaming file processing',
+        //     context: CodeKnowledgeGraphService.name,
+        //     metadata: {
+        //         totalFiles,
+        //         batchSize,
+        //         totalBatches: batches.length,
+        //     },
+        //     serviceName: CodeKnowledgeGraphService.name,
+        // });
 
         // Processar cada lote de forma streaming
         for (let i = 0; i < batches.length; i++) {
             const batchStartTime = performance.now();
 
             try {
-                // Controle de backpressure - pausar se memória alta
-                if (this.shouldPauseForMemory()) {
-                    await this.waitForMemory();
-                }
+                // 🚀 OTIMIZAÇÃO: Desabilitar backpressure que causa overhead
+                // if (this.shouldPauseForMemory()) {
+                //     await this.waitForMemory();
+                // }
 
                 // Processar lote
                 const batchResult = await this.processBatch(
                     batches[i],
                     rootDir,
                 );
+
+                // Limpeza de cache após cada batch para reduzir uso de memória
+                this.clearBatchCache();
 
                 // Atualizar métricas
                 processedFiles += batchResult.files.length;
@@ -191,29 +199,15 @@ export class CodeKnowledgeGraphService {
                     totalBatches: batches.length,
                 };
 
-                // Log de progresso a cada 10% ou a cada 100 arquivos
+                // 🚀 OTIMIZAÇÃO: Logs de progresso muito menos frequentes
                 if (
-                    i % Math.ceil(batches.length / 10) === 0 ||
-                    processedFiles % 100 === 0
+                    i % Math.ceil(batches.length / 5) === 0 || // A cada 20% em vez de 10%
+                    processedFiles % 500 === 0 // A cada 500 arquivos em vez de 100
                 ) {
-                    this.logger.log({
-                        message: 'Streaming progress update',
-                        context: CodeKnowledgeGraphService.name,
-                        metadata: {
-                            progress: progress.toFixed(2),
-                            processedFiles,
-                            totalFiles,
-                            batchIndex: i,
-                            totalBatches: batches.length,
-                            memoryUsage:
-                                this.streamingMetrics.memoryUsage.toFixed(2),
-                            avgProcessingTime:
-                                this.streamingMetrics.averageProcessingTime.toFixed(
-                                    2,
-                                ),
-                        },
-                        serviceName: CodeKnowledgeGraphService.name,
-                    });
+                    // Log simplificado para melhor performance
+                    console.log(
+                        `📊 Streaming: ${progress.toFixed(1)}% (${processedFiles}/${totalFiles})`,
+                    );
                 }
             } catch (error) {
                 this.logger.error({
@@ -533,16 +527,32 @@ export class CodeKnowledgeGraphService {
         cpuCount: number,
         totalFiles: number,
     ): number {
-        // Para streaming, usar lotes menores que o método original
-        const baseBatchSize = Math.max(5, Math.min(cpuCount * 3, 25));
+        // 🚀 OTIMIZAÇÃO: Batch sizes maiores para melhor performance
+        let baseBatchSize = Math.max(20, Math.min(cpuCount * 8, 100)); // Muito maior!
 
         // Ajustar baseado no número total de arquivos
         if (totalFiles > 10000) {
-            return Math.min(baseBatchSize, 15);
+            baseBatchSize = Math.min(baseBatchSize, 50); // Reduzido mas ainda maior
+        } else if (totalFiles > 5000) {
+            baseBatchSize = Math.min(baseBatchSize, 75); // Reduzido mas ainda maior
         }
-        if (totalFiles > 5000) {
-            return Math.min(baseBatchSize, 20);
-        }
+
+        // 🚀 OTIMIZAÇÃO: Menos verificações de memória (causam overhead)
+        // Remover verificações de memória que causam overhead
+        // const memoryUsage = process.memoryUsage();
+        // const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
+
+        // 🚀 OTIMIZAÇÃO: Desabilitar logs de debug para melhor performance
+        // this.logger.debug({
+        //     message: 'Calculated adaptive batch size',
+        //     context: CodeKnowledgeGraphService.name,
+        //     metadata: {
+        //         baseBatchSize,
+        //         totalFiles,
+        //         cpuCount,
+        //     },
+        //     serviceName: CodeKnowledgeGraphService.name,
+        // });
 
         return baseBatchSize;
     }
@@ -559,7 +569,7 @@ export class CodeKnowledgeGraphService {
     }
 
     /**
-     * Verifica se deve pausar devido ao uso de memória
+     * Verifica se deve pausar devido ao uso de memória - Otimizado
      */
     private shouldPauseForMemory(): boolean {
         const memoryUsage = process.memoryUsage();
@@ -570,30 +580,136 @@ export class CodeKnowledgeGraphService {
             heapUsageRatio,
         );
 
+        // Forçar GC preventivo se próximo do limite
+        const now = Date.now();
+        if (
+            heapUsageRatio > this.gcThreshold &&
+            now - this.lastGcTime > this.gcIntervalMs
+        ) {
+            this.forceGarbageCollection();
+            this.lastGcTime = now;
+        }
+
         return heapUsageRatio > this.memoryThreshold;
     }
 
     /**
-     * Pausa processamento para liberar memória
+     * Força garbage collection de forma otimizada
+     */
+    private forceGarbageCollection(): void {
+        if (global.gc) {
+            try {
+                global.gc();
+                this.logger.debug({
+                    message: 'Forced garbage collection executed',
+                    context: CodeKnowledgeGraphService.name,
+                    metadata: {
+                        memoryBefore:
+                            this.streamingMetrics.memoryUsage.toFixed(2),
+                    },
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            } catch (error) {
+                this.logger.warn({
+                    message: 'Failed to execute garbage collection',
+                    context: CodeKnowledgeGraphService.name,
+                    error:
+                        error instanceof Error ? error.message : String(error),
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            }
+        }
+    }
+
+    /**
+     * Pausa processamento para liberar memória - Otimizado com pausa adaptativa
      */
     private async waitForMemory(): Promise<void> {
+        const memoryUsage = process.memoryUsage();
+        const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
+
+        // Calcular pausa baseada na severidade do uso de memória
+        const severity = heapUsageRatio / this.memoryThreshold;
+        const pauseMs =
+            severity > 1.2 ? this.adaptivePauseMs : this.batchPauseMs;
+
         this.logger.warn({
             message: 'Pausing streaming due to high memory usage',
             context: CodeKnowledgeGraphService.name,
             metadata: {
-                memoryUsage: this.streamingMetrics.memoryUsage.toFixed(2),
+                memoryUsage: heapUsageRatio.toFixed(2),
                 threshold: this.memoryThreshold,
+                severity: severity.toFixed(2),
+                pauseMs,
             },
             serviceName: CodeKnowledgeGraphService.name,
         });
 
-        // Forçar garbage collection se disponível
-        if (global.gc) {
-            global.gc();
-        }
+        // Forçar garbage collection agressivo
+        this.forceGarbageCollection();
 
-        // Pausa para permitir liberação de memória
-        await new Promise((resolve) => setTimeout(resolve, this.batchPauseMs));
+        // Aguardar um pouco mais para GC ter efeito
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        // Pausa adaptativa baseada na severidade
+        await new Promise((resolve) => setTimeout(resolve, pauseMs));
+
+        // Verificar se memória melhorou após pausa
+        const newMemoryUsage = process.memoryUsage();
+        const newHeapRatio = newMemoryUsage.heapUsed / newMemoryUsage.heapTotal;
+
+        if (newHeapRatio < heapUsageRatio) {
+            this.logger.debug({
+                message: 'Memory usage improved after pause',
+                context: CodeKnowledgeGraphService.name,
+                metadata: {
+                    before: heapUsageRatio.toFixed(2),
+                    after: newHeapRatio.toFixed(2),
+                    improvement:
+                        ((heapUsageRatio - newHeapRatio) * 100).toFixed(1) +
+                        '%',
+                },
+                serviceName: CodeKnowledgeGraphService.name,
+            });
+        }
+    }
+
+    /**
+     * Limpa caches e dados temporários após cada batch
+     */
+    private clearBatchCache(): void {
+        try {
+            // Limpar caches internos se existirem
+            if (this.piscina?.queueSize > 0) {
+                this.logger.debug({
+                    message: 'Clearing worker queue cache',
+                    context: CodeKnowledgeGraphService.name,
+                    metadata: {
+                        queueSize: this.piscina.queueSize,
+                    },
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            }
+
+            // Forçar limpeza de dados temporários se memória alta
+            const memoryUsage = process.memoryUsage();
+            const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
+
+            if (heapUsageRatio > 0.5) {
+                // Limpar métricas antigas se necessário
+                if (this.streamingMetrics.filesProcessed > 1000) {
+                    this.streamingMetrics.averageProcessingTime = 0;
+                    this.streamingMetrics.lastBatchTime = 0;
+                }
+            }
+        } catch (error) {
+            this.logger.warn({
+                message: 'Error during batch cache cleanup',
+                context: CodeKnowledgeGraphService.name,
+                error: error instanceof Error ? error.message : String(error),
+                serviceName: CodeKnowledgeGraphService.name,
+            });
+        }
     }
 
     /**

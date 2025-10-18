@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service';
+import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
+import { LogModule } from './log.module.js';
 
 @Module({
-    imports: [],
+    imports: [LogModule],
     providers: [CodeKnowledgeGraphService],
     exports: [CodeKnowledgeGraphService],
     controllers: [],

@@ -1,28 +1,30 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    ImportedModule,
-    ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
+    type ImportedModule,
+    type ResolvedImport,
+} from '@/core/domain/parsing/types/language-resolver.js';
 import * as path from 'path';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
 import {
     doesFileExist,
     doesFileExistSync,
     tryReadFile,
-} from '@/shared/utils/files';
-import { tryParseJson } from '@/shared/utils/parsers';
+} from '@/shared/utils/files.js';
+import { tryParseJson } from '@/shared/utils/parsers.js';
 
 type ComposerJson = {
-    require?: Record<string, string>;
+    'require'?: Record<string, string>;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'require-dev'?: Record<string, string>;
-    autoload?: {
+    'autoload'?: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         'psr-4'?: Record<string, string>;
-        classmap?: string[];
+        'classmap'?: string[];
     };
 };
 
 export class PHPResolver implements LanguageResolver {
-    private composerJsonPath: string;
+    private composerJsonPath!: string;
     protected dependencies: Record<string, string> = {};
     protected psr4Map: Record<string, string> = {};
 
@@ -42,10 +44,14 @@ export class PHPResolver implements LanguageResolver {
         }
 
         const content = await tryReadFile(this.composerJsonPath);
-        if (!content) return false;
+        if (!content) {
+            return false;
+        }
 
         const parsed = tryParseJson<ComposerJson>(content);
-        if (!parsed) return false;
+        if (!parsed) {
+            return false;
+        }
 
         this.dependencies = {
             ...(parsed.require || {}),

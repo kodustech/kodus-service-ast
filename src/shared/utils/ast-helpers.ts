@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import { SyntaxNode } from 'tree-sitter';
+import { type SyntaxNode } from 'tree-sitter';
 
 export function normalizeAST(node: SyntaxNode): string {
     if (!node) {

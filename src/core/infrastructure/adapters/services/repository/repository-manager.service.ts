@@ -1,26 +1,28 @@
-import { IRepositoryManager } from '@/core/domain/repository/contracts/repository-manager.contract';
-import { Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service';
+import { IRepositoryManager } from '@/core/domain/repository/contracts/repository-manager.contract.js';
+import { Inject, Injectable } from '@nestjs/common';
+import { PinoLoggerService } from '../logger/pino.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { minimatch } from 'minimatch';
-import simpleGit from 'simple-git';
-import { RepositoryData, ProtoPlatformType } from '@kodus/kodus-proto/ast/v2';
-import { handleError } from '@/shared/utils/errors';
+import { simpleGit } from 'simple-git';
+import { ProtoPlatformType, RepositoryData } from '@/shared/types/ast.js';
+import { handleError } from '@/shared/utils/errors.js';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
     readonly graphsFileName: string = 'graphs';
 
-    static readonly KODUS_DIRECTORY = '.kodus';
+    static readonly kodusDirectory = '.kodus';
 
     private readonly baseDir = '/tmp/cloned-repos';
-    private readonly CLONE_TIMEOUT = 8 * 60 * 1000; // 8 minutes timeout for clone operations
-    private readonly ALLOWED_PROTOCOLS = ['https:', 'http:']; // Only allow HTTP/HTTPS
-    private readonly MAX_REPO_SIZE = 1024 * 1024 * 900; // 900MB max repo size
+    private readonly cloneTimeout = 8 * 60 * 1000; // 8 minutes timeout for clone operations
+    private readonly allowedProtocols = ['https:', 'http:']; // Only allow HTTP/HTTPS
+    private readonly maxRepoSize = 1024 * 1024 * 900; // 900MB max repo size
 
-    constructor(private readonly logger: PinoLoggerService) {
+    constructor(
+        @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
+    ) {
         void this.ensureBaseDirExists();
     }
 
@@ -108,7 +110,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 const parsedUrl = new URL(url);
 
                 // Ensure URL protocol is allowed
-                if (!this.ALLOWED_PROTOCOLS.includes(parsedUrl.protocol)) {
+                if (!this.allowedProtocols.includes(parsedUrl.protocol)) {
                     throw new Error(
                         `Invalid protocol: ${parsedUrl.protocol}. Only HTTPS/HTTP are allowed.`,
                     );
@@ -161,7 +163,7 @@ export class RepositoryManagerService implements IRepositoryManager {
     private configureGit() {
         const git = simpleGit({
             timeout: {
-                block: this.CLONE_TIMEOUT,
+                block: this.cloneTimeout,
             },
             config: [
                 // Disable all write operations
@@ -247,11 +249,11 @@ export class RepositoryManagerService implements IRepositoryManager {
             await git.clone(cloneUrl, repoPath, cloneOptions);
 
             const stats = await this.getDirectorySize(repoPath);
-            if (stats > this.MAX_REPO_SIZE) {
+            if (stats > this.maxRepoSize) {
                 await this.deleteLocalRepository({ repoData });
 
                 throw new Error(
-                    `Repository size (${Math.round(stats / 1024 / 1024)}MB) exceeds max allowed (${Math.round(this.MAX_REPO_SIZE / 1024 / 1024)}MB)`,
+                    `Repository size (${Math.round(stats / 1024 / 1024)}MB) exceeds max allowed (${Math.round(this.maxRepoSize / 1024 / 1024)}MB)`,
                 );
             }
 
@@ -283,7 +285,9 @@ export class RepositoryManagerService implements IRepositoryManager {
                 const fullPath = path.join(currentPath, entry.name);
 
                 if (entry.isDirectory()) {
-                    if (entry.name === '.git') continue; // Skip .git directory
+                    if (entry.name === '.git') {
+                        continue;
+                    } // Skip .git directory
                     await calculateSize(fullPath);
                 } else {
                     const stats = await fs.promises.stat(fullPath);
@@ -319,7 +323,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 for (const entry of entries) {
                     if (
                         keepKodusData &&
-                        entry.name === RepositoryManagerService.KODUS_DIRECTORY
+                        entry.name === RepositoryManagerService.kodusDirectory
                     ) {
                         continue;
                     }
@@ -372,7 +376,9 @@ export class RepositoryManagerService implements IRepositoryManager {
                 const relativePath = path.relative(dirPath, fullPath);
 
                 if (entry.isDirectory()) {
-                    if (entry.name === '.git') continue;
+                    if (entry.name === '.git') {
+                        continue;
+                    }
                     await processDirectory(fullPath);
                 } else {
                     scannedFiles++;
@@ -462,7 +468,7 @@ export class RepositoryManagerService implements IRepositoryManager {
             const fullPath = inKodusDir
                 ? path.join(
                       repoPath,
-                      RepositoryManagerService.KODUS_DIRECTORY,
+                      RepositoryManagerService.kodusDirectory,
                       filePath,
                   )
                 : path.join(repoPath, filePath);
@@ -535,7 +541,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                 fullPath = inKodusDir
                     ? path.join(
                           repoPath,
-                          RepositoryManagerService.KODUS_DIRECTORY,
+                          RepositoryManagerService.kodusDirectory,
                           filePath,
                       )
                     : path.join(repoPath, filePath);

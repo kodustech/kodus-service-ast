@@ -1,4 +1,4 @@
-import { ParserQuery, QueryType } from '../query';
+import { type ParserQuery, QueryType } from '../query.js';
 
 const importQuery: ParserQuery = {
     type: QueryType.IMPORT,

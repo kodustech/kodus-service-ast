@@ -1,11 +1,17 @@
-import { Language, QueryMatch, SyntaxNode } from 'tree-sitter';
-import { BaseParser } from '../base-parser';
-import { phpQueries } from './php-queries';
-import * as PhpLang from 'tree-sitter-php/php';
-import { ParserQuery, QueryType } from '../query';
-import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { type Language, type QueryMatch, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
+import { phpQueries } from './php-queries.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const TreeSitterPhp = require('tree-sitter-php');
+const PhpLang = TreeSitterPhp.php;
+import { type ParserQuery, type QueryType } from '../query.js';
+import {
+    ChainType,
+    type CallChain,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class PhpParser extends BaseParser {
     private static readonly language = PhpLang as Language;
@@ -42,7 +48,7 @@ export class PhpParser extends BaseParser {
         return PhpParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         class_declaration: NodeType.NODE_TYPE_CLASS,
         interface_declaration: NodeType.NODE_TYPE_INTERFACE,
         enum_declaration: NodeType.NODE_TYPE_ENUM,
@@ -61,12 +67,9 @@ export class PhpParser extends BaseParser {
 
         let originName = node.text;
         if (match && match['properties']) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const properties = match['properties'];
             if (
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 properties['leadingSlash'] &&
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 properties['leadingSlash'] === 'true'
             ) {
                 originName = originName.replace(/^\//, '');
@@ -138,7 +141,7 @@ export class PhpParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = PhpParser.SCOPE_TYPES[node.type];
+        const scopeType = PhpParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

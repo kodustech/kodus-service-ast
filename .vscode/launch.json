@@ -1,27 +1,39 @@
 {
     "version": "0.2.0",
     "configurations": [
-      {
-        "type": "node",
-        "request": "attach",
-        "name": "Docker: Attach to Node",
-        "port": 9300,
-        "address": "0.0.0.0",
-        "sourceMaps": true,
-        "restart": true,
-        "localRoot": "${workspaceFolder}",
-        "remoteRoot": "/usr/src/app",
-      },
-    {
-        "type": "node",
-        "request": "attach",
-        "name": "Docker: Debug Jest Tests",
-        "port": 9301,
-        "address": "0.0.0.0",
-        "sourceMaps": true,
-        "restart": true,
-        "localRoot": "${workspaceFolder}",
-        "remoteRoot": "/usr/src/app",
-      },
+        {
+            "name": "Debug Docker API",
+            "type": "node",
+            "request": "attach",
+            "port": 9300,
+            "address": "localhost",
+            "localRoot": "${workspaceFolder}/src",
+            "remoteRoot": "/usr/src/app/src",
+            "protocol": "inspector",
+            "restart": true,
+            "sourceMaps": true
+        },
+        {
+            "name": "Debug Docker Worker",
+            "type": "node",
+            "request": "attach",
+            "port": 9301,
+            "address": "localhost",
+            "localRoot": "${workspaceFolder}/src",
+            "remoteRoot": "/usr/src/app/src",
+            "protocol": "inspector",
+            "restart": true,
+            "sourceMaps": true
+        },
+        {
+            "name": "Debug Tests in Docker",
+            "type": "node",
+            "request": "attach",
+            "port": 9301,
+            "address": "localhost",
+            "localRoot": "${workspaceFolder}/test",
+            "remoteRoot": "/usr/src/app/test",
+            "protocol": "inspector"
+        }
     ]
-  }
+}

@@ -1,25 +1,27 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    ImportedModule,
-    ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
+    type ImportedModule,
+    type ResolvedImport,
+} from '@/core/domain/parsing/types/language-resolver.js';
 import * as path from 'path';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
 import {
     doesFileExist,
     doesFileExistSync,
     tryReadFile,
-} from '@/shared/utils/files';
-import { tryParseToml } from '@/shared/utils/parsers';
+} from '@/shared/utils/files.js';
+import { tryParseToml } from '@/shared/utils/parsers.js';
 
 type CargoToml = {
-    dependencies?: Record<string, string>;
+    'dependencies'?: Record<string, string>;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'dev-dependencies'?: Record<string, string>;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'build-dependencies'?: Record<string, string>;
 };
 
 export class RustResolver implements LanguageResolver {
-    private cargoTomlPath: string;
+    private cargoTomlPath!: string;
     protected dependencies: Record<string, string> = {};
 
     async canHandle(projectRoot: string): Promise<boolean> {
@@ -38,10 +40,14 @@ export class RustResolver implements LanguageResolver {
         }
 
         const content = await tryReadFile(this.cargoTomlPath);
-        if (!content) return false;
+        if (!content) {
+            return false;
+        }
 
         const parsed = tryParseToml<CargoToml>(content);
-        if (!parsed) return false;
+        if (!parsed) {
+            return false;
+        }
 
         this.dependencies = {
             ...(parsed.dependencies || {}),

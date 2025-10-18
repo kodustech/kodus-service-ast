@@ -1,17 +1,17 @@
-import { BaseParser } from '../base-parser';
+import { BaseParser } from '../base-parser.js';
 import * as RubyLang from 'tree-sitter-ruby';
-import { rubyQueries } from './ruby-queries';
-import { Language, QueryCapture, SyntaxNode } from 'tree-sitter';
-import { ParserQuery, QueryType } from '../query';
+import { rubyQueries } from './ruby-queries.js';
+import { type Language, type QueryCapture, type SyntaxNode } from 'tree-sitter';
+import { type ParserQuery, type QueryType } from '../query.js';
 import {
-    Method,
-    ObjectProperties,
+    type Method,
+    type ObjectProperties,
     ChainType,
-    CallChain,
-} from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope, TypeAnalysis } from '@kodus/kodus-proto/ast/v2';
-import { appendOrUpdateElement } from '@/shared/utils/arrays';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+    type CallChain,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope, type TypeAnalysis } from '@/shared/types/ast.js';
+import { appendOrUpdateElement } from '@/shared/utils/arrays.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class RubyParser extends BaseParser {
     private static readonly language = RubyLang as Language;
@@ -50,7 +50,7 @@ export class RubyParser extends BaseParser {
         return RubyParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         class: NodeType.NODE_TYPE_CLASS,
         module: NodeType.NODE_TYPE_CLASS,
         method: NodeType.NODE_TYPE_FUNCTION,
@@ -106,7 +106,9 @@ export class RubyParser extends BaseParser {
         node: SyntaxNode,
         chain: CallChain[],
     ): boolean {
-        if (node.type !== 'call') return false;
+        if (node.type !== 'call') {
+            return false;
+        }
 
         const receiver = node.childForFieldName('receiver');
         const method = node.childForFieldName('method');
@@ -119,7 +121,7 @@ export class RubyParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = RubyParser.SCOPE_TYPES[node.type];
+        const scopeType = RubyParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

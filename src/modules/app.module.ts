@@ -1,34 +1,35 @@
+// API Application Module - complete functionality for HTTP endpoints
 import { Module } from '@nestjs/common';
-import { LogModule } from './log.module';
-import { RepositoryModule } from './repository.module';
-import { HealthModule } from './health.module';
-import { ASTModule } from './ast.module';
-import { DiffModule } from './diff.module';
-import { EnrichmentModule } from './enrichment.module';
-import { ParsingModule } from './parsing.module';
+import { DatabaseModule } from '../core/infrastructure/database/database.module.js';
+import { QueueModuleApi } from '@/core/infrastructure/queue/queue.module.api.js';
 import { LLMModule } from '@kodus/kodus-common/llm';
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { GraphAnalysisModule } from './graph-analysis.module';
-import { TaskModule } from './task.module';
+import { PinoLoggerService } from '../core/infrastructure/adapters/services/logger/pino.service.js';
+
+// Feature modules
+import { HealthModule } from './health.module.js';
+import { LogModule } from './log.module.js';
+import { TaskModule } from './task.module.js';
+import { ASTModule } from './ast.module.js';
 
 @Module({
     imports: [
+        // Infrastructure
+        DatabaseModule,
         LogModule,
-        ASTModule,
-        RepositoryModule,
+
+        // Business features
         HealthModule,
-        DiffModule,
-        EnrichmentModule,
-        ParsingModule,
-        GraphAnalysisModule,
+        TaskModule,
+        ASTModule.forApi(), // API context with all use cases
+
+        // External integrations
+        QueueModuleApi,
         LLMModule.forRoot({
             logger: PinoLoggerService,
             global: true,
         }),
-        TaskModule,
     ],
     providers: [],
     exports: [],
-    controllers: [],
 })
 export class AppModule {}

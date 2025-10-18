@@ -1,12 +1,12 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
-import { TypeScriptResolver } from './typescript/typescript-resolver';
-import { JavaScriptResolver } from './javascript/javascript-resolver';
-import { PythonResolver } from './python/python-resolver';
-import { RubyResolver } from './ruby/ruby-resolver';
-import { RustResolver } from './rust/rust-resolver';
-import { PHPResolver } from './php/php-resolver';
-import { CSharpResolver } from './csharp/csharp-resolver';
-import { JavaResolver } from './java/java-resolver';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { TypeScriptResolver } from './typescript/typescript-resolver.js';
+import { JavaScriptResolver } from './javascript/javascript-resolver.js';
+import { PythonResolver } from './python/python-resolver.js';
+import { RubyResolver } from './ruby/ruby-resolver.js';
+import { RustResolver } from './rust/rust-resolver.js';
+import { PHPResolver } from './php/php-resolver.js';
+import { CSharpResolver } from './csharp/csharp-resolver.js';
+import { JavaResolver } from './java/java-resolver.js';
 
 const resolvers: LanguageResolver[] = [
     new TypeScriptResolver(),

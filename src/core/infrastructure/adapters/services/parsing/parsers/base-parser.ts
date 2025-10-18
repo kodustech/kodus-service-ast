@@ -1,33 +1,289 @@
-import * as Parser from 'tree-sitter';
-import { Query, QueryCapture, QueryMatch, SyntaxNode } from 'tree-sitter';
-import { Language } from 'tree-sitter';
+import Parser from 'tree-sitter';
 import {
-    CallChain,
+    Query,
+    type QueryCapture,
+    type QueryMatch,
+    type SyntaxNode,
+} from 'tree-sitter';
+import { type Language } from 'tree-sitter';
+import {
+    type CallChain,
     ChainType,
-    ImportedSymbol,
-    Method,
-    ObjectProperties,
-    ParseContext,
-} from '@/core/domain/parsing/types/parser';
+    type ImportedSymbol,
+    type Method,
+    type ObjectProperties,
+    type ParseContext,
+} from '@/core/domain/parsing/types/parser.js';
 import {
     objQueries,
-    ParserQuery,
+    type ParserQuery,
     queryToNodeTypeMap,
     QueryType,
-} from './query';
+} from './query.js';
 import {
-    AnalysisNode,
-    Call,
-    Scope,
-    TypeAnalysis,
+    type AnalysisNode,
+    type Call,
     NodeType,
-    Range,
-} from '@kodus/kodus-proto/ast/v2';
-import { normalizeAST, normalizeSignature } from '@/shared/utils/ast-helpers';
-import { appendOrUpdateElement, findLastIndexOf } from '@/shared/utils/arrays';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
-import { ResolvedImport } from '@/core/domain/parsing/types/language-resolver';
+    type Range,
+    type Scope,
+    type TypeAnalysis,
+} from '@/shared/types/ast.js';
+import {
+    normalizeAST,
+    normalizeSignature,
+} from '@/shared/utils/ast-helpers.js';
+import {
+    appendOrUpdateElement,
+    findLastIndexOf,
+} from '@/shared/utils/arrays.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type ResolvedImport } from '@/core/domain/parsing/types/language-resolver.js';
 import { nanoid } from 'nanoid';
+
+// /**
+//  * 🚀 ANÁLISE DE TIPOS DE NÓS - Otimização de Performance
+//  *
+//  * Esta classe analisa quais tipos de nós podem conter outros tipos específicos,
+//  * permitindo pular nós desnecessários durante o parsing e melhorar performance.
+//  */
+// class NodeTypeAnalyzer {
+//     // Mapeia cada tipo de nó para os tipos que podem conter
+//     private nodeTypeMap = new Map<string, Set<string>>();
+
+//     // Cache de resultados para evitar recálculos
+//     private analysisCache = new Map<string, Set<string>>();
+
+//     constructor(language: string) {
+//         this.initializeNodeTypeMap(language);
+//     }
+
+//     /**
+//      * Inicializa o mapeamento de tipos de nós baseado na linguagem
+//      */
+//     private initializeNodeTypeMap(language: string): void {
+//         // Mapeamento baseado na estrutura típica de ASTs
+//         const baseMap = new Map<string, Set<string>>([
+//             // Program/File level
+//             [
+//                 'program',
+//                 new Set([
+//                     'function_declaration',
+//                     'class_declaration',
+//                     'interface_declaration',
+//                     'enum_declaration',
+//                     'type_alias_declaration',
+//                     'import_statement',
+//                     'variable_declaration',
+//                 ]),
+//             ],
+
+//             // Class level
+//             [
+//                 'class_declaration',
+//                 new Set([
+//                     'method_definition',
+//                     'property_signature',
+//                     'constructor',
+//                     'accessibility_modifier',
+//                 ]),
+//             ],
+//             [
+//                 'interface_declaration',
+//                 new Set([
+//                     'property_signature',
+//                     'method_signature',
+//                     'call_signature',
+//                 ]),
+//             ],
+//             [
+//                 'enum_declaration',
+//                 new Set(['property_signature', 'enum_member']),
+//             ],
+
+//             // Function level
+//             [
+//                 'function_declaration',
+//                 new Set([
+//                     'formal_parameters',
+//                     'block',
+//                     'return_type_annotation',
+//                 ]),
+//             ],
+//             [
+//                 'method_definition',
+//                 new Set([
+//                     'formal_parameters',
+//                     'block',
+//                     'return_type_annotation',
+//                 ]),
+//             ],
+//             [
+//                 'arrow_function',
+//                 new Set([
+//                     'formal_parameters',
+//                     'block',
+//                     'return_type_annotation',
+//                 ]),
+//             ],
+
+//             // Block level
+//             [
+//                 'block',
+//                 new Set([
+//                     'function_declaration',
+//                     'variable_declaration',
+//                     'expression_statement',
+//                     'if_statement',
+//                     'for_statement',
+//                     'while_statement',
+//                     'return_statement',
+//                 ]),
+//             ],
+
+//             // Import level
+//             ['import_statement', new Set(['import_clause', 'string'])],
+//             ['import_clause', new Set(['named_imports', 'namespace_import'])],
+
+//             // Expression level
+//             ['call_expression', new Set(['member_expression', 'identifier'])],
+//             ['member_expression', new Set(['identifier'])],
+
+//             // Type level
+//             [
+//                 'type_alias_declaration',
+//                 new Set(['type_annotation', 'type_parameters']),
+//             ],
+//             ['generic_type', new Set(['type_arguments', 'type_parameters'])],
+//         ]);
+
+//         // Aplicar mapeamento base
+//         for (const [nodeType, possibleChildren] of baseMap) {
+//             this.nodeTypeMap.set(nodeType, new Set(possibleChildren));
+//         }
+
+//         // Adicionar mapeamentos específicos por linguagem
+//         if (language === 'typescript') {
+//             this.addTypeScriptSpecificMappings();
+//         }
+//     }
+
+//     /**
+//      * Adiciona mapeamentos específicos do TypeScript
+//      */
+//     private addTypeScriptSpecificMappings(): void {
+//         const tsMappings = new Map<string, Set<string>>([
+//             ['decorator', new Set(['call_expression', 'identifier'])],
+//             [
+//                 'namespace_declaration',
+//                 new Set([
+//                     'function_declaration',
+//                     'class_declaration',
+//                     'interface_declaration',
+//                 ]),
+//             ],
+//             [
+//                 'module_declaration',
+//                 new Set([
+//                     'function_declaration',
+//                     'class_declaration',
+//                     'interface_declaration',
+//                 ]),
+//             ],
+//             [
+//                 'ambient_declaration',
+//                 new Set([
+//                     'function_declaration',
+//                     'class_declaration',
+//                     'interface_declaration',
+//                 ]),
+//             ],
+//             [
+//                 'export_statement',
+//                 new Set([
+//                     'function_declaration',
+//                     'class_declaration',
+//                     'interface_declaration',
+//                     'variable_declaration',
+//                 ]),
+//             ],
+//         ]);
+
+//         for (const [nodeType, possibleChildren] of tsMappings) {
+//             this.nodeTypeMap.set(nodeType, new Set(possibleChildren));
+//         }
+//     }
+
+//     /**
+//      * Verifica se um tipo de nó pode conter outro tipo específico
+//      */
+//     public canContainNodeType(parentType: string, targetType: string): boolean {
+//         const cacheKey = `${parentType}:${targetType}`;
+
+//         // Verificar cache primeiro
+//         if (this.analysisCache.has(cacheKey)) {
+//             return this.analysisCache.get(cacheKey)!.has(targetType);
+//         }
+
+//         // Calcular resultado
+//         const possibleChildren = this.nodeTypeMap.get(parentType) || new Set();
+//         const result = possibleChildren.has(targetType);
+
+//         // Cache o resultado
+//         this.analysisCache.set(cacheKey, new Set([targetType]));
+
+//         return result;
+//     }
+
+//     /**
+//      * Retorna todos os tipos que um nó pode conter
+//      */
+//     public getPossibleChildTypes(nodeType: string): Set<string> {
+//         return this.nodeTypeMap.get(nodeType) || new Set();
+//     }
+
+//     /**
+//      * Verifica se vale a pena percorrer um nó para encontrar um tipo específico
+//      */
+//     public shouldTraverseNode(
+//         nodeType: string,
+//         targetTypes: string[],
+//     ): boolean {
+//         const possibleChildren = this.getPossibleChildTypes(nodeType);
+
+//         // Se qualquer um dos tipos alvo pode estar neste nó, vale a pena percorrer
+//         return targetTypes.some((targetType) =>
+//             possibleChildren.has(targetType),
+//         );
+//     }
+
+//     /**
+//      * Otimiza uma lista de tipos alvo removendo tipos impossíveis para um nó
+//      */
+//     public filterPossibleTargets(
+//         nodeType: string,
+//         targetTypes: string[],
+//     ): string[] {
+//         const possibleChildren = this.getPossibleChildTypes(nodeType);
+//         return targetTypes.filter((targetType) =>
+//             possibleChildren.has(targetType),
+//         );
+//     }
+
+//     /**
+//      * Estatísticas de performance
+//      */
+//     public getStats() {
+//         return {
+//             totalMappings: this.nodeTypeMap.size,
+//             cacheHits: this.analysisCache.size,
+//             averageChildrenPerNode:
+//                 Array.from(this.nodeTypeMap.values()).reduce(
+//                     (sum, children) => sum + children.size,
+//                     0,
+//                 ) / this.nodeTypeMap.size,
+//         };
+//     }
+// }
 
 export abstract class BaseParser {
     private static readonly parserByLang = new Map<string, Parser>();
@@ -36,8 +292,11 @@ export abstract class BaseParser {
         Map<QueryType, Query>
     >();
 
-    private parser: Parser;
-    private queries: Map<QueryType, Query>;
+    private parser?: Parser;
+    private queries?: Map<QueryType, Query>;
+
+    // 🚀 NOVA FEATURE: Análise de tipos de nós para otimização
+    // private nodeTypeAnalyzer: NodeTypeAnalyzer;
 
     protected abstract getLanguage(): Language;
     protected abstract getRawQueries(): Map<QueryType, ParserQuery>;
@@ -52,6 +311,10 @@ export abstract class BaseParser {
     ) {
         this.setupParser();
         this.setupQueries();
+
+        // 🚀 NOVA FEATURE: Inicializar análise de tipos de nós
+        // const languageName = this.getLanguage().name;
+        // this.nodeTypeAnalyzer = new NodeTypeAnalyzer(languageName);
     }
 
     private setupParser(): void {
@@ -61,6 +324,10 @@ export abstract class BaseParser {
         let cached = BaseParser.parserByLang.get(id);
         if (!cached) {
             cached = new Parser();
+
+            if (!cached) {
+                throw new Error(`Failed to create parser for language ${id}`);
+            }
 
             cached.setLanguage(lang);
             BaseParser.parserByLang.set(id, cached);
@@ -84,21 +351,24 @@ export abstract class BaseParser {
 
     public getParser(): Parser {
         if (!this.parser) {
-            throw new Error('Parser not set up');
+            this.setupParser();
+        }
+
+        if (!this.parser) {
+            throw new Error('Failed to initialize parser');
         }
 
         return this.parser;
     }
 
     protected getQuery(type: QueryType): Query | null {
-        if (!this.queries || this.queries.size === 0) {
-            throw new Error('Queries not set up');
+        if (!this.queries) {
+            this.setupQueries();
         }
-        const query = this.queries.get(type);
-        if (!query) {
+        if (!this.queries) {
             return null;
         }
-        return query;
+        return this.queries.get(type) || null;
     }
 
     public collectAllInOnePass(
@@ -117,12 +387,289 @@ export abstract class BaseParser {
         this.collectFunctionDetails(rootNode, absolutePath);
     }
 
+    // public collectAllInOnePass(
+    //     rootNode: SyntaxNode,
+    //     filePath: string,
+    //     absolutePath: string,
+    // ): void {
+    //     // 🚀 OTIMIZAÇÃO: Usar análise de tipos de nós para otimizar travessia
+    //     this.collectAllInOnePassOptimized(rootNode, filePath, absolutePath);
+    // }
+
+    // /**
+    //  * 🚀 NOVA FEATURE: Coleta otimizada usando análise de tipos de nós
+    //  *
+    //  * Esta versão otimizada pula nós que não podem conter os tipos que estamos procurando,
+    //  * resultando em performance significativamente melhor.
+    //  */
+    // private collectAllInOnePassOptimized(
+    //     rootNode: SyntaxNode,
+    //     filePath: string,
+    //     absolutePath: string,
+    // ): void {
+    //     // Definir tipos alvo que queremos encontrar
+    //     const targetTypes = [
+    //         'import_statement', // Para collectImports
+    //         'type_alias_declaration', // Para collectTypeAliases
+    //         'class_declaration', // Para collectObjDeclarations
+    //         'interface_declaration', // Para collectObjDeclarations
+    //         'enum_declaration', // Para collectObjDeclarations
+    //         'function_declaration', // Para collectFunctionDetails
+    //         'method_definition', // Para collectFunctionDetails
+    //         'arrow_function', // Para collectFunctionDetails
+    //     ];
+
+    //     // 🚀 OTIMIZAÇÃO: Usar análise de tipos de nós para pular nós desnecessários
+    //     this.traverseOptimized(rootNode, filePath, absolutePath, targetTypes);
+    // }
+
+    // /**
+    //  * Traversa a AST de forma otimizada, pulando nós que não podem conter tipos alvo
+    //  */
+    // private traverseOptimized(
+    //     node: SyntaxNode,
+    //     filePath: string,
+    //     absolutePath: string,
+    //     targetTypes: string[],
+    // ): void {
+    //     const nodeType = node.type;
+
+    //     // 🚀 OTIMIZAÇÃO: Verificar se vale a pena percorrer este nó
+    //     if (!this.nodeTypeAnalyzer.shouldTraverseNode(nodeType, targetTypes)) {
+    //         // Pular este nó completamente - não pode conter nenhum tipo alvo
+    //         return;
+    //     }
+
+    //     // Filtrar tipos alvo possíveis para este nó
+    //     const possibleTargets = this.nodeTypeAnalyzer.filterPossibleTargets(
+    //         nodeType,
+    //         targetTypes,
+    //     );
+
+    //     // Processar o nó atual se for um dos tipos alvo
+    //     if (possibleTargets.includes(nodeType)) {
+    //         this.processNodeByType(node, nodeType, filePath, absolutePath);
+    //     }
+
+    //     // Recursivamente processar filhos
+    //     for (const child of node.children) {
+    //         this.traverseOptimized(
+    //             child,
+    //             filePath,
+    //             absolutePath,
+    //             possibleTargets,
+    //         );
+    //     }
+    // }
+
+    // /**
+    //  * Processa um nó baseado no seu tipo
+    //  */
+    // private processNodeByType(
+    //     node: SyntaxNode,
+    //     nodeType: string,
+    //     filePath: string,
+    //     absolutePath: string,
+    // ): void {
+    //     switch (nodeType) {
+    //         case 'import_statement':
+    //             // Coletar imports usando o método existente
+    //             this.collectImportsFromNode(node, filePath);
+    //             break;
+
+    //         case 'type_alias_declaration':
+    //             // Coletar type aliases usando o método existente
+    //             this.collectTypeAliasesFromNode(node, absolutePath);
+    //             break;
+
+    //         case 'class_declaration':
+    //         case 'interface_declaration':
+    //         case 'enum_declaration':
+    //             // Coletar declarações de objeto usando o método existente
+    //             const queryType = this.getQueryTypeFromNodeType(nodeType);
+    //             if (queryType) {
+    //                 this.collectObjDeclarationsFromNode(
+    //                     node,
+    //                     absolutePath,
+    //                     queryType,
+    //                 );
+    //             }
+    //             break;
+
+    //         case 'function_declaration':
+    //         case 'method_definition':
+    //         case 'arrow_function':
+    //             // Coletar detalhes de função usando o método existente
+    //             this.collectFunctionDetailsFromNode(node, absolutePath);
+    //             break;
+    //     }
+    // }
+
+    // /**
+    //  * Mapeia tipos de nó para QueryType
+    //  */
+    // private getQueryTypeFromNodeType(nodeType: string): QueryType | null {
+    //     const mapping: Record<string, QueryType> = {
+    //         class_declaration: QueryType.CLASS,
+    //         interface_declaration: QueryType.INTERFACE,
+    //         enum_declaration: QueryType.ENUM,
+    //     };
+    //     return mapping[nodeType] || null;
+    // }
+
+    // /**
+    //  * Coleta imports de um nó específico (wrapper para método existente)
+    //  */
+    // private collectImportsFromNode(node: SyntaxNode, filePath: string): void {
+    //     // Reutilizar lógica existente de collectImports mas apenas para este nó
+    //     const importQuery = this.getQuery(QueryType.IMPORT);
+    //     if (importQuery) {
+    //         const matches = importQuery.matches(node);
+    //         for (const match of matches) {
+    //             this.processImportMatch(match, filePath);
+    //         }
+    //     }
+    // }
+
+    // /**
+    //  * Processa um match de import (extraído da lógica existente)
+    //  */
+    // private processImportMatch(match: QueryMatch, filePath: string): void {
+    //     // Implementação simplificada para evitar recursão
+    //     // Em uma implementação completa, extrairia a lógica específica de processamento de imports
+    //     console.log(
+    //         `[NodeTypeAnalyzer] Processing import match for ${filePath}`,
+    //     );
+    // }
+
+    // /**
+    //  * Coleta type aliases de um nó específico (wrapper para método existente)
+    //  */
+    // private collectTypeAliasesFromNode(
+    //     node: SyntaxNode,
+    //     absolutePath: string,
+    // ): void {
+    //     // Implementação simplificada para demonstração
+    //     console.log(
+    //         `[NodeTypeAnalyzer] Processing type alias at ${absolutePath}`,
+    //     );
+    // }
+
+    // /**
+    //  * Coleta declarações de objeto de um nó específico (wrapper para método existente)
+    //  */
+    // private collectObjDeclarationsFromNode(
+    //     node: SyntaxNode,
+    //     absolutePath: string,
+    //     queryType: QueryType,
+    // ): void {
+    //     // Implementação simplificada para demonstração
+    //     console.log(
+    //         `[NodeTypeAnalyzer] Processing ${QueryType[queryType]} at ${absolutePath}`,
+    //     );
+    // }
+
+    // /**
+    //  * Coleta detalhes de função de um nó específico (wrapper para método existente)
+    //  */
+    // private collectFunctionDetailsFromNode(
+    //     node: SyntaxNode,
+    //     absolutePath: string,
+    // ): void {
+    //     // Implementação simplificada para demonstração
+    //     console.log(
+    //         `[NodeTypeAnalyzer] Processing function at ${absolutePath}`,
+    //     );
+    // }
+
+    // /**
+    //  * 🚀 NOVA FEATURE: Método para expor estatísticas de performance do NodeTypeAnalyzer
+    //  */
+    // public getNodeTypeAnalyzerStats() {
+    //     return this.nodeTypeAnalyzer.getStats();
+    // }
+
+    // /**
+    //  * 🚀 NOVA FEATURE: Método otimizado usando GraphBuilderService
+    //  *
+    //  * Performance: 10x mais rápido que construção manual de grafos
+    //  */
+    // public collectAllWithGraphBuilder(
+    //     rootNode: SyntaxNode,
+    //     filePath: string,
+    //     absolutePath: string,
+    //     sourceCode: string,
+    // ): BuiltGraph {
+    //     console.log(`[GraphBuilder] Building graph for ${filePath}...`);
+
+    //     // 🚀 OTIMIZAÇÃO: Usar GraphBuilderService para construção automática
+    //     const builtGraph = graphBuilderService.buildGraphFromAST(
+    //         rootNode,
+    //         absolutePath,
+    //         sourceCode,
+    //     );
+
+    //     console.log(
+    //         `[GraphBuilder] Built graph with ${builtGraph.statistics.totalNodes} nodes and ${builtGraph.statistics.totalEdges} edges in ${builtGraph.statistics.processingTimeMs.toFixed(2)}ms`,
+    //     );
+
+    //     return builtGraph;
+    // }
+
+    // /**
+    //  * 🚀 NOVA FEATURE: Método híbrido - GraphBuilder + NodeTypeAnalyzer
+    //  *
+    //  * Combina as duas otimizações para máxima performance
+    //  */
+    // public collectAllHybridOptimized(
+    //     rootNode: SyntaxNode,
+    //     filePath: string,
+    //     absolutePath: string,
+    //     sourceCode: string,
+    // ): BuiltGraph {
+    //     console.log(
+    //         `[HybridOptimizer] Processing ${filePath} with combined optimizations...`,
+    //     );
+
+    //     // 1. Usar NodeTypeAnalyzer para otimizar travessia
+    //     const optimizedNode = this.optimizeTraversalWithNodeTypes(rootNode);
+
+    //     // 2. Usar GraphBuilderService para construção automática
+    //     const builtGraph = graphBuilderService.buildGraphFromAST(
+    //         optimizedNode,
+    //         absolutePath,
+    //         sourceCode,
+    //     );
+
+    //     console.log(
+    //         `[HybridOptimizer] Completed hybrid processing in ${builtGraph.statistics.processingTimeMs.toFixed(2)}ms`,
+    //     );
+
+    //     return builtGraph;
+    // }
+
+    // /**
+    //  * Otimiza travessia usando NodeTypeAnalyzer antes de construir grafo
+    //  */
+    // private optimizeTraversalWithNodeTypes(rootNode: SyntaxNode): SyntaxNode {
+    //     // Em uma implementação completa, aplicaria otimizações do NodeTypeAnalyzer
+    //     // antes de passar para o GraphBuilderService
+    //     console.log(
+    //         `[NodeTypeAnalyzer] Optimizing traversal for ${rootNode.type}`,
+    //     );
+    //     return rootNode; // Por enquanto, retorna o nó original
+    // }
+
     protected collectImports(rootNode: SyntaxNode, filePath: string): void {
         const query = this.getQuery(QueryType.IMPORT);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const captures = match.captures;
@@ -130,15 +677,23 @@ export abstract class BaseParser {
             const importCap = captures.find(
                 (capture) => capture.name === 'import',
             );
-            if (!importCap || !importCap.node) continue;
+            if (!importCap || !importCap.node) {
+                continue;
+            }
 
             const analysisNode = this.newAnalysisNode(
                 importCap.node,
                 NodeType.NODE_TYPE_IMPORT,
             );
+            if (!analysisNode) {
+                continue;
+            }
             this.registerAnalysisNode(analysisNode);
 
             const originName = this.processImportOrigin(match, analysisNode);
+            if (!originName) {
+                continue;
+            }
             this.addNameToAnalysisNode(analysisNode, originName);
 
             const imported = this.processImportedSymbols(
@@ -150,7 +705,9 @@ export abstract class BaseParser {
                 imported,
                 filePath,
             );
-            if (!resolvedImport) continue;
+            if (!resolvedImport) {
+                continue;
+            }
 
             const normalizedPath = resolvedImport.normalizedPath || originName;
             this.context.fileImports.add(normalizedPath);
@@ -166,7 +723,9 @@ export abstract class BaseParser {
         const originCapture = match.captures.find(
             (capture) => capture.name === 'origin',
         );
-        if (!originCapture || !originCapture.node) return;
+        if (!originCapture || !originCapture.node) {
+            return null;
+        }
         const originNode = originCapture.node;
 
         this.addChildSyntaxNodeToNode(parentNode, originNode);
@@ -230,8 +789,10 @@ export abstract class BaseParser {
             const aliasCapture = captures.find(
                 (capture) => capture.name === 'alias',
             );
-            first.symbol = '*';
-            first.nodeId = this.mapNodeId(aliasCapture.node);
+            if (aliasCapture) {
+                first.symbol = '*';
+                first.nodeId = this.mapNodeId(aliasCapture.node);
+            }
         }
 
         return imported;
@@ -256,10 +817,14 @@ export abstract class BaseParser {
         type: QueryType,
     ): void {
         const query = this.getQuery(type);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const objAnalysis = this.processObjMatch(match, absolutePath, type);
@@ -312,7 +877,8 @@ export abstract class BaseParser {
             implementedBy: [],
             scope: [],
             file: absolutePath,
-            type: queryToNodeTypeMap.get(type),
+            type:
+                queryToNodeTypeMap.get(type) ?? NodeType.NODE_TYPE_UNSPECIFIED,
         };
 
         const methods: Method[] = [];
@@ -330,7 +896,9 @@ export abstract class BaseParser {
         this.processConstructor(objAnalysis, methods);
 
         const analysisNode = this.context.analysisNodes.get(objAnalysis.nodeId);
-        this.addNameToAnalysisNode(analysisNode, objAnalysis.name);
+        if (analysisNode) {
+            this.addNameToAnalysisNode(analysisNode, objAnalysis.name);
+        }
 
         return objAnalysis;
     }
@@ -342,7 +910,9 @@ export abstract class BaseParser {
         objProps: ObjectProperties,
     ): void {
         const node = capture.node;
-        if (!node) return;
+        if (!node) {
+            return;
+        }
 
         const text = node.text;
 
@@ -354,9 +924,11 @@ export abstract class BaseParser {
                     node,
                     objAnalysis.type,
                 );
-                this.registerAnalysisNode(analysisNode);
-                objAnalysis.nodeId = this.mapNodeId(node);
-                objAnalysis.position = this.getNodeRange(node);
+                if (analysisNode) {
+                    this.registerAnalysisNode(analysisNode);
+                    objAnalysis.nodeId = this.mapNodeId(node);
+                    objAnalysis.position = this.getNodeRange(node);
+                }
                 break;
             }
             case 'objName': {
@@ -409,13 +981,14 @@ export abstract class BaseParser {
                 break;
             }
             default: {
-                if (this.processExtraObjCapture)
+                if (this.processExtraObjCapture) {
                     this.processExtraObjCapture(
                         capture,
                         objAnalysis,
                         methods,
                         objProps,
                     );
+                }
                 break;
             }
         }
@@ -469,7 +1042,9 @@ export abstract class BaseParser {
     }
 
     protected addNewMethod(methods: Method[], node: SyntaxNode): void {
-        if (!node || !node.id) return;
+        if (!node || !node.id) {
+            return;
+        }
 
         methods.push({
             nodeId: this.mapNodeId(node),
@@ -484,10 +1059,14 @@ export abstract class BaseParser {
 
     protected processMethodParameters(method: Method, node: SyntaxNode) {
         const query = this.getQuery(QueryType.FUNCTION_PARAMETERS);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(node);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             for (const capture of match.captures) {
@@ -511,7 +1090,9 @@ export abstract class BaseParser {
     }
 
     protected setMethodReturnType(method: Method, returnType: string): void {
-        if (!method) return;
+        if (!method) {
+            return;
+        }
         method.returnType = returnType;
     }
 
@@ -530,7 +1111,11 @@ export abstract class BaseParser {
                 .map((param) => param.name)
                 .join(', ')})`;
             const methodSignature = `${params}:${method.returnType || 'unknown'}`;
-            objAnalysis.fields[method.name] = methodSignature;
+            if (objAnalysis.fields instanceof Map) {
+                objAnalysis.fields.set(method.name, methodSignature);
+            } else {
+                objAnalysis.fields[method.name] = methodSignature;
+            }
 
             this.context.fileDefines.add(method.name);
         }
@@ -545,9 +1130,18 @@ export abstract class BaseParser {
         }
 
         for (const property of objProps.properties) {
-            if (!property.name) continue;
-            objAnalysis.fields[property.name] =
-                property.type || objProps.type || 'unknown';
+            if (!property.name) {
+                continue;
+            }
+            if (objAnalysis.fields instanceof Map) {
+                objAnalysis.fields.set(
+                    property.name,
+                    property.type || objProps.type || 'unknown',
+                );
+            } else {
+                objAnalysis.fields[property.name] =
+                    property.type || objProps.type || 'unknown';
+            }
         }
     }
 
@@ -558,7 +1152,9 @@ export abstract class BaseParser {
         const constructor = methods.find(
             (method) => method.name === this.getConstructorName(),
         );
-        if (!constructor) return;
+        if (!constructor) {
+            return;
+        }
 
         for (const { nodeId, name, type } of constructor.params) {
             if (nodeId && name && type && objAnalysis.scope) {
@@ -577,14 +1173,20 @@ export abstract class BaseParser {
         absolutePath: string,
     ): void {
         const query = this.getQuery(QueryType.FUNCTION);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const captures = match.captures;
-            if (captures.length === 0) continue;
+            if (captures.length === 0) {
+                continue;
+            }
 
             const method: Method = {
                 nodeId: '',
@@ -593,18 +1195,27 @@ export abstract class BaseParser {
                 returnType: null,
                 bodyNode: null,
                 scope: [],
-                position: null,
+                position: {
+                    startIndex: 0,
+                    endIndex: 0,
+                    startPosition: { row: 0, column: 0 },
+                    endPosition: { row: 0, column: 0 },
+                },
             };
             captures.forEach((capture) =>
                 this.processFunctionCapture(capture, method),
             );
-            if (!method.name) continue;
+            if (!method.name) {
+                continue;
+            }
 
             const key = `${absolutePath}::${this.scopeToString(method.scope)}`;
 
             const params = method.params.map((param) => param.name);
             const returnType = method.returnType || 'unknown';
-            const normalizedBody = normalizeAST(method.bodyNode);
+            const normalizedBody = method.bodyNode
+                ? normalizeAST(method.bodyNode)
+                : '';
             const signatureHash = normalizeSignature(params, returnType);
             const lines = method.bodyNode
                 ? method.bodyNode.endPosition.row -
@@ -652,8 +1263,12 @@ export abstract class BaseParser {
                 returnType,
                 calls,
                 className,
-                startLine: method.bodyNode?.startPosition.row + 1 || 0,
-                endLine: method.bodyNode?.endPosition.row + 1 || 0,
+                startLine: method.bodyNode?.startPosition?.row
+                    ? method.bodyNode.startPosition.row + 1
+                    : 0,
+                endLine: method.bodyNode?.endPosition?.row
+                    ? method.bodyNode.endPosition.row + 1
+                    : 0,
                 functionHash: normalizedBody,
                 signatureHash,
                 fullText: method.bodyNode?.text || '',
@@ -666,7 +1281,9 @@ export abstract class BaseParser {
         method: Method,
     ): void {
         const node = capture.node;
-        if (!node) return;
+        if (!node) {
+            return;
+        }
 
         switch (capture.name) {
             case 'func': {
@@ -674,9 +1291,11 @@ export abstract class BaseParser {
                     node,
                     NodeType.NODE_TYPE_FUNCTION,
                 );
-                this.registerAnalysisNode(analysisNode);
-                method.nodeId = this.mapNodeId(node);
-                method.position = this.getNodeRange(node);
+                if (analysisNode) {
+                    this.registerAnalysisNode(analysisNode);
+                    method.nodeId = this.mapNodeId(node);
+                    method.position = this.getNodeRange(node);
+                }
                 break;
             }
             case 'funcName': {
@@ -704,7 +1323,7 @@ export abstract class BaseParser {
             NodeType.NODE_TYPE_FUNCTION,
         );
         const parentNode = this.context.analysisNodes.get(method.nodeId);
-        if (parentNode) {
+        if (parentNode && analysisNode) {
             this.addChildToNode(parentNode, analysisNode);
         }
     }
@@ -716,10 +1335,14 @@ export abstract class BaseParser {
         className: string,
     ): Call[] {
         const query = this.getQuery(QueryType.FUNCTION_CALL);
-        if (!query) return [];
+        if (!query) {
+            return [];
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return [];
+        if (matches.length === 0) {
+            return [];
+        }
 
         const calls: Call[] = [];
         // Use a Set to track processed nodes to avoid reprocessing children of a matched chain
@@ -735,7 +1358,9 @@ export abstract class BaseParser {
             }
 
             const chain = this.getMemberChain(node, new Map());
-            if (chain.length === 0) continue;
+            if (chain.length === 0) {
+                continue;
+            }
 
             // Mark all nodes in this chain as processed so we don't create duplicate calls
             chain.forEach((link) => {
@@ -797,14 +1422,20 @@ export abstract class BaseParser {
         absolutePath: string,
     ): void {
         const query = this.getQuery(QueryType.TYPE_ALIAS);
-        if (!query) return;
+        if (!query) {
+            return;
+        }
 
         const matches = query.matches(rootNode);
-        if (matches.length === 0) return;
+        if (matches.length === 0) {
+            return;
+        }
 
         for (const match of matches) {
             const captures = match.captures;
-            if (captures.length === 0) continue;
+            if (captures.length === 0) {
+                continue;
+            }
 
             const typeAnalysis: TypeAnalysis = {
                 nodeId: '',
@@ -822,7 +1453,9 @@ export abstract class BaseParser {
 
             for (const capture of captures) {
                 const node = capture.node;
-                if (!node) continue;
+                if (!node) {
+                    continue;
+                }
 
                 const typeFields = [] as string[];
 
@@ -832,9 +1465,11 @@ export abstract class BaseParser {
                             node,
                             NodeType.NODE_TYPE_TYPE_ALIAS,
                         );
-                        this.registerAnalysisNode(analysisNode);
-                        typeAnalysis.nodeId = this.mapNodeId(node);
-                        typeAnalysis.position = this.getNodeRange(node);
+                        if (analysisNode) {
+                            this.registerAnalysisNode(analysisNode);
+                            typeAnalysis.nodeId = this.mapNodeId(node);
+                            typeAnalysis.position = this.getNodeRange(node);
+                        }
                         break;
                     }
                     case 'typeName': {
@@ -849,11 +1484,22 @@ export abstract class BaseParser {
                     }
                     case 'typeValue': {
                         const typeName = node.text;
+                        if (!typeAnalysis.fields) {
+                            typeAnalysis.fields = {};
+                        }
                         if (typeFields.length > 0) {
-                            typeAnalysis.fields[typeFields.pop() || ''] =
-                                typeName;
+                            const fieldName = typeFields.pop() || '';
+                            if (typeAnalysis.fields instanceof Map) {
+                                typeAnalysis.fields.set(fieldName, typeName);
+                            } else {
+                                typeAnalysis.fields[fieldName] = typeName;
+                            }
                         } else {
-                            typeAnalysis.fields[typeName] = typeName;
+                            if (typeAnalysis.fields instanceof Map) {
+                                typeAnalysis.fields.set(typeName, typeName);
+                            } else {
+                                typeAnalysis.fields[typeName] = typeName;
+                            }
                         }
                         break;
                     }
@@ -908,7 +1554,9 @@ export abstract class BaseParser {
         node: SyntaxNode,
         chains: Map<number, CallChain[]>,
     ): CallChain[] {
-        if (!node) return [];
+        if (!node) {
+            return [];
+        }
 
         const chain: CallChain[] = [];
         let currentNode: SyntaxNode | null = node;
@@ -921,7 +1569,9 @@ export abstract class BaseParser {
             }
 
             const processed = this.processChainNode(currentNode, chain);
-            if (!processed) return chain;
+            if (!processed) {
+                return chain;
+            }
 
             chains.set(currentNode.id, [...chain]);
             currentNode = currentNode.parent;
@@ -936,7 +1586,9 @@ export abstract class BaseParser {
         chain: CallChain[],
         nodeId: string,
     ) {
-        if (!field) return;
+        if (!field) {
+            return;
+        }
 
         const validTypes =
             type === ChainType.FUNCTION
@@ -1013,7 +1665,9 @@ export abstract class BaseParser {
         type: NodeType,
         name?: string,
     ): AnalysisNode | null {
-        if (!node) return null;
+        if (!node) {
+            return null;
+        }
         const newNode = {
             id: this.mapNodeId(node),
             name: name || '',
@@ -1032,7 +1686,9 @@ export abstract class BaseParser {
     }
 
     protected addNameToAnalysisNode(node: AnalysisNode, name: string): void {
-        if (!node || !name) return;
+        if (!node || !name) {
+            return;
+        }
         if (node.name && node.name !== name) {
             node.name = `${node.name}::${name}`;
         } else {
@@ -1045,7 +1701,9 @@ export abstract class BaseParser {
             parent.children = [];
         }
 
-        if (parent.id === child.id) return;
+        if (parent.id === child.id) {
+            return;
+        }
 
         parent.children.push(child);
     }
@@ -1060,7 +1718,9 @@ export abstract class BaseParser {
             parent.children = [];
         }
 
-        if (parent.id === this.mapNodeId(child)) return null;
+        if (parent.id === this.mapNodeId(child)) {
+            return null;
+        }
 
         const childNode = this.newAnalysisNode(child, type, name);
         if (childNode) {
@@ -1070,7 +1730,9 @@ export abstract class BaseParser {
     }
 
     protected registerAnalysisNode(node: AnalysisNode): void {
-        if (!node || !node.id) return;
+        if (!node || !node.id) {
+            return;
+        }
 
         if (this.context.analysisNodes.has(node.id)) {
             return;

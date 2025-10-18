@@ -49,7 +49,6 @@ module.exports = {
                 NODE_ENV: process.env.NODE_ENV || 'production',
                 CONTAINER_NAME: 'kodus-service-ast',
                 API_PORT: '3002',
-                API_HEALTH_PORT: '5001',
                 LOG_LEVEL: process.env.LOG_LEVEL || 'info',
                 CACHE_TTL: '3600',
                 TIMEOUT: '300000',

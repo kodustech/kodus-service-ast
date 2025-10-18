@@ -1,5 +1,5 @@
 services:
-    kodus-service-ast:
+    kodus-service-ast-api:
         image: kodus/service-ast:latest
         container_name: ${CONTAINER_NAME}
         build:
@@ -14,11 +14,63 @@ services:
             - .env
         restart: unless-stopped
         volumes:
-            - .:/usr/src/app
+            - ./src:/usr/src/app/src
+            - ./package.json:/usr/src/app/package.json
+            - ./tsconfig.json:/usr/src/app/tsconfig.json
+            - ./nest-cli.json:/usr/src/app/nest-cli.json
+            - ./.swcrc:/usr/src/app/.swcrc
             - /usr/src/app/node_modules
+        environment:
+            - CHOKIDAR_USEPOLLING=true
         networks:
             - kodus-backend-services
+            - shared-network
+        # 🚀 LIMITES DE RECURSOS - API (Leve)
+        deploy:
+            resources:
+                limits:
+                    cpus: '1.0'      # 1 CPU core
+                    memory: 1G       # 1GB RAM
+                reservations:
+                    cpus: '0.5'      # Mínimo 0.5 CPU
+                    memory: 512M     # Mínimo 512MB
+
+    kodus-service-ast-worker:
+        image: kodus/service-ast:latest
+        container_name: ${CONTAINER_NAME}-worker
+        build:
+            context: .
+            dockerfile: DockerFiles/Dockerfile.dev
+        command: ["yarn", "start:worker:dev"]
+        env_file:
+            - .env
+        restart: unless-stopped
+        volumes:
+            - ./src:/usr/src/app/src
+            - ./package.json:/usr/src/app/package.json
+            - ./tsconfig.json:/usr/src/app/tsconfig.json
+            - ./nest-cli.json:/usr/src/app/nest-cli.json
+            - ./.swcrc:/usr/src/app/.swcrc
+            - /usr/src/app/node_modules
+        environment:
+            - CHOKIDAR_USEPOLLING=true
+        networks:
+            - kodus-backend-services
+            - shared-network
+        depends_on:
+            - kodus-service-ast-api
+        # 🚀 LIMITES DE RECURSOS - WORKER (Pesado)
+        deploy:
+            resources:
+                limits:
+                    cpus: '2.0'      # 2 CPU cores
+                    memory: 2G       # 2GB RAM
+                reservations:
+                    cpus: '1.0'      # Mínimo 1 CPU
+                    memory: 1G       # Mínimo 1GB
 
 networks:
     kodus-backend-services:
+        external: true
+    shared-network:
         external: true

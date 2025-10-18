@@ -1,11 +1,14 @@
-import { Language, SyntaxNode } from 'tree-sitter';
-import { BaseParser } from '../base-parser';
-import { javaQueries } from './java-queries';
+import { type Language, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
+import { javaQueries } from './java-queries.js';
 import * as JavaLang from 'tree-sitter-java';
-import { ParserQuery, QueryType } from '../query';
-import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { type ParserQuery, type QueryType } from '../query.js';
+import {
+    ChainType,
+    type CallChain,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class JavaParser extends BaseParser {
     private static readonly language = JavaLang as Language;
@@ -41,7 +44,7 @@ export class JavaParser extends BaseParser {
         return JavaParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         class_declaration: NodeType.NODE_TYPE_CLASS,
         interface_declaration: NodeType.NODE_TYPE_INTERFACE,
         enum_declaration: NodeType.NODE_TYPE_ENUM,
@@ -81,7 +84,7 @@ export class JavaParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = JavaParser.SCOPE_TYPES[node.type];
+        const scopeType = JavaParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

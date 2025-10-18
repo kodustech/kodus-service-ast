@@ -1,13 +1,13 @@
 import {
-    AnalysisNode,
-    Call,
-    FileAnalysis,
-    FunctionAnalysis,
-    Range,
-    Scope,
-    TypeAnalysis,
-} from '@kodus/kodus-proto/ast/v2';
-import { SyntaxNode } from 'tree-sitter';
+    type AnalysisNode,
+    type Call,
+    type FileAnalysis,
+    type FunctionAnalysis,
+    type Range,
+    type Scope,
+    type TypeAnalysis,
+} from '@/shared/types/ast.js';
+import { type SyntaxNode } from 'tree-sitter';
 
 export type ParseContext = {
     filePath: string;

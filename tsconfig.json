@@ -1,37 +1,58 @@
 {
     "compilerOptions": {
-        "declaration": true,
-        "removeComments": true,
+        "declaration": false,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
         "allowJs": true,
-        "lib": ["ES2023"],
-        "module": "commonjs",
-        "target": "ES2023",
+        "checkJs": false,
+        "lib": ["ESNext"],
+        "types": ["node", "jest"],
+        "typeRoots": ["./src/types", "./node_modules/@types"],
+        "module": "NodeNext",
+        "target": "ESNext",
+        "moduleResolution": "NodeNext",
+        "esModuleInterop": true,
+        "strict": true,
         "sourceMap": true,
         "outDir": "./dist",
         "baseUrl": ".",
-        "incremental": true,
         "skipLibCheck": true,
-        "strictNullChecks": false,
+        "strictNullChecks": true,
         "noImplicitAny": false,
-        "strictBindCallApply": false,
-        "forceConsistentCasingInFileNames": false,
-        "noFallthroughCasesInSwitch": false,
+        "isolatedModules": true,
+        "strictBindCallApply": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
         "resolveJsonModule": true,
         "noEmitHelpers": true,
         "importHelpers": true,
         "inlineSources": true,
-
+        "pretty": true, // Formata a saída do compilador
+        "newLine": "lf", // Define o caractere de nova linha
+        "downlevelIteration": true,
         "paths": {
             "@/*": ["src/*"]
-        }
+        },
+
+        /* Recursos Experimentais */
+        "useDefineForClassFields": true,
+        "moduleDetection": "auto",
+        "verbatimModuleSyntax": false,
+
+        /* Otimizações de Build */
+        "incremental": true,
+        "composite": false,
+        "tsBuildInfoFile": "./dist/.tsbuildinfo"
     },
     "watchOptions": {
-        // Avoid looping in "npm run start:dev"
         "watchFile": "useFsEventsOnParentDirectory"
     },
-    "include": ["src", "test/**/*.ts", "tsconfig-paths-bootstrap.js", "ecosystem.config.js"],
-    "exclude": ["node_modules", "dist", "ormlogs.log"]
+    "include": [
+        "src/**/*",
+        "test/**/*",
+        "ecosystem.config.js",
+        "tsconfig-paths-bootstrap.js"
+    ],
+    "exclude": ["node_modules", "dist"]
 }

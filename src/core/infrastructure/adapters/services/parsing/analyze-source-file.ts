@@ -1,18 +1,18 @@
 import * as fs from 'fs';
-import { getParserByFilePath } from './parsers';
-import { BaseParser } from './parsers/base-parser';
+import { getParserByFilePath } from './parsers/index.js';
+import { type BaseParser } from './parsers/base-parser.js';
 import {
-    ParseContext,
-    ParserAnalysis,
-} from '@/core/domain/parsing/types/parser';
-import { getLanguageResolver } from './resolvers';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+    type ParseContext,
+    type ParserAnalysis,
+} from '@/core/domain/parsing/types/parser.js';
+import { getLanguageResolver } from './resolvers/index.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    AnalysisNode,
-    Call,
-    FunctionAnalysis,
-    TypeAnalysis,
-} from '@kodus/kodus-proto/ast/v2';
+    type AnalysisNode,
+    type Call,
+    type FunctionAnalysis,
+    type TypeAnalysis,
+} from '@/shared/types/ast.js';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;
@@ -88,20 +88,24 @@ export class SourceFileAnalyzer {
             const batchSize = 10;
             const normalizedImports: string[] = [];
 
+            // 🚀 FASE 1: Use original import resolution (cache disabled - causing overhead)
             for (let i = 0; i < uniqueImports.length; i += batchSize) {
                 const batch = uniqueImports.slice(i, i + batchSize);
                 const batchResults = await Promise.all(
-                    batch.map((imp) => {
+                    batch.map(async (imp) => {
                         try {
                             const resolved =
-                                this.languageParser.resolveImportWithCache(
+                                this.languageParser!.resolveImportWithCache(
                                     imp,
                                     [],
                                     filePath,
                                 );
                             return resolved?.normalizedPath || imp;
                         } catch (err) {
-                            console.error(err);
+                            console.error(
+                                `[PERFORMANCE] Import resolution failed for ${imp}:`,
+                                err,
+                            );
                             return imp;
                         }
                     }),
@@ -153,7 +157,9 @@ export class SourceFileAnalyzer {
 
     private async initializeImportResolver(rootDir: string): Promise<void> {
         const resolver = await getLanguageResolver(rootDir);
-        if (!resolver) return;
+        if (!resolver) {
+            return;
+        }
         this.importPathResolver = resolver;
         await resolver.initialize();
     }

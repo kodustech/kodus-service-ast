@@ -1,12 +1,15 @@
-import { Language, SyntaxNode } from 'tree-sitter';
-import { BaseParser } from '../base-parser';
+import { type Language, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
 import * as CSharpLang from 'tree-sitter-c-sharp';
-import { cSharpQueries } from './csharp-queries';
-import { ParserQuery, QueryType } from '../query';
-import { findNamedChildByType } from '@/shared/utils/ast-helpers';
-import { ChainType, CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { cSharpQueries } from './csharp-queries.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import { findNamedChildByType } from '@/shared/utils/ast-helpers.js';
+import {
+    ChainType,
+    type CallChain,
+} from '@/core/domain/parsing/types/parser.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class CSharpParser extends BaseParser {
     private static readonly language = CSharpLang as Language;
@@ -39,7 +42,7 @@ export class CSharpParser extends BaseParser {
         return CSharpParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {
+    private static readonly scopeTypes: Record<string, NodeType> = {
         class_declaration: NodeType.NODE_TYPE_CLASS,
         record_declaration: NodeType.NODE_TYPE_CLASS,
         struct_declaration: NodeType.NODE_TYPE_CLASS,
@@ -100,7 +103,7 @@ export class CSharpParser extends BaseParser {
     }
 
     protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
-        const scopeType = CSharpParser.SCOPE_TYPES[node.type];
+        const scopeType = CSharpParser.scopeTypes[node.type];
         if (!scopeType) {
             return null;
         }

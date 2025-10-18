@@ -1,4 +1,4 @@
-import { SupportedLanguage } from './supported-languages';
+import { type SupportedLanguage } from './supported-languages.js';
 
 export type AliasConfig = {
     pattern: string;

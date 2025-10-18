@@ -1,4 +1,4 @@
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 import { Global, Module } from '@nestjs/common';
 
 @Global()

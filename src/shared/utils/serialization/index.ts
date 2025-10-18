@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-base-to-string */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
     isMap,
     isPlainObject,
     isSerializedMap,
     isSerializedSet,
     isSet,
-} from './type-guards';
-import { Serializable, SerializablePrimitive } from './types';
+} from './type-guards.js';
+import { type Serializable, type SerializablePrimitive } from './types.js';
 
 export function serializeObject(input: any): Serializable {
     if (isMap(input)) {

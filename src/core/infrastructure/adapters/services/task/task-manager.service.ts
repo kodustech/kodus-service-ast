@@ -1,139 +1,101 @@
-import { Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service';
-import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract';
-import { Task, TaskPriority, TaskStatus } from '@kodus/kodus-proto/task';
+import { Inject, Injectable } from '@nestjs/common';
+import { PinoLoggerService } from '../logger/pino.service.js';
+import { ITaskManagerService } from '@/core/domain/task/contracts/task-manager.contract.js';
+import { Task, TaskPriority, TaskStatus } from '@/shared/types/task.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { serializeDateToTimeStamp } from '@/shared/types/serialization.js';
+import { DeepPartial, matchesPartial } from '@/shared/utils/deep-partial.js';
+import { TaskPersistenceService } from '@/core/infrastructure/persistence/task/task-persistence.service.js';
 import {
-    DeserializeTimeStampToDate,
-    SerializeDateToTimeStamp,
-} from '@kodus/kodus-proto/serialization';
-import {
-    deepMerge,
-    DeepPartial,
-    matchesPartial,
-} from '@/shared/utils/deep-partial';
+    TaskRecord,
+    UpdateTaskInput,
+} from '@/core/infrastructure/persistence/task/task-persistence.types.js';
 
 @Injectable()
 export class TaskManagerService implements ITaskManagerService {
-    private readonly tasks: Map<string, Task> = new Map();
+    private readonly defaultTaskType = 'AST_GENERIC';
 
-    constructor(private readonly logger: PinoLoggerService) {}
+    constructor(
+        @Inject(PinoLoggerService)
+        private readonly logger: PinoLoggerService,
+        @Inject(TaskPersistenceService)
+        private readonly taskPersistence: TaskPersistenceService,
+    ) {}
 
     // #region Task Management
 
-    createTask(priority: TaskPriority): string {
-        if (
-            priority === TaskPriority.TASK_PRIORITY_UNSPECIFIED ||
-            TaskPriority.UNRECOGNIZED
-        )
-            priority = TaskPriority.TASK_PRIORITY_MEDIUM;
+    async createTask(priority?: number): Promise<string> {
+        const normalizedPriority = this.normalizePriority(priority);
 
-        const taskId = crypto.randomUUID();
-        const timestamp = SerializeDateToTimeStamp(new Date());
-
-        const newTask: Task = {
-            id: taskId,
-            status: TaskStatus.TASK_STATUS_PENDING,
-            state: 'Created',
-            createdAt: timestamp,
-            updatedAt: timestamp,
+        const record = await this.taskPersistence.createTask({
+            type: this.defaultTaskType,
+            priority: normalizedPriority,
             metadata: {
                 progress: 0,
-                priority,
+                priority: normalizedPriority,
                 error: null,
             },
-        };
-
-        this.tasks.set(taskId, newTask);
+            status: TaskStatus.TASK_STATUS_PENDING,
+        });
 
         this.logger.log({
             message: 'Task created',
             context: TaskManagerService.name,
             metadata: {
-                taskId,
+                taskId: record.id,
+                priority: normalizedPriority,
             },
             serviceName: TaskManagerService.name,
         });
 
-        return taskId;
+        return record.id;
     }
 
-    updateTask(
+    async updateTask(
         task: Task,
         updates: DeepPartial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>,
-    ): void {
-        const updatedAt = SerializeDateToTimeStamp(new Date());
-
-        const updatedTask: Task = {
-            id: task.id,
-            createdAt: task.createdAt,
-            ...deepMerge(task, updates),
-            updatedAt,
-        };
-
-        this.tasks.set(task.id, updatedTask);
-
-        this.logger.log({
-            message: 'Task updated',
-            context: TaskManagerService.name,
-            metadata: {
-                taskId: task.id,
-                updates,
-            },
-            serviceName: TaskManagerService.name,
+    ): Promise<void> {
+        return this.applyPartialUpdate(task.id, updates, {
+            actor: 'SYSTEM',
+            detail: { source: 'updateTask' },
         });
     }
 
-    getTask(taskId: string): Task | null {
-        this.logger.log({
-            message: 'Retrieving task: ' + taskId + JSON.stringify(this.tasks),
-            context: TaskManagerService.name,
-            metadata: {
-                taskId,
-                tasks: this.tasks,
-            },
-            serviceName: TaskManagerService.name,
-        });
+    async getTask(taskId: string): Promise<Task | null> {
+        const record = await this.taskPersistence.findTaskById(taskId);
 
-        const task = this.tasks.get(taskId);
-
-        if (!task) {
+        if (!record) {
             this.logger.warn({
                 message: 'Task not found',
                 context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
+                metadata: { taskId },
                 serviceName: TaskManagerService.name,
             });
 
             return null;
         }
 
-        return task;
+        return this.mapRecordToTask(record);
     }
 
-    getAllTasks(): Task[] {
-        const allTasks = Array.from(this.tasks.values());
+    async getAllTasks(): Promise<Task[]> {
+        const records = await this.taskPersistence.listTasks();
 
         this.logger.log({
             message: 'Retrieved all tasks',
             context: TaskManagerService.name,
-            metadata: {
-                count: allTasks.length,
-            },
+            metadata: { count: records.length },
             serviceName: TaskManagerService.name,
         });
 
-        return allTasks;
+        return records.map((record) => this.mapRecordToTask(record));
     }
 
-    queryTasksAll(query: DeepPartial<Task>): Task[] {
-        const tasks = Array.from(this.tasks.values()).filter((task) =>
-            matchesPartial(task, query),
-        );
+    async queryTasksAll(query: DeepPartial<Task>): Promise<Task[]> {
+        const tasks = await this.getAllTasks();
+        const filtered = tasks.filter((task) => matchesPartial(task, query));
 
-        if (tasks.length === 0) {
+        if (filtered.length === 0) {
             this.logger.warn({
                 message: 'No tasks found matching query',
                 context: TaskManagerService.name,
@@ -142,22 +104,13 @@ export class TaskManagerService implements ITaskManagerService {
             });
         }
 
-        return tasks;
+        return filtered;
     }
 
-    queryTasks(query: DeepPartial<Task>): Task | null {
-        const tasks = this.queryTasksAll(query);
+    async queryTasks(query: DeepPartial<Task>): Promise<Task | null> {
+        const tasks = await this.queryTasksAll(query);
 
         if (tasks.length === 0) {
-            this.logger.warn({
-                message: 'No tasks found matching query',
-                context: TaskManagerService.name,
-                metadata: {
-                    query,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
             return null;
         }
 
@@ -165,10 +118,7 @@ export class TaskManagerService implements ITaskManagerService {
             this.logger.warn({
                 message: 'Multiple tasks found matching query, returning first',
                 context: TaskManagerService.name,
-                metadata: {
-                    query,
-                    count: tasks.length,
-                },
+                metadata: { query, count: tasks.length },
                 serviceName: TaskManagerService.name,
             });
         }
@@ -176,36 +126,19 @@ export class TaskManagerService implements ITaskManagerService {
         return tasks[0];
     }
 
-    deleteTask(taskId: string): void {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for deletion',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return;
-        }
-
-        this.tasks.delete(taskId);
+    async deleteTask(taskId: string): Promise<void> {
+        await this.taskPersistence.deleteTask(taskId);
 
         this.logger.log({
             message: 'Task deleted successfully',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-            },
+            metadata: { taskId },
             serviceName: TaskManagerService.name,
         });
     }
 
-    clearAllTasks(): void {
-        this.tasks.clear();
+    async clearAllTasks(): Promise<void> {
+        await this.taskPersistence.clearTasks();
 
         this.logger.log({
             message: 'All tasks cleared',
@@ -218,236 +151,174 @@ export class TaskManagerService implements ITaskManagerService {
 
     // #region Task Status
 
-    getTaskStatus(taskId: string): TaskStatus | null {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for status check',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return null;
-        }
-
-        return task.status;
+    async getTaskStatus(taskId: string): Promise<TaskStatus | null> {
+        const task = await this.getTask(taskId);
+        return task?.status ?? null;
     }
 
-    startTask(taskId: string, state?: string): void {
-        const task = this.getTask(taskId);
+    async startTask(taskId: string, state?: string): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: TaskStatus.TASK_STATUS_IN_PROGRESS,
+                progress: 0,
+                state: state ?? 'In Progress',
+                metadata: { progress: 0 },
+                actor: 'WORKER',
+                detail: { action: 'start' },
+            },
+            'startTask',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for start',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            status: TaskStatus.TASK_STATUS_IN_PROGRESS,
-            metadata: {
-                progress: 0, // Reset progress to 0 when starting
-            },
-            state: state || task.state || 'In Progress',
-        });
 
         this.logger.log({
             message: 'Task started successfully',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-            },
+            metadata: { taskId },
             serviceName: TaskManagerService.name,
         });
     }
 
-    pauseTask(taskId: string, progress?: number, state?: string): void {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for pause',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return;
-        }
-
-        if (progress !== undefined && (progress < 0 || progress > 100)) {
-            this.logger.error({
-                message: 'Invalid progress value for pause',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                    progress,
-                },
-                serviceName: TaskManagerService.name,
-            });
-            return;
-        }
-
-        const updatedProgress =
-            progress !== undefined ? progress : task.metadata.progress || 0;
-
-        this.updateTask(task, {
-            status: TaskStatus.TASK_STATUS_PENDING,
-            metadata: {
-                progress: updatedProgress,
+    async pauseTask(
+        taskId: string,
+        progress?: number,
+        state?: string,
+    ): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: TaskStatus.TASK_STATUS_PENDING,
+                progress,
+                state: state ?? 'Paused',
+                metadata: progress !== undefined ? { progress } : undefined,
+                actor: 'WORKER',
+                detail: { action: 'pause' },
             },
-            state: state || task.state || 'Paused',
-        });
+            'pauseTask',
+        );
+
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task paused successfully',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-            },
+            metadata: { taskId },
             serviceName: TaskManagerService.name,
         });
     }
 
-    resumeTask(taskId: string, state?: string): void {
-        const task = this.getTask(taskId);
+    async resumeTask(taskId: string, state?: string): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: TaskStatus.TASK_STATUS_IN_PROGRESS,
+                state: state ?? 'Resumed',
+                actor: 'WORKER',
+                detail: { action: 'resume' },
+            },
+            'resumeTask',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for resume',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            status: TaskStatus.TASK_STATUS_IN_PROGRESS,
-            state: state || task.state || 'Resumed',
-        });
 
         this.logger.log({
             message: 'Task resumed successfully',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-            },
+            metadata: { taskId },
             serviceName: TaskManagerService.name,
         });
     }
 
-    completeTask(taskId: string, state?: string): void {
-        const task = this.getTask(taskId);
+    async completeTask(taskId: string, state?: string): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: TaskStatus.TASK_STATUS_COMPLETED,
+                progress: 100,
+                metadata: { progress: 100 },
+                state: state ?? 'Completed',
+                actor: 'WORKER',
+                detail: { action: 'complete' },
+            },
+            'completeTask',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for completion',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            status: TaskStatus.TASK_STATUS_COMPLETED,
-            metadata: {
-                progress: 100, // Set progress to 100% on completion
-            },
-            state: state || task.state || 'Completed',
-        });
 
         this.logger.log({
             message: 'Task completed successfully',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-            },
+            metadata: { taskId },
             serviceName: TaskManagerService.name,
         });
     }
 
-    failTask(taskId: string, error: string, state?: string): void {
-        const task = this.getTask(taskId);
+    async failTask(
+        taskId: string,
+        error: string,
+        state?: string,
+    ): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: TaskStatus.TASK_STATUS_FAILED,
+                error,
+                metadata: { error },
+                state: state ?? 'Failed',
+                actor: 'WORKER',
+                detail: { action: 'fail' },
+                incrementRetry: true,
+            },
+            'failTask',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for failure',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            status: TaskStatus.TASK_STATUS_FAILED,
-            metadata: {
-                error,
-            },
-            state: state || task.state || 'Failed',
-        });
 
         this.logger.error({
             message: 'Task failed',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-                error,
-            },
+            metadata: { taskId, error },
             serviceName: TaskManagerService.name,
         });
     }
 
-    cancelTask(taskId: string, state?: string): void {
-        const task = this.getTask(taskId);
+    async cancelTask(taskId: string, state?: string): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: TaskStatus.TASK_STATUS_CANCELLED,
+                state: state ?? 'Cancelled',
+                actor: 'WORKER',
+                detail: { action: 'cancel' },
+            },
+            'cancelTask',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for cancellation',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            status: TaskStatus.TASK_STATUS_CANCELLED,
-            state: state || task.state || 'Cancelled',
-        });
 
         this.logger.log({
             message: 'Task cancelled successfully',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-            },
+            metadata: { taskId },
             serviceName: TaskManagerService.name,
         });
     }
@@ -456,52 +327,31 @@ export class TaskManagerService implements ITaskManagerService {
 
     //#region Task State
 
-    getTaskState(taskId: string): string {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for state check',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return 'Unknown';
-        }
-
-        return task.state || 'Unknown';
+    async getTaskState(taskId: string): Promise<string> {
+        const task = await this.getTask(taskId);
+        return task?.state ?? 'Unknown';
     }
 
-    updateTaskState(taskId: string, state: string): void {
-        const task = this.getTask(taskId);
+    async updateTaskState(taskId: string, state: string): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                state,
+                actor: 'WORKER',
+                detail: { action: 'update-state' },
+            },
+            'updateTaskState',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for state update',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            state,
-        });
 
         this.logger.log({
             message: 'Task state updated',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-                state,
-            },
+            metadata: { taskId, state },
             serviceName: TaskManagerService.name,
         });
     }
@@ -510,54 +360,32 @@ export class TaskManagerService implements ITaskManagerService {
 
     //#region Task Error
 
-    getTaskError(taskId: string): string | null {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for error check',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return null;
-        }
-
-        return task.metadata.error || null;
+    async getTaskError(taskId: string): Promise<string | null> {
+        const task = await this.getTask(taskId);
+        return task?.metadata.error ?? null;
     }
 
-    updateTaskError(taskId: string, error: string): void {
-        const task = this.getTask(taskId);
+    async updateTaskError(taskId: string, error: string): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                error,
+                metadata: { error },
+                actor: 'WORKER',
+                detail: { action: 'update-error' },
+            },
+            'updateTaskError',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for error update',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            metadata: {
-                error,
-            },
-        });
 
         this.logger.log({
             message: 'Task error updated',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-                error,
-            },
+            metadata: { taskId, error },
             serviceName: TaskManagerService.name,
         });
     }
@@ -566,67 +394,42 @@ export class TaskManagerService implements ITaskManagerService {
 
     // #region Task Progress
 
-    getTaskProgress(taskId: string): number {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for progress check',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return 0;
-        }
-
-        return task.metadata.progress || 0;
+    async getTaskProgress(taskId: string): Promise<number> {
+        const task = await this.getTask(taskId);
+        return task?.metadata.progress ?? 0;
     }
 
-    updateTaskProgress(taskId: string, progress: number): void {
-        const task = this.getTask(taskId);
-
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for progress update',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return;
-        }
-
+    async updateTaskProgress(taskId: string, progress: number): Promise<void> {
         if (progress < 0 || progress > 100) {
             this.logger.error({
                 message: 'Invalid progress value',
                 context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                    progress,
-                },
+                metadata: { taskId, progress },
                 serviceName: TaskManagerService.name,
             });
             return;
         }
 
-        this.updateTask(task, {
-            metadata: {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
                 progress,
+                metadata: { progress },
+                actor: 'WORKER',
+                detail: { action: 'update-progress' },
             },
-        });
+            'updateTaskProgress',
+        );
+
+        if (!updated) {
+            return;
+        }
 
         this.logger.log({
             message: 'Task progress updated',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-                progress,
-            },
+            metadata: { taskId, progress },
             serviceName: TaskManagerService.name,
         });
     }
@@ -635,54 +438,41 @@ export class TaskManagerService implements ITaskManagerService {
 
     // #region Task Priority
 
-    getTaskPriority(taskId: string): number {
-        const task = this.getTask(taskId);
-
+    async getTaskPriority(taskId: string): Promise<number> {
+        const task = await this.getTask(taskId);
         if (!task) {
-            this.logger.warn({
-                message: 'Task not found for priority check',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
-            return TaskPriority.TASK_PRIORITY_UNSPECIFIED; // Default priority
+            return TaskPriority.TASK_PRIORITY_UNSPECIFIED;
         }
 
-        return task.metadata.priority || TaskPriority.TASK_PRIORITY_MEDIUM;
+        return this.normalizePriority(
+            task.metadata.priority as number | undefined,
+        );
     }
 
-    updateTaskPriority(taskId: string, priority: TaskPriority): void {
-        const task = this.getTask(taskId);
+    async updateTaskPriority(
+        taskId: string,
+        priority: TaskPriority,
+    ): Promise<void> {
+        const updated = await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                priority,
+                metadata: { priority },
+                actor: 'WORKER',
+                detail: { action: 'update-priority' },
+            },
+            'updateTaskPriority',
+        );
 
-        if (!task) {
-            this.logger.warn({
-                message: 'Task not found for priority update',
-                context: TaskManagerService.name,
-                metadata: {
-                    taskId,
-                },
-                serviceName: TaskManagerService.name,
-            });
-
+        if (!updated) {
             return;
         }
-
-        this.updateTask(task, {
-            metadata: {
-                priority,
-            },
-        });
 
         this.logger.log({
             message: 'Task priority updated',
             context: TaskManagerService.name,
-            metadata: {
-                taskId,
-                priority,
-            },
+            metadata: { taskId, priority },
             serviceName: TaskManagerService.name,
         });
     }
@@ -695,7 +485,7 @@ export class TaskManagerService implements ITaskManagerService {
         name: 'periodicTaskCleanup',
         waitForCompletion: true,
     })
-    periodicTaskCleanup(): void {
+    async periodicTaskCleanup(): Promise<void> {
         this.logger.log({
             message: 'Starting periodic task cleanup',
             context: TaskManagerService.name,
@@ -703,57 +493,175 @@ export class TaskManagerService implements ITaskManagerService {
         });
 
         const now = new Date();
-        const threshold = new Date(now.getTime() - 8 * 60 * 60 * 1000); // 8 hours ago
+        const threshold = new Date(now.getTime() - 8 * 60 * 60 * 1000);
 
-        let deletedCount = 0;
-        const deletedIds: string[] = [];
-
-        const endStates = [
+        const endStates = new Set<TaskStatus>([
             TaskStatus.TASK_STATUS_CANCELLED,
             TaskStatus.TASK_STATUS_COMPLETED,
             TaskStatus.TASK_STATUS_FAILED,
-        ];
+        ]);
 
-        for (const [taskId, task] of this.tasks.entries()) {
-            if (DeserializeTimeStampToDate(task.updatedAt) < threshold) {
-                if (!endStates.includes(task.status)) {
-                    this.logger.warn({
-                        message: `Task ${taskId} is not in an end state, but is older than 8 hours, marking as cancelled. Will be deleted in next cleanup.`,
-                        context: TaskManagerService.name,
-                        metadata: {
-                            taskId,
-                            status: task.status,
-                        },
-                        serviceName: TaskManagerService.name,
-                    });
+        const staleTasks =
+            await this.taskPersistence.findTasksUpdatedBefore(threshold);
 
-                    this.updateTask(task, {
-                        status: TaskStatus.TASK_STATUS_CANCELLED,
-                        metadata: {
-                            error: 'Task automatically marked as cancelled due to inactivity',
-                        },
-                    });
+        const toDelete: string[] = [];
 
-                    continue;
-                }
-
-                this.tasks.delete(taskId);
-
-                deletedCount++;
-                deletedIds.push(taskId);
+        for (const task of staleTasks) {
+            if (endStates.has(task.status)) {
+                toDelete.push(task.id);
+                continue;
             }
+
+            await this.tryUpdateTask(
+                task.id,
+                {
+                    taskId: task.id,
+                    status: TaskStatus.TASK_STATUS_CANCELLED,
+                    error: 'Task automatically marked as cancelled due to inactivity',
+                    metadata: {
+                        error: 'Task automatically marked as cancelled due to inactivity',
+                    },
+                    actor: 'SYSTEM',
+                    detail: { action: 'cleanup-cancel' },
+                },
+                'periodicTaskCleanup:cancel',
+            );
+        }
+
+        if (toDelete.length > 0) {
+            await this.taskPersistence.deleteTasks(toDelete);
         }
 
         this.logger.log({
             message: 'Periodic task cleanup completed',
             context: TaskManagerService.name,
             metadata: {
-                deletedCount,
-                deletedIds,
+                deletedCount: toDelete.length,
+                cancelledCount: staleTasks.length - toDelete.length,
             },
             serviceName: TaskManagerService.name,
         });
     }
 
     // #endregion Cron
+
+    private async tryUpdateTask(
+        taskId: string,
+        input: UpdateTaskInput,
+        action: string,
+    ): Promise<boolean> {
+        try {
+            await this.taskPersistence.updateTask(input);
+            return true;
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('not found')) {
+                this.logger.warn({
+                    message: `Task not found for ${action}`,
+                    context: TaskManagerService.name,
+                    metadata: { taskId },
+                    serviceName: TaskManagerService.name,
+                });
+                return false;
+            }
+            throw error;
+        }
+    }
+
+    private async applyPartialUpdate(
+        taskId: string,
+        updates: DeepPartial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>,
+        context: { actor: string; detail?: Record<string, unknown> },
+    ): Promise<void> {
+        const metadataUpdates = updates.metadata ?? {};
+        const metadataPayload: Record<string, unknown> = {};
+
+        if (metadataUpdates.progress !== undefined) {
+            metadataPayload.progress = metadataUpdates.progress;
+        }
+
+        if ('error' in metadataUpdates) {
+            metadataPayload.error = metadataUpdates.error ?? null;
+        }
+
+        if (metadataUpdates.priority !== undefined) {
+            metadataPayload.priority = metadataUpdates.priority;
+        }
+
+        const hasAction =
+            context.detail &&
+            Object.prototype.hasOwnProperty.call(context.detail, 'action');
+        const actionLabel = hasAction
+            ? String((context.detail as { action?: unknown }).action)
+            : 'updateTask';
+
+        await this.tryUpdateTask(
+            taskId,
+            {
+                taskId,
+                status: updates.status,
+                state: updates.state,
+                progress: metadataUpdates.progress,
+                error:
+                    'error' in metadataUpdates
+                        ? (metadataUpdates.error ?? null)
+                        : undefined,
+                priority: metadataUpdates.priority,
+                metadata:
+                    Object.keys(metadataPayload).length > 0
+                        ? metadataPayload
+                        : undefined,
+                actor: context.actor,
+                detail: context.detail,
+            },
+            actionLabel,
+        );
+    }
+
+    private mapRecordToTask(record: TaskRecord): Task {
+        const metadata: Task['metadata'] = {};
+
+        const progress =
+            record.progress ??
+            (record.metadata?.progress as number | undefined) ??
+            undefined;
+
+        if (progress !== undefined && progress !== null) {
+            metadata.progress = progress;
+        }
+
+        const priority = this.normalizePriority(
+            record.priority ??
+                (record.metadata?.priority as number | undefined),
+        );
+        metadata.priority = priority;
+
+        const errorValue =
+            record.error ??
+            (record.metadata?.error as string | null | undefined);
+        if (errorValue !== undefined && errorValue !== null) {
+            metadata.error = errorValue;
+        }
+
+        return {
+            id: record.id,
+            status: record.status,
+            state: record.state ?? 'Unknown',
+            createdAt: serializeDateToTimeStamp(record.createdAt),
+            updatedAt: serializeDateToTimeStamp(record.updatedAt),
+            metadata,
+        };
+    }
+
+    private normalizePriority(priority?: number): TaskPriority {
+        switch (priority) {
+            case TaskPriority.TASK_PRIORITY_LOW:
+                return TaskPriority.TASK_PRIORITY_LOW;
+            case TaskPriority.TASK_PRIORITY_HIGH:
+                return TaskPriority.TASK_PRIORITY_HIGH;
+            case TaskPriority.TASK_PRIORITY_MEDIUM:
+                return TaskPriority.TASK_PRIORITY_MEDIUM;
+            default:
+                return TaskPriority.TASK_PRIORITY_MEDIUM;
+        }
+    }
 }

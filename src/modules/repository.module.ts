@@ -1,9 +1,10 @@
-import { REPOSITORY_MANAGER_TOKEN } from '@/core/domain/repository/contracts/repository-manager.contract';
-import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service';
+import { REPOSITORY_MANAGER_TOKEN } from '@/core/domain/repository/contracts/repository-manager.contract.js';
+import { RepositoryManagerService } from '@/core/infrastructure/adapters/services/repository/repository-manager.service.js';
 import { Module } from '@nestjs/common';
+import { LogModule } from './log.module.js';
 
 @Module({
-    imports: [],
+    imports: [LogModule],
     providers: [
         {
             provide: REPOSITORY_MANAGER_TOKEN,

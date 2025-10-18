@@ -1,14 +1,14 @@
-import { Language, SyntaxNode } from 'tree-sitter';
-import { BaseParser } from '../base-parser';
+import { type Language, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
 import * as GoLang from 'tree-sitter-go';
-import { goQueries } from './go-queries';
-import { ParserQuery, QueryType } from '../query';
-import { CallChain } from '@/core/domain/parsing/types/parser';
-import { NodeType, Scope } from '@kodus/kodus-proto/ast/v2';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages';
+import { goQueries } from './go-queries.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import { type CallChain } from '@/core/domain/parsing/types/parser.js';
+import { type NodeType, type Scope } from '@/shared/types/ast.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 
 export class GoParser extends BaseParser {
-    private static readonly language = GoLang as Language;
+    private static readonly language = GoLang as unknown as Language;
     private static readonly rawQueries = goQueries;
     private static readonly constructorName =
         SUPPORTED_LANGUAGES.go.properties.constructorName;
@@ -36,16 +36,16 @@ export class GoParser extends BaseParser {
         return GoParser.validFunctionTypes;
     }
 
-    private static readonly SCOPE_TYPES: Record<string, NodeType> = {};
+    private static readonly scopeTypes: Record<string, NodeType> = {};
 
     protected override processChainNode(
-        node: SyntaxNode,
-        chain: CallChain[],
+        _node: SyntaxNode,
+        _chain: CallChain[],
     ): boolean {
         throw new Error('Method not implemented.');
     }
 
-    protected override getScopeTypeForNode(node: SyntaxNode): Scope | null {
+    protected override getScopeTypeForNode(_node: SyntaxNode): Scope | null {
         throw new Error('Method not implemented.');
     }
 }

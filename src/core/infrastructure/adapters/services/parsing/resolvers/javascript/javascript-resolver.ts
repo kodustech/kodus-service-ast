@@ -1,12 +1,12 @@
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
-    ImportedModule,
-    ResolvedImport,
-} from '@/core/domain/parsing/types/language-resolver';
+    type ImportedModule,
+    type ResolvedImport,
+} from '@/core/domain/parsing/types/language-resolver.js';
 import * as path from 'path';
-import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages';
-import { doesFileExist, tryReadFile } from '@/shared/utils/files';
-import { tryParseJson } from '@/shared/utils/parsers';
+import { SupportedLanguage } from '@/core/domain/parsing/types/supported-languages.js';
+import { doesFileExist, tryReadFile } from '@/shared/utils/files.js';
+import { tryParseJson } from '@/shared/utils/parsers.js';
 
 type PackageJson = {
     dependencies?: Record<string, string>;
@@ -16,7 +16,7 @@ type PackageJson = {
 };
 
 export class JavaScriptResolver implements LanguageResolver {
-    private packageJsonPath: string;
+    private packageJsonPath!: string;
     protected dependencies: Record<string, string> = {};
 
     async canHandle(projectRoot: string): Promise<boolean> {
@@ -35,10 +35,14 @@ export class JavaScriptResolver implements LanguageResolver {
         }
 
         const content = await tryReadFile(this.packageJsonPath);
-        if (!content) return false;
+        if (!content) {
+            return false;
+        }
 
         const config = tryParseJson<PackageJson>(content);
-        if (!config) return false;
+        if (!config) {
+            return false;
+        }
 
         this.dependencies = {
             ...config.dependencies,

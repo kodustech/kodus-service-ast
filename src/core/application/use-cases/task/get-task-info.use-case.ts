@@ -1,26 +1,32 @@
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service';
-import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
 import {
-    GrpcInvalidArgumentException,
-    GrpcNotFoundException,
-} from '@/shared/utils/grpc/exceptions';
+    type ITaskManagerService,
+    TASK_MANAGER_TOKEN,
+} from '@/core/domain/task/contracts/task-manager.contract.js';
+
 import {
     GetTaskInfoRequest,
     GetTaskInfoResponse,
-} from '@kodus/kodus-proto/task';
-import { Injectable } from '@nestjs/common';
+} from '@/shared/types/task.js';
+import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GetTaskInfoUseCase {
     constructor(
-        private readonly taskManagerService: TaskManagerService,
-
+        @Inject(TASK_MANAGER_TOKEN)
+        private readonly taskManagerService: ITaskManagerService,
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
 
-    execute(request: GetTaskInfoRequest): GetTaskInfoResponse {
+    async execute(request: GetTaskInfoRequest): Promise<GetTaskInfoResponse> {
         const { taskId } = request;
 
+        this.logger.debug({
+            message: 'Getting task info',
+            context: GetTaskInfoUseCase.name,
+            metadata: { taskId },
+        });
         if (!taskId || taskId.trim() === '') {
             this.logger.error({
                 message: 'Task ID is required',
@@ -28,10 +34,10 @@ export class GetTaskInfoUseCase {
                 metadata: { request },
             });
 
-            throw new GrpcInvalidArgumentException('Task ID is required');
+            throw new Error('Task ID is required');
         }
 
-        const task = this.taskManagerService.getTask(taskId);
+        const task = await this.taskManagerService.getTask(taskId);
         if (!task) {
             this.logger.error({
                 message: `Task with ID ${taskId} not found`,
@@ -39,7 +45,7 @@ export class GetTaskInfoUseCase {
                 metadata: { request },
             });
 
-            throw new GrpcNotFoundException(`Task with ID ${taskId} not found`);
+            throw new Error(`Task with ID ${taskId} not found`);
         }
 
         return {

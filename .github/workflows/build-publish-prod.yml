@@ -1,4 +1,4 @@
-name: Build and Publish Docker Images for Production
+name: Build and Publish Docker Images for cloud
 
 on:
     release:
@@ -6,110 +6,78 @@ on:
 
 jobs:
     build-and-push:
-        name: Build and Push Docker Image for Production
+        name: Build and Push Docker Image for Production (Cloud)
         runs-on: ubuntu-latest
-
-        # Permissões necessárias para o auth@v2
         permissions:
             contents: read
-            id-token: write
-
-        env:
-            # Essas variáveis ficam disponíveis em todos os passos abaixo
-            AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
-            GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
-            REPOSITORY: kodus-images
-            IMAGE: kodus-service-ast-prod
-            IMAGE_TAG_SHA: ${{ github.sha }}
-            IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
-
         steps:
             - name: Checkout Repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v4.2.2
 
             - name: Capture release version
               run: echo "RELEASE_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
 
-            # 1) Autenticação via Service Account Key JSON
-            - name: Autenticar no GCP
-              uses: google-github-actions/auth@v2
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4.1.0
               with:
-                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ secrets.AWS_REGION }}
 
-            # 2) Instala e configura o gcloud CLI (já pega as credenciais definidas acima)
-            - name: Set up Google Cloud SDK
-              uses: google-github-actions/setup-gcloud@v2
-              with:
-                  project_id: ${{ env.GCP_PROJECT }}
-
-            # 3) Configura o Docker para usar o ARTIFACT REGISTRY
-            - name: Configure Docker for Artifact Registry
-              run: gcloud auth configure-docker ${{ env.AR_REGISTRY }}
-
-            # 4) Opcional: DEBUG (apague depois de validar)
-            - name: 🕵️‍♂️ DANGER - DEBUG ALL VALUES
-              run: |
-                  echo "GCP_PROJECT: ${{ env.GCP_PROJECT }}"
-                  echo "REGISTRY:   ${{ env.AR_REGISTRY }}/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION"
-                  echo "KEY JSON (início):"
-                  echo "${{ secrets.GCP_SA_KEY }}" | head -n 5
-                  echo "..."
+            - name: Login to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2.0.1
 
             - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
+              uses: docker/setup-buildx-action@v3.10.0
 
-            # 5) Build & Push
             - name: Build and Push Docker Image
+              env:
+                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                  ECR_REPOSITORY: kodus-service-ast-prod
+                  IMAGE_TAG_SHA: ${{ github.sha }}
+                  IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
               run: |
                   docker build \
                     --build-arg RELEASE_VERSION=$IMAGE_TAG_VERSION \
                     --build-arg API_CLOUD_MODE=true \
                     -f DockerFiles/Dockerfile.prod \
-                    -t $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA \
-                    -t $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION .
+                    -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA \
+                    -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION .
 
-                  docker push $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA
-                  docker push $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION
+                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA
+                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION
 
-            # 6) Cleanup
+            - name: Log out of Amazon ECR
+              if: always()
+              run: docker logout ${{ steps.login-ecr.outputs.registry }}
+
             - name: Cleanup Docker images
               run: |
-                  docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_SHA || true
-                  docker rmi $AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION || true
-
-            # 7) Atualiza repositório de infra e commita nova versão
-            - name: Update Infrastructure Repository
+                  docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA || true
+                  docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION || true
               env:
-                  INFRA_REPO_PAT: ${{ secrets.INFRA_REPO_PAT }}
-                  FULL_IMAGE_PATH: "$AR_REGISTRY/$GCP_PROJECT/$REPOSITORY/$IMAGE:$IMAGE_TAG_VERSION"
-              run: |
-                  git config --global user.name "GitHub Actions"
-                  git config --global user.email "actions@github.com"
+                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                  ECR_REPOSITORY: kodus-service-ast-prod
+                  IMAGE_TAG_SHA: ${{ github.sha }}
+                  IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
 
-                  git clone https://x-access-token:$INFRA_REPO_PAT@github.com/kodus-git/kodus-infra.git infra
-                  cd infra
-                  sed -i.bak "s|container_image *=.*|container_image = \"$FULL_IMAGE_PATH\"|" envs/prod/platform-base.tfvars
-                  git add envs/prod/platform-base.tfvars
-                  git commit -m "Deploy: atualiza imagem kodus-service-ast para $IMAGE_TAG_VERSION"
-                  git push
-
-            # 8) Notificações no Discord
             - name: Notificar Discord sobre Sucesso
               if: success()
-              uses: sarisia/actions-status-discord@v1
+              uses: sarisia/actions-status-discord@v1.15.3
               with:
                   webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":tada: Imagem `${{ env.IMAGE_TAG_VERSION }}` publicada com sucesso."
-                  title: "Build e Push: kodus-service-ast"
+                  content: ":tada: A imagem Docker `${{ env.RELEASE_VERSION }}` foi publicada no Amazon ECR com sucesso."
+                  title: "Build e Push: kodus-orchestrator"
                   username: "GitHub Actions"
                   color: 0x00FF00
 
             - name: Notificar Discord sobre Falha
               if: failure()
-              uses: sarisia/actions-status-discord@v1
+              uses: sarisia/actions-status-discord@v1.15.3
               with:
                   webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":x: Falha ao publicar `${{ env.IMAGE_TAG_VERSION }}`."
-                  title: "Build e Push: kodus-service-ast"
+                  content: ":x: Falha ao publicar a imagem Docker `${{ env.RELEASE_VERSION }}` no Amazon ECR."
+                  title: "Build e Push: kodus-orchestrator"
                   username: "GitHub Actions"
                   color: 0xFF0000

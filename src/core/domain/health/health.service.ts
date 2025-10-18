@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MemoryMetrics } from './interfaces/memory-metrics.interface';
-import { SystemStatus } from './interfaces/system-status.interface';
+import { MemoryMetrics } from './interfaces/memory-metrics.interface.js';
+import { SystemStatus } from './interfaces/system-status.interface.js';
 
 /**
  * Service responsible for providing health status information
@@ -9,7 +9,7 @@ import { SystemStatus } from './interfaces/system-status.interface';
 export class HealthService {
     private metricsCache: MemoryMetrics | null = null;
     private lastMetricsTime = 0;
-    private readonly CACHE_TTL = 60000; // 1 minute in ms
+    private readonly cacheTtl = 60000; // 1 minute in ms
 
     /**
      * Checks if the service is running properly
@@ -62,7 +62,7 @@ export class HealthService {
         const now = Date.now();
 
         // Use cache if available and not expired
-        if (this.metricsCache && now - this.lastMetricsTime < this.CACHE_TTL) {
+        if (this.metricsCache && now - this.lastMetricsTime < this.cacheTtl) {
             return this.metricsCache;
         }
 

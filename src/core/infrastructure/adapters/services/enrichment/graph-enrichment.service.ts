@@ -1,27 +1,32 @@
-import { Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { PinoLoggerService } from '../logger/pino.service.js';
 import {
-    EnrichedGraphNode,
-    EnrichedGraphEdge,
+    CodeGraph,
     EnrichedGraph,
+    EnrichedGraphEdge,
+    EnrichedGraphNode,
     NodeType,
     RelationshipType,
-    CodeGraph,
-} from '@kodus/kodus-proto/ast/v2';
+} from '@/shared/types/ast.js';
 
 @Injectable()
 export class GraphEnrichmentService {
-    private normalizedPathCache: Map<string, string>;
-    private extractPathCache: Map<
+    private normalizedPathCache?: Map<string, string>;
+    private extractPathCache?: Map<
         string,
         { filePath: string; identifier?: string }
     >;
-    private addedNodes: Set<string>;
-    private relationshipKeys: Record<string, boolean>;
-    private nodes: EnrichedGraphNode[];
-    private relationships: Map<string, EnrichedGraphEdge>;
+    private addedNodes?: Set<string>;
+    private relationshipKeys?: Record<string, boolean>;
+    private nodes?: EnrichedGraphNode[];
+    private relationships?: Map<string, EnrichedGraphEdge>;
 
-    constructor(private readonly logger: PinoLoggerService) {}
+    // 🚀 OTIMIZAÇÃO REAL: Cache para findNode O(1) dentro da mesma execução
+    private nodesByNameAndPath?: Map<string, EnrichedGraphNode>;
+
+    constructor(
+        @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
+    ) {}
 
     enrichGraph(data: CodeGraph): EnrichedGraph {
         this.normalizedPathCache = new Map();
@@ -30,6 +35,9 @@ export class GraphEnrichmentService {
         this.relationships = new Map();
         this.addedNodes = new Set();
         this.relationshipKeys = {};
+
+        // 🚀 INICIALIZAR CACHE O(1) para findNode
+        this.nodesByNameAndPath = new Map();
 
         this.processFiles(data);
 
@@ -40,17 +48,17 @@ export class GraphEnrichmentService {
         this.processFunctionCalls(data);
 
         return {
-            nodes: this.nodes,
-            relationships: Array.from(this.relationships.values()),
+            nodes: this.nodes || [],
+            relationships: Array.from(this.relationships?.values() || []),
         };
     }
 
     private clearNormalizedPathCache(): void {
-        this.normalizedPathCache.clear();
+        this.normalizedPathCache?.clear();
     }
 
     private clearExtractPathCache(): void {
-        this.extractPathCache.clear();
+        this.extractPathCache?.clear();
     }
 
     private processFiles(data: CodeGraph) {
@@ -155,7 +163,7 @@ export class GraphEnrichmentService {
                 const { identifier: methodName } =
                     this.extractFilePathAndIdentifier(funcKey);
 
-                functionName = methodName;
+                functionName = methodName || '';
 
                 if (!functionName) {
                     this.logger.warn({
@@ -301,12 +309,13 @@ export class GraphEnrichmentService {
     }
 
     private normalizePath(path: string): string {
-        if (this.normalizedPathCache.has(path)) {
-            return this.normalizedPathCache.get(path);
+        const cached = this.normalizedPathCache?.get(path);
+        if (cached !== undefined) {
+            return cached;
         }
 
         const normalized = path.trim().replace(/\\/g, '/');
-        this.normalizedPathCache.set(path, normalized);
+        this.normalizedPathCache?.set(path, normalized);
 
         return normalized;
     }
@@ -316,9 +325,13 @@ export class GraphEnrichmentService {
             return;
         }
 
-        if (!this.addedNodes.has(node.id)) {
-            this.addedNodes.add(node.id);
-            this.nodes.push(node);
+        if (!this.addedNodes?.has(node.id)) {
+            this.addedNodes?.add(node.id);
+            this.nodes?.push(node);
+
+            // 🚀 POPULAR CACHE O(1) para findNode
+            const key = `${node.name}|${node.filePath}`;
+            this.nodesByNameAndPath?.set(key, node);
         }
     }
 
@@ -327,7 +340,7 @@ export class GraphEnrichmentService {
         owner: string,
         filePath: string,
     ): void {
-        const existingNode = this.nodes.find((n) => n.id === nodeId);
+        const existingNode = this.nodes?.find((n) => n.id === nodeId);
         if (existingNode) {
             existingNode.owner = owner;
             existingNode.filePath = this.normalizePath(filePath);
@@ -344,8 +357,9 @@ export class GraphEnrichmentService {
         filePath: string;
         identifier?: string;
     } {
-        if (this.extractPathCache.has(fullPath)) {
-            return this.extractPathCache.get(fullPath);
+        const cached = this.extractPathCache?.get(fullPath);
+        if (cached !== undefined) {
+            return cached;
         }
 
         const match = fullPath.match(/^(.+\.[a-zA-Z0-9]+)::(.+)$/);
@@ -354,23 +368,25 @@ export class GraphEnrichmentService {
             ? { filePath: match[1], identifier: match[2] }
             : { filePath: fullPath };
 
-        this.extractPathCache.set(fullPath, result);
+        this.extractPathCache?.set(fullPath, result);
 
         return result;
     }
 
     private addRelationship(relationship: EnrichedGraphEdge) {
         if (
-            !this.addedNodes.has(relationship.from) ||
-            !this.addedNodes.has(relationship.to)
+            !this.addedNodes?.has(relationship.from) ||
+            !this.addedNodes?.has(relationship.to)
         ) {
             return;
         }
 
         const key = `${relationship.from}:${relationship.to}:${relationship.type}`;
-        if (!this.relationshipKeys[key]) {
-            this.relationships.set(key, relationship);
-            this.relationshipKeys[key] = true;
+        if (!this.relationshipKeys?.[key]) {
+            this.relationships?.set(key, relationship);
+            if (this.relationshipKeys) {
+                this.relationshipKeys[key] = true;
+            }
         }
     }
 
@@ -409,7 +425,9 @@ export class GraphEnrichmentService {
         data: CodeGraph,
     ): string | null {
         const fileData = data.files.get(filePath);
-        if (!fileData) return null;
+        if (!fileData) {
+            return null;
+        }
 
         const className = fileData.className?.[0] || 'undefined';
 
@@ -421,41 +439,40 @@ export class GraphEnrichmentService {
         methodName: string,
         data: CodeGraph,
     ): { id: string; filePath: string } | null {
-        const matchingClasses = Array.from(data.types.entries()).filter(
-            ([, type]) =>
+        // 🚀 OTIMIZAÇÃO: Iterar diretamente em vez de Array.from()
+        let matchingClass: any = null;
+        for (const [, type] of data.types) {
+            if (
                 type.type === NodeType.NODE_TYPE_CLASS &&
                 Array.isArray(type.implements) &&
                 type.implements.some((impl: string) =>
                     impl.startsWith(interfacePath),
-                ),
-        );
+                )
+            ) {
+                matchingClass = type;
+                break; // Pegar o primeiro match
+            }
+        }
 
-        if (matchingClasses.length === 0) {
+        if (!matchingClass || !matchingClass.name) {
             return null;
         }
 
-        const [, implClass] = matchingClasses[0];
-
-        if (!implClass.name) {
-            return null;
+        // 🚀 OTIMIZAÇÃO: Buscar função diretamente em vez de Array.from()
+        for (const [, func] of data.functions) {
+            if (
+                func.className === matchingClass.name &&
+                func.name === methodName
+            ) {
+                const normalizedFilePath = this.normalizePath(func.file);
+                return {
+                    id: func.nodeId,
+                    filePath: normalizedFilePath,
+                };
+            }
         }
 
-        const implMethodEntry = Array.from(data.functions.entries()).find(
-            ([, func]) =>
-                func.className === implClass.name && func.name === methodName,
-        );
-
-        if (!implMethodEntry) {
-            return null;
-        }
-
-        const [, func] = implMethodEntry;
-        const normalizedFilePath = this.normalizePath(func.file);
-
-        return {
-            id: func.nodeId,
-            filePath: normalizedFilePath,
-        };
+        return null;
     }
 
     private findNode(
@@ -465,35 +482,29 @@ export class GraphEnrichmentService {
     ): EnrichedGraphNode | null {
         const normalizedFilePath = this.normalizePath(filePath);
 
+        // 🚀 OTIMIZAÇÃO: O(1) lookup usando cache
         if (caller === undefined || caller === null) {
-            return (
-                this.nodes.find(
-                    (node) =>
-                        node.name === name &&
-                        node.filePath === normalizedFilePath,
-                ) || null
-            );
+            const key = `${name}|${normalizedFilePath}`;
+            return this.nodesByNameAndPath?.get(key) || null;
         }
 
-        // Find the specific node that matches the name, file, and context.
-        const foundNode = this.nodes.find((node) => {
-            // Basic match: name and file must align.
-            if (node.name !== name || node.filePath !== normalizedFilePath) {
-                return false;
-            }
+        // 🚀 Para casos com caller, ainda precisamos filtrar, mas otimizamos
+        const key = `${name}|${normalizedFilePath}`;
+        const candidateNode = this.nodesByNameAndPath?.get(key);
 
-            // Contextual match: use the caller to disambiguate.
-            if (caller) {
-                // A caller was provided (e.g., 'Foo'). We are looking for a method.
-                // The node's owner must match the caller.
-                return node.owner === caller;
-            } else {
-                // No caller was provided. We are looking for a standalone function.
-                // The node must NOT have an owner.
-                return !node.owner;
-            }
-        });
+        if (!candidateNode) {
+            return null;
+        }
 
-        return foundNode || null;
+        // Contextual match: use the caller to disambiguate.
+        if (caller) {
+            // A caller was provided (e.g., 'Foo'). We are looking for a method.
+            // The node's owner must match the caller.
+            return candidateNode.owner === caller ? candidateNode : null;
+        } else {
+            // No caller was provided. We are looking for a standalone function.
+            // The node must NOT have an owner.
+            return !candidateNode.owner ? candidateNode : null;
+        }
     }
 }

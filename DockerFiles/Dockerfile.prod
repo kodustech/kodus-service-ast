@@ -19,6 +19,7 @@ RUN apt-get update && \
     make \
     g++ \
     pkg-config \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia apenas os arquivos necessários para instalação de dependências
@@ -52,6 +53,7 @@ RUN apt-get update && \
     git \
     ca-certificates \
     tzdata \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia apenas o necessário da etapa de build

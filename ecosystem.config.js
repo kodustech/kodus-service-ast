@@ -43,16 +43,6 @@ module.exports = {
             min_uptime: '5m',
             max_restarts: 10,
             restart_delay: 5000,
-
-            // Variáveis de ambiente
-            env: {
-                NODE_ENV: process.env.NODE_ENV || 'production',
-                CONTAINER_NAME: 'kodus-service-ast',
-                API_PORT: '3002',
-                LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-                CACHE_TTL: '3600',
-                TIMEOUT: '300000',
-            },
         },
     ],
 };

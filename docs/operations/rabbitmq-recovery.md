@@ -70,11 +70,6 @@ console.log('Expected options:', JSON.stringify(options, null, 2));
 
 ### 4. Health Check Detalhado
 
-```bash
-# Verificar status das filas
-curl http://localhost:5001/health/rabbitmq/detail
-```
-
 ## 🛠️ Soluções
 
 ### 🚨 **Solução Rápida: Limpeza Total**

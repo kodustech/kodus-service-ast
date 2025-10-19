@@ -97,7 +97,6 @@ docker build \
 docker run -d \
   --name kodus-ast-dev \
   -p 3002:3002 \
-  -p 5001:5001 \
   -v $(pwd):/usr/src/app \
   -v /usr/src/app/node_modules \
   kodus-ast:dev
@@ -106,7 +105,6 @@ docker run -d \
 docker run -d \
   --name kodus-ast \
   -p 3002:3002 \
-  -p 5001:5001 \
   -e NODE_ENV=production \
   -e LOG_LEVEL=info \
   --memory="4g" \
@@ -141,7 +139,6 @@ GET    /api/status/:id  # Check analysis status
 | `NODE_ENV`                      | production     | Runtime environment                                                                 |
 | `LOG_LEVEL`                     | info           | Log level (error, warn, info, debug)                                                |
 | `API_PORT`                      | 3002           | API port                                                                            |
-| `API_HEALTH_PORT`               | 5001           | Health check port                                                                   |
 | `UV_THREADPOOL_SIZE`            | Auto           | Node.js thread pool size                                                            |
 | `DB_URL`                        | -              | Postgres connection string (takes precedence over host/port vars)                   |
 | `DB_HOST`                       | localhost      | Postgres host (used when `DB_URL` is not set)                                       |

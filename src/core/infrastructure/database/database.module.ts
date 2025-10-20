@@ -69,18 +69,10 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                 const isDevelopment =
                     databaseEnv === 'development' || databaseEnv === 'local';
 
-                const defaultSsl = !isDevelopment;
-
-                const sslEnabled =
-                    (
-                        getConfigValue('DB_SSL', undefined, `${defaultSsl}`) ??
-                        `${defaultSsl}`
-                    )
-                        .toLowerCase()
-                        .trim() === 'true';
-
-                const rejectUnauthorizedDefault = !isDevelopment;
-
+                // Lógica simples: SSL baseado no ambiente
+                const useSSL = !isDevelopment; // DEV = false, PROD = true
+                console.log('useSSL', isDevelopment, databaseEnv);
+                const rejectUnauthorized = isDevelopment; // DEV = false, PROD = true
                 const poolConfig = url
                     ? {
                           connectionString: url,
@@ -127,18 +119,9 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                         'DB_STATEMENT_TIMEOUT_MS',
                         0,
                     ),
-                    ssl: sslEnabled
+                    ssl: useSSL
                         ? {
-                              rejectUnauthorized:
-                                  (
-                                      getConfigValue(
-                                          'DB_SSL_REJECT_UNAUTHORIZED',
-                                          undefined,
-                                          `${rejectUnauthorizedDefault}`,
-                                      ) ?? `${rejectUnauthorizedDefault}`
-                                  )
-                                      .toLowerCase()
-                                      .trim() !== 'false',
+                              rejectUnauthorized: rejectUnauthorized,
                           }
                         : undefined,
                 });

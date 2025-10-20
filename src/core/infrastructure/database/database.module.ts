@@ -73,6 +73,7 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                 const useSSL = !isDevelopment; // DEV = false, PROD = true
                 console.log('useSSL', isDevelopment, databaseEnv);
                 const rejectUnauthorized = isDevelopment; // DEV = false, PROD = true
+
                 const poolConfig = url
                     ? {
                           connectionString: url,
@@ -101,6 +102,7 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                           ),
                       };
 
+                console.log('poolConfig', poolConfig, url);
                 return new Pool({
                     ...poolConfig,
 

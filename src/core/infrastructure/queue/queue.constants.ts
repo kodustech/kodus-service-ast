@@ -6,7 +6,7 @@ export const QUEUE_CONFIG_VERSION = 'v2.0.0';
 // Queue configuration constants and types
 export const QUEUE_CONFIG = {
     // Delivery limits
-    DELIVERY_LIMIT: 5,
+    DELIVERY_LIMIT: 3,
 
     // Queue types
     QUEUE_TYPE: 'quorum',
@@ -37,8 +37,8 @@ export function getQueueRuntimeConfig() {
         version: QUEUE_CONFIG_VERSION,
         enableSingleActiveConsumer:
             (getEnvVariable('RABBIT_SAC') ?? 'false') === 'true',
-        retryTtlMs: Number(getEnvVariable('RABBIT_RETRY_TTL_MS') ?? '30000'),
-        prefetch: Number(getEnvVariable('RABBIT_PREFETCH') ?? '1'),
+        retryTtlMs: Number(getEnvVariable('RABBIT_RETRY_TTL_MS') ?? '60000'),
+        prefetch: Number(getEnvVariable('RABBIT_PREFETCH') ?? '2'),
         publishTimeoutMs: Number(
             getEnvVariable('RABBIT_PUBLISH_TIMEOUT_MS') ?? '5000',
         ),

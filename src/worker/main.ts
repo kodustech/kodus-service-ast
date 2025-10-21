@@ -6,29 +6,28 @@ import { type INestApplicationContext } from '@nestjs/common';
 async function bootstrap(): Promise<void> {
     let app: INestApplicationContext;
     try {
-        console.log('[WORKER] Starting bootstrap function...');
-        console.log('[WORKER] Calling NestFactory.createApplicationContext...');
+        console.log('[KODUS-AST-WORKER] Starting worker bootstrap function...');
         app = await NestFactory.createApplicationContext(WorkerModule, {
             logger: ['log', 'error', 'warn', 'debug', 'verbose'],
         });
-        console.log('[WORKER] Application context created');
 
-        console.log('[WORKER] Waiting 2 seconds for RabbitMQ setup...');
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        console.log('[WORKER] Wait completed');
 
-        console.log('[WORKER] Worker is ready');
+        console.log('[KODUS-AST-WORKER] Worker is ready');
     } catch (error) {
-        console.error('[WORKER] Error during bootstrap:', error);
+        console.error('[KODUS-AST-WORKER] Error during bootstrap:', error);
         throw error;
     }
 
     const shutdown = async (signal: NodeJS.Signals) => {
         try {
             await app.close();
-            console.log('[WORKER] Worker shutdown complete', signal);
+            console.log('[KODUS-AST-WORKER] Worker shutdown complete', signal);
         } catch (error) {
-            console.error('[WORKER] Error during worker shutdown:', error);
+            console.error(
+                '[KODUS-AST-WORKER] Error during worker shutdown:',
+                error,
+            );
         } finally {
             process.exit(0);
         }

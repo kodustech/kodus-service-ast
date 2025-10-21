@@ -12,14 +12,17 @@ export interface RabbitMqConfig {
 
 export function loadRabbitMqConfig(): RabbitMqConfig {
     const url = getEnvVariable('RABBIT_URL');
+    const rabbitmqEnabled =
+        getEnvVariable('API_RABBITMQ_ENABLED', 'true')?.toLowerCase() ===
+        'true';
 
-    if (!url) {
+    if (!url || !rabbitmqEnabled) {
         return {
             enabled: false,
             url: '',
             retryQueue: getEnvVariable('RABBIT_RETRY_QUEUE'),
-            retryTtlMs: getEnvVariableAsNumber('RABBIT_RETRY_TTL_MS', 30000),
-            prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 1) ?? 1,
+            retryTtlMs: getEnvVariableAsNumber('RABBIT_RETRY_TTL_MS', 60000),
+            prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 2) ?? 2,
             publishTimeoutMs:
                 getEnvVariableAsNumber('RABBIT_PUBLISH_TIMEOUT_MS', 5000) ??
                 5000,
@@ -31,8 +34,8 @@ export function loadRabbitMqConfig(): RabbitMqConfig {
         enabled: true,
         url,
         retryQueue: getEnvVariable('RABBIT_RETRY_QUEUE'),
-        retryTtlMs: getEnvVariableAsNumber('RABBIT_RETRY_TTL_MS', 30000),
-        prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 1) ?? 1,
+        retryTtlMs: getEnvVariableAsNumber('RABBIT_RETRY_TTL_MS', 60000),
+        prefetch: getEnvVariableAsNumber('RABBIT_PREFETCH', 2) ?? 2,
         publishTimeoutMs:
             getEnvVariableAsNumber('RABBIT_PUBLISH_TIMEOUT_MS', 5000) ?? 5000,
         connectionName: 'kodus-service-ast-api',

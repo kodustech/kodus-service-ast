@@ -18,6 +18,15 @@ export class RabbitTaskDispatcher implements ITaskJobDispatcher {
     ) {}
 
     async dispatch<T>(payload: DispatchTaskPayload<T>): Promise<void> {
+        // Se RabbitMQ estiver desabilitado, não faz nada
+        if (!this.cfg.enabled) {
+            console.log(
+                'RabbitMQ disabled, skipping task dispatch:',
+                payload.taskId,
+            );
+            return;
+        }
+
         const { routingKey } = resolveRoutingKey(payload.type);
         const message = {
             taskId: payload.taskId,

@@ -38,15 +38,14 @@ jobs:
                   IMAGE_TAG_SHA: ${{ github.sha }}
                   IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
               run: |
-                  docker build \
+                  docker buildx build \
+                    --platform linux/arm64 \
                     --build-arg RELEASE_VERSION=$IMAGE_TAG_VERSION \
                     --build-arg API_CLOUD_MODE=true \
                     -f DockerFiles/Dockerfile.prod \
                     -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA \
-                    -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION .
-
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION
+                    -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION \
+                    --push .
 
             - name: Log out of Amazon ECR
               if: always()

@@ -2,9 +2,10 @@ import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/gr
 import { Module } from '@nestjs/common';
 import { DiffModule } from './diff.module.js';
 import { LogModule } from './log.module.js';
+import { LLMModule } from '@kodus/kodus-common/llm';
 
 @Module({
-    imports: [DiffModule, LogModule],
+    imports: [DiffModule, LogModule, LLMModule],
     providers: [GraphAnalyzerService],
     exports: [GraphAnalyzerService],
     controllers: [],

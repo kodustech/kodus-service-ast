@@ -1,97 +1,97 @@
-name: 🚀 Deploy Manual para Production
+# name: 🚀 Deploy Manual para Production
 
-on:
-    workflow_dispatch:
-        inputs:
-            image_tag:
-                description: "Tag da imagem Docker para deploy. Se vazio, será usada a última publicada no GCR."
-                required: false
+# on:
+#     workflow_dispatch:
+#         inputs:
+#             image_tag:
+#                 description: "Tag da imagem Docker para deploy. Se vazio, será usada a última publicada no GCR."
+#                 required: false
 
-env:
-    AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
-    GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
-    AR_REPOSITORY: kodus-images
-    AR_IMAGE: kodus-service-ast-prod
-    TF_STATE_BUCKET: ${{ secrets.GCP_PROD_TFSTATE_BUCKET }}
+# env:
+#     AR_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+#     GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+#     AR_REPOSITORY: kodus-images
+#     AR_IMAGE: kodus-service-ast-prod
+#     TF_STATE_BUCKET: ${{ secrets.GCP_PROD_TFSTATE_BUCKET }}
 
-jobs:
-    deploy:
-        runs-on: ubuntu-latest
+# jobs:
+#     deploy:
+#         runs-on: ubuntu-latest
 
-        permissions:
-            contents: "read"
-            id-token: "write"
+#         permissions:
+#             contents: "read"
+#             id-token: "write"
 
-        steps:
-            - name: Checkout Infrastructure Repository
-              uses: actions/checkout@v4
+#         steps:
+#             - name: Checkout Infrastructure Repository
+#               uses: actions/checkout@v4
 
-            - name: Authenticate to Google Cloud
-              uses: "google-github-actions/auth@v2"
-              with:
-                  workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-                  service_account: ${{ secrets.GCP_SA_EMAIL }}
+#             - name: Authenticate to Google Cloud
+#               uses: "google-github-actions/auth@v2"
+#               with:
+#                   workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+#                   service_account: ${{ secrets.GCP_SA_EMAIL }}
 
-            - name: 🧠 Definir e Validar a Tag da Imagem
-              id: define-image
-              run: |
-                  IMAGE_TAG_INPUT="${{ github.event.inputs.image_tag }}"
+#             - name: 🧠 Definir e Validar a Tag da Imagem
+#               id: define-image
+#               run: |
+#                   IMAGE_TAG_INPUT="${{ github.event.inputs.image_tag }}"
 
-                  if [ -n "$IMAGE_TAG_INPUT" ]; then
-                    echo "🧪 Validando se a imagem com tag '$IMAGE_TAG_INPUT' existe..."
-                    IMAGE_EXISTS=$(gcloud artifacts docker tags list ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE} --filter="tag=$IMAGE_TAG_INPUT" --format="get(tag)")
+#                   if [ -n "$IMAGE_TAG_INPUT" ]; then
+#                     echo "🧪 Validando se a imagem com tag '$IMAGE_TAG_INPUT' existe..."
+#                     IMAGE_EXISTS=$(gcloud artifacts docker tags list ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE} --filter="tag=$IMAGE_TAG_INPUT" --format="get(tag)")
 
-                    if [ -z "$IMAGE_EXISTS" ]; then
-                      echo "❌ Imagem com a tag '$IMAGE_TAG_INPUT' não encontrada."
-                      exit 1
-                    fi
-                    echo "🟢 Imagem válida. Usando tag: $IMAGE_TAG_INPUT"
-                    echo "IMAGE_TAG=$IMAGE_TAG_INPUT" >> $GITHUB_ENV
-                  else
-                    echo "ℹ️ Nenhuma tag fornecida. Buscando a mais recente..."
-                    LAST_TAG=$(gcloud artifacts docker tags list ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE} --sort-by=~CREATE_TIME --limit=1 --format="get(tag)")
+#                     if [ -z "$IMAGE_EXISTS" ]; then
+#                       echo "❌ Imagem com a tag '$IMAGE_TAG_INPUT' não encontrada."
+#                       exit 1
+#                     fi
+#                     echo "🟢 Imagem válida. Usando tag: $IMAGE_TAG_INPUT"
+#                     echo "IMAGE_TAG=$IMAGE_TAG_INPUT" >> $GITHUB_ENV
+#                   else
+#                     echo "ℹ️ Nenhuma tag fornecida. Buscando a mais recente..."
+#                     LAST_TAG=$(gcloud artifacts docker tags list ${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE} --sort-by=~CREATE_TIME --limit=1 --format="get(tag)")
 
-                    if [ -z "$LAST_TAG" ]; then
-                      echo "❌ Nenhuma imagem encontrada."
-                      exit 1
-                    fi
-                    echo "🟢 Última tag encontrada: $LAST_TAG"
-                    echo "IMAGE_TAG=$LAST_TAG" >> $GITHUB_ENV
-                  fi
+#                     if [ -z "$LAST_TAG" ]; then
+#                       echo "❌ Nenhuma imagem encontrada."
+#                       exit 1
+#                     fi
+#                     echo "🟢 Última tag encontrada: $LAST_TAG"
+#                     echo "IMAGE_TAG=$LAST_TAG" >> $GITHUB_ENV
+#                   fi
 
-            - name: 📝 Atualizar Arquivo de Configuração do Terraform
-              run: |
-                  FULL_IMAGE_PATH="${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE}:${{ env.IMAGE_TAG }}"
-                  TFVARS_FILE="envs/prod/platform-base.tfvars"
+#             - name: 📝 Atualizar Arquivo de Configuração do Terraform
+#               run: |
+#                   FULL_IMAGE_PATH="${AR_REGISTRY}/${GCP_PROJECT}/${AR_REPOSITORY}/${AR_IMAGE}:${{ env.IMAGE_TAG }}"
+#                   TFVARS_FILE="envs/prod/platform-base.tfvars"
 
-                  echo "Atualizando $TFVARS_FILE com a nova imagem: $FULL_IMAGE_PATH"
+#                   echo "Atualizando $TFVARS_FILE com a nova imagem: $FULL_IMAGE_PATH"
 
-                  # Substitui a linha do container_image no arquivo .tfvars
-                  sed -i.bak "s|container_image.*=.*|container_image     = \"$FULL_IMAGE_PATH\"|" $TFVARS_FILE
+#                   # Substitui a linha do container_image no arquivo .tfvars
+#                   sed -i.bak "s|container_image.*=.*|container_image     = \"$FULL_IMAGE_PATH\"|" $TFVARS_FILE
 
-            - name: Set up Terraform
-              uses: hashicorp/setup-terraform@v3
+#             - name: Set up Terraform
+#               uses: hashicorp/setup-terraform@v3
 
-            - name: 🚀 Aplicar Deploy com Terraform
-              run: |
-                  cd envs/prod
-                  terraform -chdir=../../stacks/platform-base init -reconfigure -backend-config="bucket=${TF_STATE_BUCKET}"
-                  terraform -chdir=../../stacks/platform-base apply -var-file=./platform-base.tfvars --auto-approve
+#             - name: 🚀 Aplicar Deploy com Terraform
+#               run: |
+#                   cd envs/prod
+#                   terraform -chdir=../../stacks/platform-base init -reconfigure -backend-config="bucket=${TF_STATE_BUCKET}"
+#                   terraform -chdir=../../stacks/platform-base apply -var-file=./platform-base.tfvars --auto-approve
 
-            - name: 📣 Notificar Sucesso no Discord
-              if: success()
-              uses: sarisia/actions-status-discord@v1.15.3
-              with:
-                  webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":tada: Deploy da imagem `${{ env.IMAGE_TAG }}` realizado com sucesso em produção!"
-                  title: "Deploy Terraform - kodus-service-ast"
-                  color: 0x00FF00
+#             - name: 📣 Notificar Sucesso no Discord
+#               if: success()
+#               uses: sarisia/actions-status-discord@v1.15.3
+#               with:
+#                   webhook: ${{ secrets.DISCORD_WEBHOOK }}
+#                   content: ":tada: Deploy da imagem `${{ env.IMAGE_TAG }}` realizado com sucesso em produção!"
+#                   title: "Deploy Terraform - kodus-service-ast"
+#                   color: 0x00FF00
 
-            - name: ❌ Notificar Falha no Discord
-              if: failure()
-              uses: sarisia/actions-status-discord@v1.15.3
-              with:
-                  webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":x: Falha ao fazer deploy da imagem `${{ env.IMAGE_TAG }}`. Verifique os logs do workflow!"
-                  title: "Deploy Terraform - kodus-service-ast"
-                  color: 0xFF0000
+#             - name: ❌ Notificar Falha no Discord
+#               if: failure()
+#               uses: sarisia/actions-status-discord@v1.15.3
+#               with:
+#                   webhook: ${{ secrets.DISCORD_WEBHOOK }}
+#                   content: ":x: Falha ao fazer deploy da imagem `${{ env.IMAGE_TAG }}`. Verifique os logs do workflow!"
+#                   title: "Deploy Terraform - kodus-service-ast"
+#                   color: 0xFF0000

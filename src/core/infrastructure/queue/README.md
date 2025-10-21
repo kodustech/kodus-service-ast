@@ -34,7 +34,7 @@ export const QUEUE_CONFIG = {
     ECHO_ROUTING_KEY: 'ast.test.echo',
 
     // Queue Settings
-    DELIVERY_LIMIT: 5,
+    DELIVERY_LIMIT: 3,
     QUEUE_TYPE: 'quorum',
 } as const;
 
@@ -42,8 +42,8 @@ export const QUEUE_CONFIG = {
 export function getQueueRuntimeConfig() {
     return {
         enableSingleActiveConsumer: getEnvVariable('RABBIT_SAC') === 'true',
-        retryTtlMs: Number(getEnvVariable('RABBIT_RETRY_TTL_MS') ?? '30000'),
-        prefetch: Number(getEnvVariable('RABBIT_PREFETCH') ?? '1'),
+        retryTtlMs: Number(getEnvVariable('RABBIT_RETRY_TTL_MS') ?? '60000'),
+        prefetch: Number(getEnvVariable('RABBIT_PREFETCH') ?? '2'),
         publishTimeoutMs: Number(
             getEnvVariable('RABBIT_PUBLISH_TIMEOUT_MS') ?? '5000',
         ),
@@ -59,7 +59,7 @@ export function getQueueRuntimeConfig() {
 {
     'x-queue-type': 'quorum',
     'x-dead-letter-exchange': 'ast.jobs.dlx',
-    'x-delivery-limit': 5,
+    'x-delivery-limit': 3,
 }
 ```
 
@@ -106,8 +106,8 @@ Verifique se `@RabbitSubscribe` tem `queueOptions` com argumentos corretos.
 ```bash
 # RabbitMQ
 RABBIT_URL=amqp://localhost:5672
-RABBIT_PREFETCH=1
-RABBIT_RETRY_TTL_MS=30000
+RABBIT_PREFETCH=2
+RABBIT_RETRY_TTL_MS=60000
 
 # Opcional - sobrescrever defaults
 RABBIT_EXCHANGE=ast.jobs.x

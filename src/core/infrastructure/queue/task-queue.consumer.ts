@@ -9,9 +9,7 @@ export class TaskQueueConsumer {
     constructor(
         @Inject(TaskQueueProcessor)
         private readonly processor: TaskQueueProcessor,
-    ) {
-        console.log('[DI] TaskQueueConsumer.processor?', !!this.processor);
-    }
+    ) {}
 
     @RabbitSubscribe({
         exchange: QUEUE_CONFIG.EXCHANGE,

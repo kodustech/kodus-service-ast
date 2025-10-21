@@ -85,7 +85,8 @@ export class SourceFileAnalyzer {
             );
 
             const uniqueImports = Array.from(context.fileImports);
-            const batchSize = 10;
+            // 🚀 OTIMIZAÇÃO: Aumentar batch size para melhor throughput
+            const batchSize = 20;
             const normalizedImports: string[] = [];
 
             // 🚀 FASE 1: Use original import resolution (cache disabled - causing overhead)

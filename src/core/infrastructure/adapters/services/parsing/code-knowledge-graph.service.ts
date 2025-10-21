@@ -47,12 +47,14 @@ export class CodeKnowledgeGraphService {
     };
 
     // Configurações para streaming - Otimizadas
-    private readonly memoryThreshold = 0.75; // 75% de uso de memória (mais conservador)
+    // 🚀 OTIMIZAÇÃO: Aumentar threshold de memória para melhor performance
+    private readonly memoryThreshold = 0.85; // 85% de uso de memória
     private readonly batchPauseMs = 50; // Pausa reduzida entre lotes
     private readonly adaptivePauseMs = 200; // Pausa maior quando memória muito alta
     private readonly gcThreshold = 0.7; // Threshold para forçar GC
     private lastGcTime = 0;
-    private gcIntervalMs = 5000; // GC a cada 5s no máximo
+    // 🚀 OTIMIZAÇÃO: Reduzir frequência de GC para melhor performance
+    private gcIntervalMs = 10000; // GC a cada 10s no máximo
 
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
@@ -89,7 +91,8 @@ export class CodeKnowledgeGraphService {
         const maxThreads = cpuCount - 1;
         const idleTimeout = 30000;
         const maxQueue = 1000;
-        const concurrentTasksPerWorker = 1;
+        // 🚀 OTIMIZAÇÃO: Aumentar tasks concorrentes por worker
+        const concurrentTasksPerWorker = 2;
 
         this.piscina = new Piscina({
             filename: workerPath,

@@ -59,3 +59,15 @@ export function getEnvVariableAsNumberOrExit(variable: string): number {
 
     return value;
 }
+
+export function getEnvVariableAsBoolean(
+    variable: string,
+    defaultValue: boolean = false,
+): boolean {
+    const value = getEnvVariable(variable);
+    if (value === undefined) {
+        return defaultValue;
+    }
+
+    return value.toLowerCase() === 'true' || value === '1';
+}

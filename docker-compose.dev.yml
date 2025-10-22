@@ -7,8 +7,7 @@ services:
             dockerfile: DockerFiles/Dockerfile.dev
         ports:
             - ${API_PORT}:${API_PORT}
-            - 9300:9300 # debug
-            - 9301:9301 # test debug
+            - 9231:9231 # debug API
         env_file:
             - .env
         restart: unless-stopped
@@ -19,6 +18,7 @@ services:
             - ./nest-cli.json:/usr/src/app/nest-cli.json
             - ./.swcrc:/usr/src/app/.swcrc
             - /usr/src/app/node_modules
+            - ./tmp:/tmp/cloned-repos
         environment:
             - CHOKIDAR_USEPOLLING=true
         networks:
@@ -41,6 +41,8 @@ services:
             context: .
             dockerfile: DockerFiles/Dockerfile.dev
         command: ["yarn", "start:worker:dev"]
+        ports:
+            - 9230:9230 # worker debug
         env_file:
             - .env
         restart: unless-stopped
@@ -51,6 +53,7 @@ services:
             - ./nest-cli.json:/usr/src/app/nest-cli.json
             - ./.swcrc:/usr/src/app/.swcrc
             - /usr/src/app/node_modules
+            - ./tmp:/tmp/cloned-repos
         environment:
             - CHOKIDAR_USEPOLLING=true
         networks:
@@ -73,3 +76,6 @@ networks:
         external: true
     shared-network:
         external: true
+
+# volumes:
+#     shared-tmp:

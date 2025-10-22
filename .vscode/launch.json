@@ -2,38 +2,34 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Docker API",
             "type": "node",
             "request": "attach",
-            "port": 9300,
-            "address": "localhost",
-            "localRoot": "${workspaceFolder}/src",
-            "remoteRoot": "/usr/src/app/src",
-            "protocol": "inspector",
-            "restart": true,
-            "sourceMaps": true
+            "name": "Docker: Attach to API",
+            "port": 9231,
+            "address": "0.0.0.0",
+            "sourceMaps": true,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/usr/src/app"
         },
         {
-            "name": "Debug Docker Worker",
             "type": "node",
             "request": "attach",
-            "port": 9301,
-            "address": "localhost",
-            "localRoot": "${workspaceFolder}/src",
-            "remoteRoot": "/usr/src/app/src",
-            "protocol": "inspector",
-            "restart": true,
-            "sourceMaps": true
-        },
+            "name": "Docker: Attach to Worker",
+            "port": 9230,
+            "address": "0.0.0.0",
+            "sourceMaps": true,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/usr/src/app"
+        }
+    ],
+    "compounds": [
         {
-            "name": "Debug Tests in Docker",
-            "type": "node",
-            "request": "attach",
-            "port": 9301,
-            "address": "localhost",
-            "localRoot": "${workspaceFolder}/test",
-            "remoteRoot": "/usr/src/app/test",
-            "protocol": "inspector"
+            "name": "Debug Docker Both",
+            "configurations": [
+                "Docker: Attach to API",
+                "Docker: Attach to Worker"
+            ],
+            "stopAll": true
         }
     ]
 }

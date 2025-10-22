@@ -1,4 +1,5 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { TaskResultStorageService } from '@/core/infrastructure/adapters/services/storage/task-result-storage.service.js';
 
 import { Inject, Injectable } from '@nestjs/common';
 import {
@@ -17,7 +18,7 @@ export class GetGraphsUseCase {
     constructor(
         @Inject(REPOSITORY_MANAGER_TOKEN)
         private readonly repositoryManagerService: IRepositoryManager,
-
+        private readonly taskResultStorageService: TaskResultStorageService,
         private readonly logger: PinoLoggerService,
     ) {}
 
@@ -35,12 +36,44 @@ export class GetGraphsUseCase {
         request: GetGraphsRequest,
         serialized: boolean,
     ): Promise<GetGraphsResponseData | SerializedGetGraphsResponseData | null> {
-        const { headRepo } = request;
-        const fileName = this.repositoryManagerService.graphsFileName;
+        const { headRepo, taskId } = request;
+
+        // Try to get graphs metadata if taskId is provided
+        let graphsMetadata: any = null;
+        if (taskId) {
+            try {
+                graphsMetadata =
+                    await this.taskResultStorageService.getGraphsMetadata(
+                        taskId,
+                    );
+                if (graphsMetadata) {
+                    this.logger.log({
+                        message: `Found graphs metadata for task ${taskId}`,
+                        context: GetGraphsUseCase.name,
+                        metadata: {
+                            taskId,
+                            repository: graphsMetadata.repository,
+                            storageType: graphsMetadata.storageType,
+                            size: graphsMetadata.size,
+                        },
+                        serviceName: GetGraphsUseCase.name,
+                    });
+                }
+            } catch (error) {
+                this.logger.warn({
+                    message: `Failed to get graphs metadata for task ${taskId}`,
+                    context: GetGraphsUseCase.name,
+                    error,
+                    metadata: { taskId },
+                    serviceName: GetGraphsUseCase.name,
+                });
+            }
+        }
 
         const graphs = await this.repositoryManagerService.readFile({
             repoData: headRepo,
-            filePath: fileName,
+            filePath: this.repositoryManagerService.graphsFileName,
+            taskId,
             inKodusDir: true,
         });
 
@@ -50,6 +83,26 @@ export class GetGraphsUseCase {
                 context: GetGraphsUseCase.name,
                 metadata: {
                     request: JSON.stringify(headRepo),
+                    taskId,
+                    hasMetadata: !!graphsMetadata,
+                },
+                serviceName: GetGraphsUseCase.name,
+            });
+            throw new Error(
+                `No graphs found for repository ${headRepo.repositoryName}`,
+            );
+        }
+
+        const graphsData = JSON.parse(graphs);
+
+        if (!graphsData) {
+            this.logger.error({
+                message: `No graphs found for repository ${headRepo.repositoryName}`,
+                context: GetGraphsUseCase.name,
+                metadata: {
+                    request: JSON.stringify(headRepo),
+                    taskId,
+                    hasMetadata: !!graphsMetadata,
                 },
                 serviceName: GetGraphsUseCase.name,
             });
@@ -63,13 +116,17 @@ export class GetGraphsUseCase {
             context: GetGraphsUseCase.name,
             metadata: {
                 request: JSON.stringify(headRepo),
+                taskId,
+                hasMetadata: !!graphsMetadata,
+                graphsSize: Buffer.byteLength(
+                    JSON.stringify(graphsData),
+                    'utf8',
+                ),
             },
             serviceName: GetGraphsUseCase.name,
         });
 
-        const parsedGraphs = JSON.parse(
-            graphs,
-        ) as SerializedGetGraphsResponseData;
+        const parsedGraphs = graphsData as SerializedGetGraphsResponseData;
         if (!parsedGraphs) {
             this.logger.error({
                 message: `Failed to parse graphs for repository ${headRepo.repositoryName}`,

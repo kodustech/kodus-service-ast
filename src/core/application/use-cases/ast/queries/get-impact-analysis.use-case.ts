@@ -24,7 +24,7 @@ export class GetImpactAnalysisUseCase {
         request: GetImpactAnalysisRequest,
     ): Promise<GetImpactAnalysisResponse> {
         try {
-            const { headRepo, baseRepo } = request;
+            const { headRepo, baseRepo, taskId } = request;
 
             if (!headRepo || !baseRepo) {
                 this.logger.error({
@@ -41,6 +41,7 @@ export class GetImpactAnalysisUseCase {
                 {
                     repoData: headRepo,
                     filePath: fileName,
+                    taskId,
                     inKodusDir: true,
                 },
             );

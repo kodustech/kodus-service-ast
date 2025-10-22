@@ -43,17 +43,12 @@ export class ASTModule {
         return {
             module: ASTModule,
             imports: [
-                ParsingModule, // Provides CodeKnowledgeGraphService for use cases
+                ParsingModule,
                 EnrichmentModule,
                 RepositoryModule,
                 GraphAnalysisModule,
-                // Note: Worker doesn't need DiffModule, TaskModule, or controllers
             ],
-            providers: [
-                // Only async commands executed by worker
-                // (InitializeRepositoryUseCase, InitializeImpactAnalysisUseCase)
-                // These will be provided by WorkerAstModule
-            ],
+            providers: [],
             exports: [],
         };
     }

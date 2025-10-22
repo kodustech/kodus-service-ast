@@ -1,6 +1,7 @@
 import { IRepositoryManager } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service.js';
+import { S3GraphsService } from '../storage/s3-graphs.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -8,6 +9,7 @@ import { minimatch } from 'minimatch';
 import { simpleGit } from 'simple-git';
 import { ProtoPlatformType, RepositoryData } from '@/shared/types/ast.js';
 import { handleError } from '@/shared/utils/errors.js';
+import { getEnvVariableAsBoolean } from '@/shared/utils/env.js';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -22,6 +24,8 @@ export class RepositoryManagerService implements IRepositoryManager {
 
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
+        @Inject(S3GraphsService)
+        private readonly s3GraphsService: S3GraphsService,
     ) {
         void this.ensureBaseDirExists();
     }
@@ -459,10 +463,60 @@ export class RepositoryManagerService implements IRepositoryManager {
         repoData: RepositoryData;
         filePath: string;
         data: Buffer | string;
+        taskId: string;
         inKodusDir?: boolean;
     }): Promise<boolean> {
-        const { repoData, filePath, data, inKodusDir = false } = params;
+        const { repoData, filePath, data, inKodusDir = false, taskId } = params;
+
         try {
+            // Check if this is a graphs file and S3 is enabled
+            if (
+                inKodusDir &&
+                filePath === this.graphsFileName &&
+                getEnvVariableAsBoolean('S3_ENABLED', false) &&
+                taskId
+            ) {
+                this.logger.log({
+                    message: 'Saving graphs to S3',
+                    context: RepositoryManagerService.name,
+                    metadata: {
+                        repository: repoData.repositoryName,
+                        taskId,
+                        filePath,
+                    },
+                });
+
+                const result = await this.s3GraphsService.saveGraphs(
+                    taskId,
+                    repoData.repositoryName,
+                    JSON.parse(data.toString()),
+                );
+
+                if (result) {
+                    this.logger.log({
+                        message: 'Graphs saved to S3 successfully',
+                        context: RepositoryManagerService.name,
+                        metadata: {
+                            repository: repoData.repositoryName,
+                            taskId,
+                            s3Key: result.key,
+                            size: result.size,
+                        },
+                    });
+                    return true;
+                } else {
+                    this.logger.warn({
+                        message:
+                            'Failed to save graphs to S3, falling back to local storage',
+                        context: RepositoryManagerService.name,
+                        metadata: {
+                            repository: repoData.repositoryName,
+                            taskId,
+                        },
+                    });
+                    // Fall through to local storage
+                }
+            }
             const repoPath = await this.getRepoDir(repoData);
 
             const fullPath = inKodusDir
@@ -481,6 +535,17 @@ export class RepositoryManagerService implements IRepositoryManager {
                 recursive: true,
             });
             await fs.promises.writeFile(fullPath, data);
+
+            this.logger.log({
+                message: 'File saved to local filesystem',
+                context: RepositoryManagerService.name,
+                metadata: {
+                    repository: repoData.repositoryName,
+                    filePath,
+                    inKodusDir,
+                    storageType: 'local',
+                },
+            });
 
             return true;
         } catch (error) {
@@ -503,6 +568,7 @@ export class RepositoryManagerService implements IRepositoryManager {
     public async readFile(params: {
         repoData: RepositoryData;
         filePath: string;
+        taskId: string;
         inKodusDir?: boolean;
         stringify?: true; // default is true
         absolute?: boolean;
@@ -511,6 +577,7 @@ export class RepositoryManagerService implements IRepositoryManager {
     public async readFile(params: {
         repoData: RepositoryData;
         filePath: string;
+        taskId: string;
         inKodusDir?: boolean;
         stringify?: false;
         absolute?: boolean;
@@ -519,6 +586,7 @@ export class RepositoryManagerService implements IRepositoryManager {
     public async readFile(params: {
         repoData: RepositoryData;
         filePath: string;
+        taskId: string;
         inKodusDir?: boolean;
         stringify?: boolean;
         absolute?: boolean;
@@ -529,9 +597,41 @@ export class RepositoryManagerService implements IRepositoryManager {
             inKodusDir = false,
             stringify = true,
             absolute = false,
+            taskId,
         } = params;
 
         try {
+            // Check if this is a graphs file and S3 is enabled
+            if (
+                inKodusDir &&
+                filePath === this.graphsFileName &&
+                getEnvVariableAsBoolean('S3_ENABLED', false) &&
+                taskId
+            ) {
+                this.logger.debug({
+                    message: 'Reading graphs from S3',
+                    context: RepositoryManagerService.name,
+                    metadata: {
+                        repository: repoData.repositoryName,
+                    },
+                });
+
+                const graphsData = await this.s3GraphsService.getGraphs(
+                    taskId,
+                    repoData.repositoryName,
+                );
+
+                if (!graphsData) {
+                    return null;
+                }
+
+                if (stringify) {
+                    return JSON.stringify(graphsData);
+                }
+
+                return Buffer.from(JSON.stringify(graphsData));
+            }
+
             let fullPath: string;
             if (absolute) {
                 fullPath = filePath;

@@ -21,12 +21,14 @@ export interface IRepositoryManager {
         repoData: RepositoryData;
         filePath: string;
         data: Buffer | string;
+        taskId: string;
         inKodusDir?: boolean;
     }): Promise<boolean>;
 
     readFile(params: {
         repoData: RepositoryData;
         filePath: string;
+        taskId: string;
         inKodusDir?: boolean;
         stringify?: true; // default is true
         absolute?: boolean;
@@ -34,6 +36,7 @@ export interface IRepositoryManager {
     readFile(params: {
         repoData: RepositoryData;
         filePath: string;
+        taskId: string;
         inKodusDir?: boolean;
         stringify?: false;
         absolute?: boolean;
@@ -41,6 +44,7 @@ export interface IRepositoryManager {
     readFile(params: {
         repoData: RepositoryData;
         filePath: string;
+        taskId: string;
         inKodusDir?: boolean;
         absolute?: boolean;
     }): Promise<Buffer | string | null>;

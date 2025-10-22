@@ -8,6 +8,7 @@ import { TaskQueueProcessor } from '@/core/application/services/task/task-queue-
 import { TaskQueueConsumer } from '@/core/infrastructure/queue/task-queue.consumer.js';
 import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
+import { TaskResultStorageService } from '@/core/infrastructure/adapters/services/storage/task-result-storage.service.js';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { TaskManagerService } from '@/core/infrastructure/adapters/services/task
         { provide: TASK_MANAGER_TOKEN, useClass: TaskManagerService },
         TaskQueueProcessor,
         TaskQueueConsumer,
+        TaskResultStorageService,
     ],
     exports: [TaskQueueProcessor, TaskQueueConsumer],
 })

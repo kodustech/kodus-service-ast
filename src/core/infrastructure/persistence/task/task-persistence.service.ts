@@ -147,7 +147,6 @@ export class TaskPersistenceService {
             const selectForUpdate = `
                 SELECT * FROM ${this.tasksTable}
                 WHERE id = $1
-                FOR UPDATE
             `;
 
             const existing = await client.query(selectForUpdate, [taskId]);
@@ -249,6 +248,44 @@ export class TaskPersistenceService {
         `;
 
         await this.pool.query(upsert, [taskId, JSON.stringify(payload ?? {})]);
+    }
+
+    async storeTaskResult(
+        input: StoreTaskResultInput,
+    ): Promise<{ payload: Record<string, unknown> }> {
+        const { taskId, payload } = input;
+
+        const upsert = `
+            INSERT INTO ${this.taskResultsTable} (task_id, payload)
+            VALUES ($1, $2)
+            ON CONFLICT (task_id)
+            DO UPDATE SET
+                payload = $2,
+                created_at = NOW()
+            RETURNING payload
+        `;
+
+        const result = await this.pool.query(upsert, [
+            taskId,
+            JSON.stringify(payload),
+        ]);
+
+        return { payload: result.rows[0].payload };
+    }
+
+    async getTaskResult(
+        taskId: string,
+    ): Promise<{ payload: Record<string, unknown> } | null> {
+        const result = await this.pool.query(
+            `SELECT payload FROM ${this.taskResultsTable} WHERE task_id = $1`,
+            [taskId],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return { payload: result.rows[0].payload };
     }
 
     async deleteTask(taskId: string): Promise<void> {

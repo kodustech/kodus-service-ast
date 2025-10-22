@@ -11,11 +11,15 @@
         ".": "./dist/main.js"
     },
     "scripts": {
-        "start:dev": "concurrently \"nest start --watch -b swc -- --inspect=0.0.0.0:9300\" \"chokidar 'dist/**/*.js' -c 'tsc-alias -p tsconfig.json'\"",
+        "start:dev": "concurrently \"nest start --watch --debug 0.0.0.0:9231 -b swc\" \"chokidar 'dist/**/*.js' -c 'tsc-alias -p tsconfig.json'\"",
+        "start:debug": "nest start --debug=0.0.0.0:9229 --watch -b swc",
+        "start:debug:worker": "tsx watch --clear-screen=false --inspect=0.0.0.0:9230 src/worker/main.ts",
+        "start:debug:main": "nest start --debug=0.0.0.0:9231 --watch -b swc",
+        "start:debug:both": "concurrently \"yarn start:debug:main\" \"yarn start:debug:worker\"",
         "build": "nest build -b swc --type-check && tsc-alias -p tsconfig.json",
         "start:prod": "node dist/main.js",
         "start:worker": "node dist/worker/main.js",
-        "start:worker:dev": "tsx watch --clear-screen=false src/worker/main.ts",
+        "start:worker:dev": "tsx watch --clear-screen=false --inspect=0.0.0.0:9230 src/worker/main.ts",
         "lint": "eslint \"src/**/*.{ts,tsx}\" \"test/**/*.{ts,tsx}\"",
         "lint:fix": "eslint \"src/**/*.{ts,tsx}\" \"test/**/*.{ts,tsx}\" --fix",
         "format:fix": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\" \"test/**/*.{ts,tsx,js,jsx}\"",
@@ -34,6 +38,8 @@
         "docker:test": "docker compose -f docker-compose.dev.yml exec kodus-service-ast node --inspect=0.0.0.0:9301 node_modules/.bin/jest --watchAll --runInBand"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.914.0",
+        "@aws-sdk/s3-request-presigner": "^3.914.0",
         "@golevelup/nestjs-rabbitmq": "^6.0.2",
         "@kodus/kodus-common": "^1.2.16",
         "@langchain/anthropic": "^0.3.31",

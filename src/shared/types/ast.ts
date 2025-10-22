@@ -181,6 +181,7 @@ export interface SerializedGetGraphsResponseData {
 }
 
 export interface GetGraphsRequest {
+    taskId: string;
     headRepo: RepositoryData;
     baseRepo?: RepositoryData | null;
 }

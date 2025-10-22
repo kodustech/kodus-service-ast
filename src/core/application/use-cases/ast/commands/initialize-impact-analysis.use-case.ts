@@ -33,7 +33,7 @@ export class InitializeImpactAnalysisUseCase {
         request: InitializeImpactAnalysisRequest,
         taskContext?: TaskContext,
     ): Promise<void> {
-        const { baseRepo, headRepo, codeChunk, fileName } = request;
+        const { baseRepo, headRepo, codeChunk, fileName, taskId } = request;
 
         if (!baseRepo || !headRepo) {
             throw new Error('Both baseRepo and headRepo must be provided');
@@ -89,6 +89,7 @@ export class InitializeImpactAnalysisUseCase {
                 headRepo,
                 analysisResult,
                 impactAnalysis,
+                taskId,
             );
 
             if (taskContext) {
@@ -121,6 +122,7 @@ export class InitializeImpactAnalysisUseCase {
         repoData: RepositoryData,
         analysisResult: ChangeResult,
         impactAnalysis: GetImpactAnalysisResponse,
+        taskId: string,
     ): Promise<void> {
         const fileName = `impact-analysis`;
         const data = {
@@ -133,6 +135,7 @@ export class InitializeImpactAnalysisUseCase {
             repoData,
             filePath: fileName,
             data: jsonData,
+            taskId,
             inKodusDir: true,
         });
         if (!ok) {

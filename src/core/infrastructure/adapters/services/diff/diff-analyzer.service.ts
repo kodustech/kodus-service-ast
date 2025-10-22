@@ -49,6 +49,7 @@ export class DiffAnalyzerService {
         diff: string,
         graphs: GetGraphsResponseData,
         repoData: RepositoryData,
+        taskId: string,
     ): Promise<string> {
         if (!filePath || filePath.length === 0 || !path.isAbsolute(filePath)) {
             this.logger.error({
@@ -104,6 +105,7 @@ export class DiffAnalyzerService {
                 await this.repositoryManagerService.readFile({
                     repoData,
                     filePath,
+                    taskId,
                     absolute: true,
                 });
 
@@ -224,6 +226,7 @@ export class DiffAnalyzerService {
                     fileContent = await this.repositoryManagerService.readFile({
                         repoData,
                         filePath: file,
+                        taskId,
                         absolute: true,
                     });
                 }

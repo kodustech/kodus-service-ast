@@ -6,6 +6,7 @@ import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.co
 import { TaskService } from '@/core/application/services/task/task.service.js';
 import { useCases } from '@/core/application/use-cases/task/index.js';
 import { TaskHttpController } from '@/core/infrastructure/http/controllers/task.controller.js';
+import { TaskResultStorageService } from '@/core/infrastructure/adapters/services/storage/task-result-storage.service.js';
 
 @Module({
     imports: [TaskPersistenceModule, QueueModuleApi],
@@ -14,8 +15,9 @@ import { TaskHttpController } from '@/core/infrastructure/http/controllers/task.
         TaskManagerService,
         { provide: TASK_MANAGER_TOKEN, useExisting: TaskManagerService },
         TaskService,
+        TaskResultStorageService,
     ],
-    exports: [...useCases, TaskService],
+    exports: [...useCases, TaskService, TaskResultStorageService],
     controllers: [TaskHttpController],
 })
 export class TaskModule {}

@@ -43,6 +43,7 @@ export class GetContentFromDiffUseCase {
                 diff,
                 graphs,
                 repoData.headRepo,
+                request.taskId,
             );
         } catch (error) {
             this.logger.error({

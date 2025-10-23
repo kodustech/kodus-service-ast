@@ -21,6 +21,7 @@ services:
             - ./tmp:/tmp/cloned-repos
         environment:
             - CHOKIDAR_USEPOLLING=true
+            - TZ=UTC
         networks:
             - kodus-backend-services
             - shared-network
@@ -56,6 +57,7 @@ services:
             - ./tmp:/tmp/cloned-repos
         environment:
             - CHOKIDAR_USEPOLLING=true
+            - TZ=UTC
         networks:
             - kodus-backend-services
             - shared-network

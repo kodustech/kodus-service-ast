@@ -26,13 +26,22 @@ export class TaskResultStorageService {
         graphsMetadata: GraphStorageMetadata,
     ): Promise<void> {
         try {
-            await this.taskPersistence.storeTaskResult({
+            this.logger.debug({
+                message: 'Attempting to save graphs metadata',
+                context: TaskResultStorageService.name,
+                metadata: {
+                    taskId,
+                    graphsMetadata,
+                },
+            });
+
+            const result = await this.taskPersistence.storeTaskResult({
                 taskId,
                 payload: graphsMetadata as unknown as Record<string, unknown>,
             });
 
             this.logger.log({
-                message: 'Graphs metadata saved to task_results',
+                message: 'Graphs metadata saved to task_results successfully',
                 context: TaskResultStorageService.name,
                 metadata: {
                     taskId,
@@ -40,6 +49,7 @@ export class TaskResultStorageService {
                     repository: graphsMetadata.repository,
                     commit: graphsMetadata.commit,
                     s3Key: graphsMetadata.s3Key,
+                    result,
                 },
             });
         } catch (error) {

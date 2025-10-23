@@ -8,6 +8,8 @@ export interface GraphStorageMetadata {
     commit: string;
     size: number;
     s3Key?: string;
+    localPath?: string;
+    s3Url?: string;
 }
 
 @Injectable()

@@ -11,6 +11,7 @@ import {
     getEnvVariableOrExit,
 } from '@/shared/utils/env.js';
 import { PinoLoggerService } from '../logger/pino.service.js';
+import * as crypto from 'crypto';
 
 export interface GraphStorageResult {
     key: string;
@@ -269,8 +270,6 @@ export class S3GraphsService {
 
     // Security: Calculate MD5 for content validation
     private calculateMD5(content: string): string {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const crypto = require('crypto');
         return crypto.createHash('md5').update(content).digest('base64');
     }
 

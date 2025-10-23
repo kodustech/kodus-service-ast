@@ -28,6 +28,7 @@ RUN apt-get update && \
     tzdata \
     wget \
     git \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules

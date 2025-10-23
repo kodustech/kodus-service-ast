@@ -16,13 +16,11 @@ import {
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
 import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service.js';
-import { TaskResultStorageService } from '@/core/infrastructure/adapters/services/storage/task-result-storage.service.js';
 import {
     InitializeRepositoryRequest,
     InitializeImpactAnalysisRequest,
 } from '@/shared/types/ast.js';
 import { astSerializer } from '@/shared/utils/ast-serialization.js';
-import { getEnvVariableAsBoolean } from '@/shared/utils/env.js';
 import { handleError } from '@/shared/utils/errors.js';
 import * as path from 'path';
 
@@ -41,8 +39,6 @@ export class TaskQueueProcessor {
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         @Inject(GraphEnrichmentService)
         private readonly graphEnrichmentService: GraphEnrichmentService,
-        @Inject(TaskResultStorageService)
-        private readonly taskResultStorageService: TaskResultStorageService,
         @Inject(TaskContextService)
         private readonly taskContextService: TaskContextService,
         @Inject(PinoLoggerService)
@@ -282,42 +278,7 @@ export class TaskQueueProcessor {
             );
         }
 
-        // Save graphs metadata to task results
-        try {
-            // Determine storage type based on S3_ENABLED setting
-            const s3Enabled = getEnvVariableAsBoolean('S3_ENABLED', false);
-            const storageType = s3Enabled ? 's3' : 'local';
-
-            await this.taskResultStorageService.saveGraphsMetadata(taskId, {
-                storageType,
-                repository: repoData.repositoryName,
-                commit: repoData.commitSha ?? '',
-                size: graphsSize,
-            });
-
-            this.logger.log({
-                message: `Saved graphs metadata for task ${taskId}`,
-                context: WORKER_CONTEXT,
-                metadata: {
-                    taskId,
-                    repository: repoData.repositoryName,
-                    size: graphsSize,
-                },
-                serviceName: WORKER_CONTEXT,
-            });
-        } catch (error) {
-            this.logger.warn({
-                message: `Failed to save graphs metadata for task ${taskId}`,
-                context: WORKER_CONTEXT,
-                error,
-                metadata: {
-                    taskId,
-                    repository: repoData.repositoryName,
-                },
-                serviceName: WORKER_CONTEXT,
-            });
-            // Don't throw error - graphs are saved, metadata is optional
-        }
+        // Metadata is now saved automatically in RepositoryManagerService.writeFile()
 
         this.logger.log({
             message: `Stored graphs in ${fileName} for repository ${repoData.repositoryName}`,

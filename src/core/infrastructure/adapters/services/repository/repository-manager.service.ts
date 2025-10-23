@@ -2,6 +2,7 @@ import { IRepositoryManager } from '@/core/domain/repository/contracts/repositor
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import { S3GraphsService } from '../storage/s3-graphs.service.js';
+import { TaskResultStorageService } from '../storage/task-result-storage.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -26,6 +27,8 @@ export class RepositoryManagerService implements IRepositoryManager {
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
         @Inject(S3GraphsService)
         private readonly s3GraphsService: S3GraphsService,
+        @Inject(TaskResultStorageService)
+        private readonly taskResultStorageService: TaskResultStorageService,
     ) {
         void this.ensureBaseDirExists();
     }
@@ -467,6 +470,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         inKodusDir?: boolean;
     }): Promise<boolean> {
         const { repoData, filePath, data, inKodusDir = false, taskId } = params;
+        let s3Result: any = null;
 
         try {
             // Check if this is a graphs file and S3 is enabled
@@ -486,21 +490,21 @@ export class RepositoryManagerService implements IRepositoryManager {
                     },
                 });
 
-                const result = await this.s3GraphsService.saveGraphs(
+                s3Result = await this.s3GraphsService.saveGraphs(
                     taskId,
                     repoData.repositoryName,
                     JSON.parse(data.toString()),
                 );
 
-                if (result) {
+                if (s3Result) {
                     this.logger.log({
                         message: 'Graphs saved to S3 successfully',
                         context: RepositoryManagerService.name,
                         metadata: {
                             repository: repoData.repositoryName,
                             taskId,
-                            s3Key: result.key,
-                            size: result.size,
+                            s3Key: s3Result.key,
+                            size: s3Result.size,
                         },
                     });
                     return true;
@@ -546,6 +550,64 @@ export class RepositoryManagerService implements IRepositoryManager {
                     storageType: 'local',
                 },
             });
+
+            // Save graphs metadata if this is a graphs file
+            if (inKodusDir && filePath === this.graphsFileName && taskId) {
+                try {
+                    // Determine actual storage type based on what was used
+                    const storageType = s3Result ? 's3' : 'local';
+                    const graphsSize = Buffer.byteLength(
+                        data.toString(),
+                        'utf8',
+                    );
+
+                    // Prepare metadata with paths/URLs
+                    const metadata: any = {
+                        storageType,
+                        repository: repoData.repositoryName,
+                        commit: repoData.commitSha ?? '',
+                        size: graphsSize,
+                    };
+
+                    // Add local path for local storage
+                    if (storageType === 'local') {
+                        metadata.localPath = fullPath;
+                    }
+
+                    // Add S3 info if S3 was used
+                    if (s3Result) {
+                        metadata.s3Key = s3Result.key;
+                        metadata.s3Url = s3Result.url;
+                    }
+
+                    await this.taskResultStorageService.saveGraphsMetadata(
+                        taskId,
+                        metadata,
+                    );
+
+                    this.logger.log({
+                        message: `Saved graphs metadata for task ${taskId}`,
+                        context: RepositoryManagerService.name,
+                        metadata: {
+                            taskId,
+                            repository: repoData.repositoryName,
+                            size: graphsSize,
+                            storageType,
+                        },
+                    });
+                } catch (error) {
+                    this.logger.warn({
+                        message: `Failed to save graphs metadata for task ${taskId}`,
+                        context: RepositoryManagerService.name,
+                        error,
+                        metadata: {
+                            taskId,
+                            repository: repoData.repositoryName,
+                        },
+                    });
+                    // Don't throw error - graphs are saved, metadata is optional
+                }
+            }
 
             return true;
         } catch (error) {

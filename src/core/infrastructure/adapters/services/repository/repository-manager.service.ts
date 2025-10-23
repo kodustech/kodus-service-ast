@@ -100,6 +100,64 @@ export class RepositoryManagerService implements IRepositoryManager {
             .slice(0, 32);
     }
 
+    private async saveGraphsMetadata(
+        taskId: string,
+        repoData: RepositoryData,
+        data: Buffer | string,
+        storageType: 's3' | 'local',
+        s3Result?: any,
+        localPath?: string,
+    ): Promise<void> {
+        try {
+            const graphsSize = Buffer.byteLength(data.toString(), 'utf8');
+
+            const metadata: any = {
+                storageType,
+                repository: repoData.repositoryName,
+                commit: repoData.commitSha ?? '',
+                size: graphsSize,
+            };
+
+            // Add local path for local storage
+            if (storageType === 'local' && localPath) {
+                metadata.localPath = localPath;
+            }
+
+            // Add S3 info if S3 was used
+            if (storageType === 's3' && s3Result) {
+                metadata.s3Key = s3Result.key;
+                metadata.s3Url = s3Result.url;
+            }
+
+            await this.taskResultStorageService.saveGraphsMetadata(
+                taskId,
+                metadata,
+            );
+
+            this.logger.log({
+                message: `Saved ${storageType} graphs metadata for task ${taskId}`,
+                context: RepositoryManagerService.name,
+                metadata: {
+                    taskId,
+                    repository: repoData.repositoryName,
+                    size: graphsSize,
+                    storageType,
+                },
+            });
+        } catch (error) {
+            this.logger.warn({
+                message: `Failed to save ${storageType} graphs metadata for task ${taskId}`,
+                context: RepositoryManagerService.name,
+                error,
+                metadata: {
+                    taskId,
+                    repository: repoData.repositoryName,
+                },
+            });
+            // Don't throw error - graphs are saved, metadata is optional
+        }
+    }
+
     private async ensureClientDirExists(organizationId: string): Promise<void> {
         const clientDir = this.getClientDir(organizationId);
         const clientDirExists = await fs.promises
@@ -473,7 +531,6 @@ export class RepositoryManagerService implements IRepositoryManager {
         let s3Result: any = null;
 
         try {
-            // Check if this is a graphs file and S3 is enabled
             if (
                 inKodusDir &&
                 filePath === this.graphsFileName &&
@@ -507,6 +564,26 @@ export class RepositoryManagerService implements IRepositoryManager {
                             size: s3Result.size,
                         },
                     });
+
+                    // Save S3 metadata (fire and forget)
+                    this.saveGraphsMetadata(
+                        taskId,
+                        repoData,
+                        data,
+                        's3',
+                        s3Result,
+                    ).catch((error) => {
+                        this.logger.warn({
+                            message: `Failed to save S3 graphs metadata for task ${taskId}`,
+                            context: RepositoryManagerService.name,
+                            error,
+                            metadata: {
+                                taskId,
+                                repository: repoData.repositoryName,
+                            },
+                        });
+                    });
+
                     return true;
                 } else {
                     this.logger.warn({
@@ -518,9 +595,10 @@ export class RepositoryManagerService implements IRepositoryManager {
                             taskId,
                         },
                     });
-                    // Fall through to local storage
+                    return false;
                 }
             }
+
             const repoPath = await this.getRepoDir(repoData);
 
             const fullPath = inKodusDir
@@ -551,53 +629,18 @@ export class RepositoryManagerService implements IRepositoryManager {
                 },
             });
 
-            // Save graphs metadata if this is a graphs file
+            // Save graphs metadata if this is a graphs file (local storage - fire and forget)
             if (inKodusDir && filePath === this.graphsFileName && taskId) {
-                try {
-                    // Determine actual storage type based on what was used
-                    const storageType = s3Result ? 's3' : 'local';
-                    const graphsSize = Buffer.byteLength(
-                        data.toString(),
-                        'utf8',
-                    );
-
-                    // Prepare metadata with paths/URLs
-                    const metadata: any = {
-                        storageType,
-                        repository: repoData.repositoryName,
-                        commit: repoData.commitSha ?? '',
-                        size: graphsSize,
-                    };
-
-                    // Add local path for local storage
-                    if (storageType === 'local') {
-                        metadata.localPath = fullPath;
-                    }
-
-                    // Add S3 info if S3 was used
-                    if (s3Result) {
-                        metadata.s3Key = s3Result.key;
-                        metadata.s3Url = s3Result.url;
-                    }
-
-                    await this.taskResultStorageService.saveGraphsMetadata(
-                        taskId,
-                        metadata,
-                    );
-
-                    this.logger.log({
-                        message: `Saved graphs metadata for task ${taskId}`,
-                        context: RepositoryManagerService.name,
-                        metadata: {
-                            taskId,
-                            repository: repoData.repositoryName,
-                            size: graphsSize,
-                            storageType,
-                        },
-                    });
-                } catch (error) {
+                this.saveGraphsMetadata(
+                    taskId,
+                    repoData,
+                    data,
+                    'local',
+                    undefined,
+                    fullPath,
+                ).catch((error) => {
                     this.logger.warn({
-                        message: `Failed to save graphs metadata for task ${taskId}`,
+                        message: `Failed to save local graphs metadata for task ${taskId}`,
                         context: RepositoryManagerService.name,
                         error,
                         metadata: {
@@ -605,8 +648,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                             repository: repoData.repositoryName,
                         },
                     });
-                    // Don't throw error - graphs are saved, metadata is optional
-                }
+                });
             }
 
             return true;

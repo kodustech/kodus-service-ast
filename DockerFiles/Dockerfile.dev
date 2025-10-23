@@ -3,6 +3,7 @@ FROM node:22.14.0-slim
 ENV NODE_ENV=development \
     NODE_OPTIONS=--max-old-space-size=4096 \
     PORT=3002 \
+    TZ=UTC \
     TREE_SITTER_SKIP_PREBUILD_DOWNLOAD=1 \
     npm_config_build_from_source=true \
     SHELL=/bin/sh

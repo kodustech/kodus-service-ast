@@ -16,6 +16,8 @@ import {
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
 import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service.js';
+import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service.js';
+import { GetGraphsUseCase } from '@/core/application/use-cases/ast/queries/get-graphs.use-case.js';
 import {
     InitializeRepositoryRequest,
     InitializeImpactAnalysisRequest,
@@ -39,6 +41,10 @@ export class TaskQueueProcessor {
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
         @Inject(GraphEnrichmentService)
         private readonly graphEnrichmentService: GraphEnrichmentService,
+        @Inject(GraphAnalyzerService)
+        private readonly graphAnalyzerService: GraphAnalyzerService,
+        @Inject(GetGraphsUseCase)
+        private readonly getGraphsUseCase: GetGraphsUseCase,
         @Inject(TaskContextService)
         private readonly taskContextService: TaskContextService,
         @Inject(PinoLoggerService)
@@ -187,24 +193,106 @@ export class TaskQueueProcessor {
         request: InitializeImpactAnalysisRequest,
         taskContext: any,
     ): Promise<void> {
-        // TODO: Implement impact analysis processing logic
-        // This should call the appropriate services for impact analysis
-        if (taskContext) {
-            await taskContext.start('Initializing impact analysis');
+        const { baseRepo, headRepo, codeChunk, fileName, graphsTaskId } =
+            request;
+        const taskId = request?.taskId ?? taskContext?.taskId;
+
+        if (!baseRepo || !headRepo) {
+            throw new Error('Both baseRepo and headRepo must be provided');
         }
 
-        // Placeholder implementation
-        this.logger.log({
-            message: 'Processing impact analysis',
-            context: WORKER_CONTEXT,
-            metadata: { request },
-            serviceName: WORKER_CONTEXT,
-        });
-
-        if (taskContext) {
-            await taskContext.complete(
-                'Impact analysis initialized successfully',
+        if (!graphsTaskId) {
+            throw new Error(
+                'graphsTaskId must be provided to fetch existing graphs',
             );
+        }
+
+        try {
+            if (taskContext) {
+                await taskContext.start('Getting graphs');
+            }
+            // Busca graphs usando o taskId dos graphs existentes
+            const graphsRequest = {
+                ...request,
+                taskId: graphsTaskId, // Usa o taskId dos graphs, não o taskId atual
+            };
+            const graphs = await this.getGraphsUseCase.execute(
+                graphsRequest,
+                false,
+            );
+
+            if (!graphs) {
+                throw new Error(
+                    `No graphs found for repository ${headRepo.repositoryName}`,
+                );
+            }
+
+            if (taskContext) {
+                await taskContext.update('Analyzing graphs');
+            }
+            const analysisResult =
+                this.graphAnalyzerService.analyzeCodeWithGraph(
+                    codeChunk,
+                    fileName,
+                    graphs,
+                );
+
+            if (!analysisResult) {
+                throw new Error(
+                    `No analysis result found for code chunk in file ${fileName}`,
+                );
+            }
+
+            if (taskContext) {
+                await taskContext.update('Generating impact analysis');
+            }
+            const impactAnalysis =
+                await this.graphAnalyzerService.generateImpactAnalysis(
+                    graphs,
+                    analysisResult,
+                );
+
+            if (!impactAnalysis) {
+                throw new Error(
+                    `No impact analysis generated for code chunk in file ${fileName}`,
+                );
+            }
+
+            if (taskContext) {
+                await taskContext.update('Storing impact analysis');
+            }
+            await this.storeImpactAnalysis(
+                headRepo,
+                analysisResult,
+                impactAnalysis,
+                taskId,
+                graphsTaskId, // Passa o graphsTaskId para incluir nos metadados
+            );
+
+            if (taskContext) {
+                await taskContext.complete(
+                    'Impact analysis completed successfully',
+                );
+            }
+        } catch (error) {
+            this.logger.error({
+                message: 'Error during impact analysis initialization',
+                context: WORKER_CONTEXT,
+                error,
+                metadata: {
+                    fileName,
+                    taskId: taskContext?.taskId,
+                },
+                serviceName: WORKER_CONTEXT,
+            });
+
+            if (taskContext) {
+                await taskContext.fail(
+                    error instanceof Error ? error.message : 'Unknown error',
+                    'Impact analysis initialization failed',
+                );
+            }
+            throw error;
         }
     }
 
@@ -233,6 +321,55 @@ export class TaskQueueProcessor {
         return path.resolve(repoDir);
     }
 
+    private async storeImpactAnalysis(
+        repoData: any,
+        analysisResult: any,
+        impactAnalysis: any,
+        taskId: string,
+        graphsTaskId: string,
+    ): Promise<void> {
+        const fileName = 'impact-analysis';
+        const data = {
+            analysisResult,
+            impactAnalysis,
+            graphsTaskId,
+        };
+        const jsonData = JSON.stringify(data, null, 2);
+
+        const ok = await this.repositoryManagerService.writeFile({
+            repoData,
+            filePath: fileName,
+            data: jsonData,
+            taskId,
+            inKodusDir: true,
+            graphsTaskId, // Passa o graphsTaskId para incluir nos metadados
+        });
+        if (!ok) {
+            this.logger.error({
+                message: `Failed to write impact analysis for repository ${repoData.repositoryName}`,
+                context: WORKER_CONTEXT,
+                metadata: {
+                    repoName: repoData.repositoryName,
+                    filePath: fileName,
+                },
+                serviceName: WORKER_CONTEXT,
+            });
+            throw new Error(
+                `Failed to write impact analysis for repository ${repoData.repositoryName}`,
+            );
+        }
+
+        this.logger.log({
+            message: `Stored impact analysis for repository ${repoData.repositoryName}`,
+            context: WORKER_CONTEXT,
+            metadata: {
+                repoName: repoData.repositoryName,
+                filePath: fileName,
+            },
+            serviceName: WORKER_CONTEXT,
+        });
+    }
+
     private async storeGraphs(
         repoData: any,
         baseGraph: any,
@@ -243,6 +380,7 @@ export class TaskQueueProcessor {
         taskId: string,
     ): Promise<void> {
         const fileName = this.repositoryManagerService.graphsFileName;
+        // Serialize graphs without pretty printing to reduce memory usage
         const graphs = astSerializer.serializeGetGraphsResponseData({
             baseGraph: {
                 graph: baseGraph,
@@ -255,8 +393,19 @@ export class TaskQueueProcessor {
             enrichHeadGraph,
         });
 
-        const graphsJson = JSON.stringify(graphs, null, 2);
+        // Use compact JSON to reduce memory usage
+        const graphsJson = JSON.stringify(graphs);
         const graphsSize = Buffer.byteLength(graphsJson, 'utf8');
+
+        this.logger.log({
+            message: 'Writing graphs to storage',
+            context: 'TaskQueueProcessor',
+            metadata: {
+                taskId,
+                repository: repoData.repositoryName,
+                graphsSize,
+            },
+        });
 
         const ok = await this.repositoryManagerService.writeFile({
             repoData,

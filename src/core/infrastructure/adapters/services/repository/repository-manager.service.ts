@@ -23,6 +23,13 @@ export class RepositoryManagerService implements IRepositoryManager {
     private readonly allowedProtocols = ['https:', 'http:']; // Only allow HTTP/HTTPS
     private readonly maxRepoSize = 1024 * 1024 * 900; // 900MB max repo size
 
+    // Simple in-memory cache for S3 data
+    private readonly s3Cache = new Map<
+        string,
+        { data: any; timestamp: number }
+    >();
+    private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes cache timeout
+
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
         @Inject(S3GraphsService)
@@ -100,6 +107,15 @@ export class RepositoryManagerService implements IRepositoryManager {
             .slice(0, 32);
     }
 
+    private cleanCache(): void {
+        const now = Date.now();
+        for (const [key, value] of this.s3Cache.entries()) {
+            if (now - value.timestamp > this.cacheTimeout) {
+                this.s3Cache.delete(key);
+            }
+        }
+    }
+
     private async saveGraphsMetadata(
         taskId: string,
         repoData: RepositoryData,
@@ -107,6 +123,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         storageType: 's3' | 'local',
         s3Result?: any,
         localPath?: string,
+        graphsTaskId?: string,
     ): Promise<void> {
         try {
             const graphsSize = Buffer.byteLength(data.toString(), 'utf8');
@@ -117,6 +134,11 @@ export class RepositoryManagerService implements IRepositoryManager {
                 commit: repoData.commitSha ?? '',
                 size: graphsSize,
             };
+
+            // Include graphsTaskId if provided (for impact analysis)
+            if (graphsTaskId) {
+                metadata.graphsTaskId = graphsTaskId;
+            }
 
             // Add local path for local storage
             if (storageType === 'local' && localPath) {
@@ -526,8 +548,16 @@ export class RepositoryManagerService implements IRepositoryManager {
         data: Buffer | string;
         taskId: string;
         inKodusDir?: boolean;
+        graphsTaskId?: string;
     }): Promise<boolean> {
-        const { repoData, filePath, data, inKodusDir = false, taskId } = params;
+        const {
+            repoData,
+            filePath,
+            data,
+            inKodusDir = false,
+            taskId,
+            graphsTaskId,
+        } = params;
         let s3Result: any = null;
 
         try {
@@ -572,6 +602,8 @@ export class RepositoryManagerService implements IRepositoryManager {
                         data,
                         's3',
                         s3Result,
+                        undefined,
+                        graphsTaskId,
                     ).catch((error) => {
                         this.logger.warn({
                             message: `Failed to save S3 graphs metadata for task ${taskId}`,
@@ -638,6 +670,7 @@ export class RepositoryManagerService implements IRepositoryManager {
                     'local',
                     undefined,
                     fullPath,
+                    graphsTaskId,
                 ).catch((error) => {
                     this.logger.warn({
                         message: `Failed to save local graphs metadata for task ${taskId}`,
@@ -712,11 +745,53 @@ export class RepositoryManagerService implements IRepositoryManager {
                 getEnvVariableAsBoolean('S3_ENABLED', false) &&
                 taskId
             ) {
+                // Check cache first
+                const cacheKey = `${taskId}-${repoData.repositoryName}`;
+                const cached = this.s3Cache.get(cacheKey);
+
+                if (
+                    cached &&
+                    Date.now() - cached.timestamp < this.cacheTimeout
+                ) {
+                    this.logger.debug({
+                        message: 'Reading graphs from cache',
+                        context: RepositoryManagerService.name,
+                        metadata: {
+                            repository: repoData.repositoryName,
+                            taskId,
+                            cacheKey,
+                            dataType: typeof cached.data,
+                            dataKeys: cached.data
+                                ? Object.keys(cached.data)
+                                : null,
+                        },
+                    });
+
+                    try {
+                        if (stringify) {
+                            return JSON.stringify(cached.data);
+                        }
+                        return Buffer.from(JSON.stringify(cached.data));
+                    } catch (error) {
+                        this.logger.error({
+                            message:
+                                'Failed to serialize cached data, falling back to S3',
+                            context: RepositoryManagerService.name,
+                            error,
+                            metadata: { cacheKey, taskId },
+                        });
+                        // Fall back to S3 if cache serialization fails
+                        this.s3Cache.delete(cacheKey);
+                        // Continue to S3 logic below - don't return here
+                    }
+                }
+
                 this.logger.debug({
                     message: 'Reading graphs from S3',
                     context: RepositoryManagerService.name,
                     metadata: {
                         repository: repoData.repositoryName,
+                        taskId,
                     },
                 });
 
@@ -729,11 +804,44 @@ export class RepositoryManagerService implements IRepositoryManager {
                     return null;
                 }
 
-                if (stringify) {
-                    return JSON.stringify(graphsData);
-                }
+                // Cache the data
+                this.s3Cache.set(cacheKey, {
+                    data: graphsData,
+                    timestamp: Date.now(),
+                });
 
-                return Buffer.from(JSON.stringify(graphsData));
+                this.logger.debug({
+                    message: 'Cached S3 data',
+                    context: RepositoryManagerService.name,
+                    metadata: {
+                        repository: repoData.repositoryName,
+                        taskId,
+                        cacheKey,
+                        dataType: typeof graphsData,
+                        dataKeys: graphsData ? Object.keys(graphsData) : null,
+                    },
+                });
+
+                // Clean old cache entries
+                this.cleanCache();
+
+                try {
+                    if (stringify) {
+                        return JSON.stringify(graphsData);
+                    }
+                    return Buffer.from(JSON.stringify(graphsData));
+                } catch (error) {
+                    this.logger.error({
+                        message: 'Failed to serialize S3 data',
+                        context: RepositoryManagerService.name,
+                        error,
+                        metadata: {
+                            taskId,
+                            repository: repoData.repositoryName,
+                        },
+                    });
+                    throw new Error('Failed to serialize graphs data');
+                }
             }
 
             let fullPath: string;

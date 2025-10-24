@@ -225,6 +225,7 @@ export interface InitializeImpactAnalysisRequest extends GetGraphsRequest {
     baseRepo: RepositoryData;
     codeChunk: string;
     fileName: string;
+    graphsTaskId: string;
     priority?: TaskPriority;
 }
 

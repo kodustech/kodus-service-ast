@@ -23,6 +23,7 @@ export interface IRepositoryManager {
         data: Buffer | string;
         taskId: string;
         inKodusDir?: boolean;
+        graphsTaskId?: string;
     }): Promise<boolean>;
 
     readFile(params: {

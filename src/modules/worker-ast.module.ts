@@ -9,6 +9,7 @@ import { TaskQueueConsumer } from '@/core/infrastructure/queue/task-queue.consum
 import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.contract.js';
 import { TaskManagerService } from '@/core/infrastructure/adapters/services/task/task-manager.service.js';
 import { TaskResultStorageService } from '@/core/infrastructure/adapters/services/storage/task-result-storage.service.js';
+import { GetGraphsUseCase } from '@/core/application/use-cases/ast/queries/get-graphs.use-case.js';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { TaskResultStorageService } from '@/core/infrastructure/adapters/service
         TaskQueueProcessor,
         TaskQueueConsumer,
         TaskResultStorageService,
+        GetGraphsUseCase,
     ],
     exports: [TaskQueueProcessor, TaskQueueConsumer],
 })

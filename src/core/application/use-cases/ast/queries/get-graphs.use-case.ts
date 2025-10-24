@@ -18,7 +18,9 @@ export class GetGraphsUseCase {
     constructor(
         @Inject(REPOSITORY_MANAGER_TOKEN)
         private readonly repositoryManagerService: IRepositoryManager,
+        @Inject(TaskResultStorageService)
         private readonly taskResultStorageService: TaskResultStorageService,
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
 
@@ -38,38 +40,6 @@ export class GetGraphsUseCase {
     ): Promise<GetGraphsResponseData | SerializedGetGraphsResponseData | null> {
         const { headRepo, taskId } = request;
 
-        // Try to get graphs metadata if taskId is provided
-        let graphsMetadata: any = null;
-        if (taskId) {
-            try {
-                graphsMetadata =
-                    await this.taskResultStorageService.getGraphsMetadata(
-                        taskId,
-                    );
-                if (graphsMetadata) {
-                    this.logger.log({
-                        message: `Found graphs metadata for task ${taskId}`,
-                        context: GetGraphsUseCase.name,
-                        metadata: {
-                            taskId,
-                            repository: graphsMetadata.repository,
-                            storageType: graphsMetadata.storageType,
-                            size: graphsMetadata.size,
-                        },
-                        serviceName: GetGraphsUseCase.name,
-                    });
-                }
-            } catch (error) {
-                this.logger.warn({
-                    message: `Failed to get graphs metadata for task ${taskId}`,
-                    context: GetGraphsUseCase.name,
-                    error,
-                    metadata: { taskId },
-                    serviceName: GetGraphsUseCase.name,
-                });
-            }
-        }
-
         const graphs = await this.repositoryManagerService.readFile({
             repoData: headRepo,
             filePath: this.repositoryManagerService.graphsFileName,
@@ -84,7 +54,6 @@ export class GetGraphsUseCase {
                 metadata: {
                     request: JSON.stringify(headRepo),
                     taskId,
-                    hasMetadata: !!graphsMetadata,
                 },
                 serviceName: GetGraphsUseCase.name,
             });
@@ -102,7 +71,6 @@ export class GetGraphsUseCase {
                 metadata: {
                     request: JSON.stringify(headRepo),
                     taskId,
-                    hasMetadata: !!graphsMetadata,
                 },
                 serviceName: GetGraphsUseCase.name,
             });
@@ -117,11 +85,7 @@ export class GetGraphsUseCase {
             metadata: {
                 request: JSON.stringify(headRepo),
                 taskId,
-                hasMetadata: !!graphsMetadata,
-                graphsSize: Buffer.byteLength(
-                    JSON.stringify(graphsData),
-                    'utf8',
-                ),
+                graphsSize: Buffer.byteLength(graphs, 'utf8'),
             },
             serviceName: GetGraphsUseCase.name,
         });

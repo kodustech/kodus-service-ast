@@ -21,14 +21,12 @@ export class RepositoryManagerService implements IRepositoryManager {
     private readonly baseDir = '/tmp/cloned-repos';
     private readonly cloneTimeout = 8 * 60 * 1000; // 8 minutes timeout for clone operations
     private readonly allowedProtocols = ['https:', 'http:']; // Only allow HTTP/HTTPS
-    private readonly maxRepoSize = 1024 * 1024 * 900; // 900MB max repo size
+    private readonly maxRepoSize = 1024 * 1024 * 2048; // 2GB max repo size
 
-    // Simple in-memory cache for S3 data
-    private readonly s3Cache = new Map<
-        string,
-        { data: any; timestamp: number }
-    >();
-    private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes cache timeout
+    // Cache em arquivo para todos os dados
+    private readonly fileCacheDir = '/tmp/s3-cache';
+    private readonly maxFileCacheSize = 2 * 1024 * 1024 * 1024; // 2GB max cache
+    private readonly maxFileAge = 30 * 60 * 1000; // 30 minutos
 
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
@@ -38,6 +36,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         private readonly taskResultStorageService: TaskResultStorageService,
     ) {
         void this.ensureBaseDirExists();
+        void this.ensureFileCacheDirExists();
     }
 
     private async ensureBaseDirExists(): Promise<void> {
@@ -57,6 +56,32 @@ export class RepositoryManagerService implements IRepositoryManager {
                 serviceName: RepositoryManagerService.name,
             });
             throw error;
+        }
+    }
+
+    private async ensureFileCacheDirExists(): Promise<void> {
+        try {
+            const cacheDirExists = await fs.promises
+                .stat(this.fileCacheDir)
+                .catch(() => false);
+            if (!cacheDirExists) {
+                await fs.promises.mkdir(this.fileCacheDir, { recursive: true });
+                this.logger.debug({
+                    message: 'File cache directory created',
+                    context: RepositoryManagerService.name,
+                    metadata: { cacheDir: this.fileCacheDir },
+                    serviceName: RepositoryManagerService.name,
+                });
+            }
+        } catch (error) {
+            this.logger.error({
+                message: 'Error ensuring file cache directory exists',
+                context: RepositoryManagerService.name,
+                error,
+                metadata: { cacheDir: this.fileCacheDir },
+                serviceName: RepositoryManagerService.name,
+            });
+            // Não falha a inicialização se não conseguir criar o cache
         }
     }
 
@@ -105,15 +130,6 @@ export class RepositoryManagerService implements IRepositoryManager {
             .update(idString)
             .digest('hex')
             .slice(0, 32);
-    }
-
-    private cleanCache(): void {
-        const now = Date.now();
-        for (const [key, value] of this.s3Cache.entries()) {
-            if (now - value.timestamp > this.cacheTimeout) {
-                this.s3Cache.delete(key);
-            }
-        }
     }
 
     private async saveGraphsMetadata(
@@ -291,11 +307,23 @@ export class RepositoryManagerService implements IRepositoryManager {
             await this.deleteLocalRepository({ repoData });
         }
 
-        let cloneUrl = repoData.url;
+        // Clean URL by removing extra spaces
+        let cloneUrl = repoData.url.trim().replace(/\s+/g, '');
+
+        this.logger.debug({
+            message: 'Processing repository URL',
+            context: RepositoryManagerService.name,
+            metadata: {
+                originalUrl: repoData.url,
+                cleanedUrl: cloneUrl,
+                hasAuth: !!repoData.auth,
+            },
+            serviceName: RepositoryManagerService.name,
+        });
 
         if (repoData.auth) {
             const { token, username } = repoData.auth;
-            const urlObj = new URL(repoData.url);
+            const urlObj = new URL(cloneUrl);
 
             if (token) {
                 if (
@@ -309,6 +337,20 @@ export class RepositoryManagerService implements IRepositoryManager {
                 ) {
                     urlObj.username = (username as string) || 'oauth2';
                     urlObj.password = token;
+
+                    this.logger.debug({
+                        message: 'Bitbucket authentication configured',
+                        context: RepositoryManagerService.name,
+                        metadata: {
+                            username: urlObj.username,
+                            hasPassword: !!urlObj.password,
+                            passwordLength: urlObj.password?.length || 0,
+                            finalUrl: urlObj
+                                .toString()
+                                .replace(/\/\/[^@]+@/, '//***:***@'), // Hide credentials in log
+                        },
+                        serviceName: RepositoryManagerService.name,
+                    });
                 } else {
                     urlObj.username = 'oauth2';
                     urlObj.password = token;
@@ -346,15 +388,47 @@ export class RepositoryManagerService implements IRepositoryManager {
 
             return repoPath;
         } catch (error) {
+            // Enhanced error logging for Bitbucket authentication issues
+            const errorMessage =
+                error instanceof Error ? error.message : String(error);
+            const isBitbucketAuthError =
+                repoData.provider ===
+                    ProtoPlatformType.PROTO_PLATFORM_TYPE_BITBUCKET &&
+                (errorMessage.includes('authentication') ||
+                    errorMessage.includes('access') ||
+                    errorMessage.includes('permission') ||
+                    errorMessage.includes('not have access'));
+
             this.logger.error({
-                message: 'Error cloning repository',
+                message: isBitbucketAuthError
+                    ? 'Bitbucket authentication failed'
+                    : 'Error cloning repository',
                 context: RepositoryManagerService.name,
                 error,
-                metadata: { params: repoData, repoPath, cloneUrl },
+                metadata: {
+                    params: repoData,
+                    repoPath,
+                    cloneUrl: cloneUrl.replace(/\/\/[^@]+@/, '//***:***@'), // Hide credentials
+                    isBitbucketAuthError,
+                    provider: repoData.provider,
+                    hasAuth: !!repoData.auth,
+                    authUsername: repoData.auth?.username || 'none',
+                },
                 serviceName: RepositoryManagerService.name,
             });
 
             await this.deleteLocalRepository({ repoData });
+
+            // Provide more specific error message for Bitbucket auth issues
+            if (isBitbucketAuthError) {
+                const authError = new Error(
+                    `Bitbucket authentication failed for repository: ${repoData.repositoryName}. ` +
+                        `Please verify: 1) Token is valid and not expired, 2) Username is correct, ` +
+                        `3) Token has repository access permissions, 4) Repository exists and is accessible.`,
+                );
+                (authError as any).errorType = 'BUSINESS_ERROR';
+                throw authError;
+            }
 
             throw error;
         }
@@ -745,44 +819,43 @@ export class RepositoryManagerService implements IRepositoryManager {
                 getEnvVariableAsBoolean('S3_ENABLED', false) &&
                 taskId
             ) {
-                // Check cache first
-                const cacheKey = `${taskId}-${repoData.repositoryName}`;
-                const cached = this.s3Cache.get(cacheKey);
+                // Check file cache first
+                const cacheKey = this.generateCacheKey(
+                    taskId,
+                    repoData.repositoryName,
+                    repoData.organizationId,
+                );
+                const fileCachedData = await this.loadFromFileCache(cacheKey);
 
-                if (
-                    cached &&
-                    Date.now() - cached.timestamp < this.cacheTimeout
-                ) {
+                if (fileCachedData) {
                     this.logger.debug({
-                        message: 'Reading graphs from cache',
+                        message: 'Reading graphs from file cache',
                         context: RepositoryManagerService.name,
                         metadata: {
                             repository: repoData.repositoryName,
                             taskId,
                             cacheKey,
-                            dataType: typeof cached.data,
-                            dataKeys: cached.data
-                                ? Object.keys(cached.data)
+                            dataType: typeof fileCachedData,
+                            dataKeys: fileCachedData
+                                ? Object.keys(fileCachedData)
                                 : null,
                         },
                     });
 
                     try {
                         if (stringify) {
-                            return JSON.stringify(cached.data);
+                            return JSON.stringify(fileCachedData);
                         }
-                        return Buffer.from(JSON.stringify(cached.data));
+
+                        return Buffer.from(JSON.stringify(fileCachedData));
                     } catch (error) {
                         this.logger.error({
                             message:
-                                'Failed to serialize cached data, falling back to S3',
+                                'Failed to serialize file cached data, falling back to S3',
                             context: RepositoryManagerService.name,
                             error,
                             metadata: { cacheKey, taskId },
                         });
-                        // Fall back to S3 if cache serialization fails
-                        this.s3Cache.delete(cacheKey);
-                        // Continue to S3 logic below - don't return here
                     }
                 }
 
@@ -804,31 +877,33 @@ export class RepositoryManagerService implements IRepositoryManager {
                     return null;
                 }
 
-                // Cache the data
-                this.s3Cache.set(cacheKey, {
-                    data: graphsData,
-                    timestamp: Date.now(),
-                });
+                // Calculate data size
+                const dataSize = Buffer.byteLength(
+                    JSON.stringify(graphsData),
+                    'utf8',
+                );
+
+                // Save all data to file cache
+                await this.saveToFileCache(cacheKey, graphsData, dataSize);
 
                 this.logger.debug({
-                    message: 'Cached S3 data',
+                    message: 'Cached S3 data to file',
                     context: RepositoryManagerService.name,
                     metadata: {
                         repository: repoData.repositoryName,
                         taskId,
                         cacheKey,
+                        dataSize: Math.round(dataSize / 1024 / 1024), // MB
                         dataType: typeof graphsData,
                         dataKeys: graphsData ? Object.keys(graphsData) : null,
                     },
                 });
 
-                // Clean old cache entries
-                this.cleanCache();
-
                 try {
                     if (stringify) {
                         return JSON.stringify(graphsData);
                     }
+
                     return Buffer.from(JSON.stringify(graphsData));
                 } catch (error) {
                     this.logger.error({
@@ -889,6 +964,195 @@ export class RepositoryManagerService implements IRepositoryManager {
                 serviceName: RepositoryManagerService.name,
             });
             return null;
+        }
+    }
+
+    /**
+     * Gera uma chave de cache baseada no hash do conteúdo
+     * Inclui organizationId para evitar conflitos entre clientes
+     */
+    private generateCacheKey(
+        taskId: string,
+        repositoryName: string,
+        organizationId: string,
+    ): string {
+        const content = `${organizationId}-${taskId}-${repositoryName}`;
+        return crypto.createHash('md5').update(content).digest('hex');
+    }
+
+    /**
+     * Salva dados no cache em arquivo
+     */
+    private async saveToFileCache(
+        cacheKey: string,
+        data: any,
+        size: number,
+    ): Promise<void> {
+        try {
+            const filePath = path.join(this.fileCacheDir, `${cacheKey}.json`);
+            const cacheData = {
+                data,
+                timestamp: Date.now(),
+                size,
+            };
+
+            await fs.promises.writeFile(
+                filePath,
+                JSON.stringify(cacheData),
+                'utf-8',
+            );
+
+            this.logger.debug({
+                message: 'Data saved to file cache',
+                context: RepositoryManagerService.name,
+                metadata: {
+                    cacheKey,
+                    filePath,
+                    size,
+                },
+                serviceName: RepositoryManagerService.name,
+            });
+
+            // Limpar cache antigo
+            await this.cleanFileCache();
+        } catch (error) {
+            this.logger.warn({
+                message: 'Failed to save to file cache',
+                context: RepositoryManagerService.name,
+                error,
+                metadata: { cacheKey, size },
+                serviceName: RepositoryManagerService.name,
+            });
+        }
+    }
+
+    /**
+     * Carrega dados do cache em arquivo
+     */
+    private async loadFromFileCache(cacheKey: string): Promise<any | null> {
+        try {
+            const filePath = path.join(this.fileCacheDir, `${cacheKey}.json`);
+
+            // Verificar se o arquivo existe
+            const exists = await fs.promises.stat(filePath).catch(() => false);
+            if (!exists) {
+                return null;
+            }
+
+            // Ler e parsear o arquivo
+            const content = await fs.promises.readFile(filePath, 'utf-8');
+            const cacheData = JSON.parse(content);
+
+            // Verificar se não expirou
+            const age = Date.now() - cacheData.timestamp;
+            if (age > this.maxFileAge) {
+                // Remover arquivo expirado
+                await fs.promises.unlink(filePath).catch(() => {});
+                return null;
+            }
+
+            this.logger.debug({
+                message: 'Data loaded from file cache',
+                context: RepositoryManagerService.name,
+                metadata: {
+                    cacheKey,
+                    filePath,
+                    age: Math.round(age / 1000), // em segundos
+                    size: cacheData.size,
+                },
+                serviceName: RepositoryManagerService.name,
+            });
+
+            return cacheData.data;
+        } catch (error) {
+            this.logger.warn({
+                message: 'Failed to load from file cache',
+                context: RepositoryManagerService.name,
+                error,
+                metadata: { cacheKey },
+                serviceName: RepositoryManagerService.name,
+            });
+            return null;
+        }
+    }
+
+    /**
+     * Limpa arquivos de cache antigos
+     */
+    private async cleanFileCache(): Promise<void> {
+        try {
+            const files = await fs.promises.readdir(this.fileCacheDir);
+            const now = Date.now();
+            let totalSize = 0;
+            const fileStats: Array<{
+                path: string;
+                size: number;
+                age: number;
+            }> = [];
+
+            // Coletar estatísticas dos arquivos
+            for (const file of files) {
+                if (!file.endsWith('.json')) {
+                    continue;
+                }
+
+                const filePath = path.join(this.fileCacheDir, file);
+                try {
+                    const stats = await fs.promises.stat(filePath);
+                    const age = now - stats.mtime.getTime();
+
+                    fileStats.push({
+                        path: filePath,
+                        size: stats.size,
+                        age,
+                    });
+                    totalSize += stats.size;
+                } catch {
+                    // Ignorar arquivos que não conseguimos ler
+                }
+            }
+
+            // Remover arquivos expirados
+            for (const fileStat of fileStats) {
+                if (fileStat.age > this.maxFileAge) {
+                    await fs.promises.unlink(fileStat.path).catch(() => {});
+                    totalSize -= fileStat.size;
+                }
+            }
+
+            // Se ainda exceder o tamanho máximo, remover os mais antigos
+            if (totalSize > this.maxFileCacheSize) {
+                const remainingFiles = fileStats
+                    .filter((f) => f.age <= this.maxFileAge)
+                    .sort((a, b) => b.age - a.age); // Mais antigos primeiro
+
+                for (const fileStat of remainingFiles) {
+                    if (totalSize <= this.maxFileCacheSize) {
+                        break;
+                    }
+
+                    await fs.promises.unlink(fileStat.path).catch(() => {});
+                    totalSize -= fileStat.size;
+                }
+            }
+
+            this.logger.debug({
+                message: 'File cache cleaned',
+                context: RepositoryManagerService.name,
+                metadata: {
+                    totalSize: Math.round(totalSize / 1024 / 1024), // MB
+                    maxSize: Math.round(this.maxFileCacheSize / 1024 / 1024), // MB
+                    filesRemoved: files.length - fileStats.length,
+                },
+                serviceName: RepositoryManagerService.name,
+            });
+        } catch (error) {
+            this.logger.warn({
+                message: 'Failed to clean file cache',
+                context: RepositoryManagerService.name,
+                error,
+                serviceName: RepositoryManagerService.name,
+            });
         }
     }
 }

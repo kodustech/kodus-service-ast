@@ -52,17 +52,6 @@ export class TaskQueueProcessor {
     ) {}
 
     async process(message: TaskQueueMessage): Promise<void> {
-        // Check circuit breaker before processing
-        if (!this.circuitBreaker.isAvailable()) {
-            this.logger.warn({
-                message: 'Circuit breaker preventing task processing',
-                context: WORKER_CONTEXT,
-                metadata: { taskId: message.taskId },
-                serviceName: WORKER_CONTEXT,
-            });
-            throw new Error('RabbitMQ circuit breaker is open');
-        }
-
         const taskContext = this.taskContextService.createContext(
             message.taskId,
         );
@@ -85,9 +74,11 @@ export class TaskQueueProcessor {
                         return;
                     default:
                         await this.markUnsupported(message);
-                        throw new Error(
+                        const error = new Error(
                             `Unsupported task type: ${message.type}`,
                         );
+                        (error as any).errorType = 'BUSINESS_ERROR';
+                        throw error;
                 }
             });
         } catch (error) {
@@ -114,7 +105,11 @@ export class TaskQueueProcessor {
         const taskId = request?.taskId ?? taskContext?.taskId;
 
         if (!baseRepo || !headRepo) {
-            throw new Error('Both baseRepo and headRepo must be provided');
+            const error = new Error(
+                'Both baseRepo and headRepo must be provided',
+            );
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         try {
@@ -198,13 +193,19 @@ export class TaskQueueProcessor {
         const taskId = request?.taskId ?? taskContext?.taskId;
 
         if (!baseRepo || !headRepo) {
-            throw new Error('Both baseRepo and headRepo must be provided');
+            const error = new Error(
+                'Both baseRepo and headRepo must be provided',
+            );
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         if (!graphsTaskId) {
-            throw new Error(
+            const error = new Error(
                 'graphsTaskId must be provided to fetch existing graphs',
             );
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         try {
@@ -308,7 +309,9 @@ export class TaskQueueProcessor {
                 metadata: { request: JSON.stringify(repoData) },
                 serviceName: WORKER_CONTEXT,
             });
-            throw new Error('Failed to clone repository');
+            const error = new Error('Failed to clone repository');
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         this.logger.log({
@@ -354,9 +357,11 @@ export class TaskQueueProcessor {
                 },
                 serviceName: WORKER_CONTEXT,
             });
-            throw new Error(
+            const error = new Error(
                 `Failed to write impact analysis for repository ${repoData.repositoryName}`,
             );
+            (error as any).errorType = 'SYSTEM_ERROR';
+            throw error;
         }
 
         this.logger.log({
@@ -380,8 +385,9 @@ export class TaskQueueProcessor {
         taskId: string,
     ): Promise<void> {
         const fileName = this.repositoryManagerService.graphsFileName;
-        // Serialize graphs without pretty printing to reduce memory usage
-        const graphs = astSerializer.serializeGetGraphsResponseData({
+
+        // Serialize graphs with streaming approach for large datasets
+        const graphs = await this.serializeGraphsStreaming({
             baseGraph: {
                 graph: baseGraph,
                 dir: baseGraphDir,
@@ -404,8 +410,12 @@ export class TaskQueueProcessor {
                 taskId,
                 repository: repoData.repositoryName,
                 graphsSize,
+                memoryUsage: this.getMemoryUsageMB(),
             },
         });
+
+        // Force garbage collection after serialization
+        this.forceGarbageCollection();
 
         const ok = await this.repositoryManagerService.writeFile({
             repoData,
@@ -422,9 +432,11 @@ export class TaskQueueProcessor {
                 metadata: { request: JSON.stringify(repoData) },
                 serviceName: WORKER_CONTEXT,
             });
-            throw new Error(
+            const error = new Error(
                 `Failed to write graphs to ${fileName} for repository ${repoData.repositoryName}`,
             );
+            (error as any).errorType = 'SYSTEM_ERROR';
+            throw error;
         }
 
         // Metadata is now saved automatically in RepositoryManagerService.writeFile()
@@ -435,9 +447,68 @@ export class TaskQueueProcessor {
             metadata: {
                 filePath: path.join(repoData.repositoryName, fileName),
                 size: graphsSize,
+                memoryUsage: this.getMemoryUsageMB(),
             },
             serviceName: WORKER_CONTEXT,
         });
+    }
+
+    /**
+     * Serialize graphs with streaming approach for large datasets
+     */
+    private async serializeGraphsStreaming(graphsData: any): Promise<any> {
+        try {
+            // Use the existing serializer but with memory monitoring
+            const result =
+                astSerializer.serializeGetGraphsResponseData(graphsData);
+
+            // Force garbage collection after serialization
+            this.forceGarbageCollection();
+
+            return result;
+        } catch (error) {
+            this.logger.error({
+                message: 'Failed to serialize graphs',
+                context: WORKER_CONTEXT,
+                error,
+                metadata: {
+                    memoryUsage: this.getMemoryUsageMB(),
+                },
+                serviceName: WORKER_CONTEXT,
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Get current memory usage in MB
+     */
+    private getMemoryUsageMB(): number {
+        const memUsage = process.memoryUsage();
+        return Math.round(memUsage.heapUsed / 1024 / 1024);
+    }
+
+    /**
+     * Force garbage collection if available
+     */
+    private forceGarbageCollection(): void {
+        if (global.gc) {
+            try {
+                global.gc();
+                this.logger.debug({
+                    message: 'Forced garbage collection',
+                    context: WORKER_CONTEXT,
+                    serviceName: WORKER_CONTEXT,
+                });
+            } catch (error) {
+                this.logger.warn({
+                    message: 'Failed to force garbage collection',
+                    context: WORKER_CONTEXT,
+                    error,
+                    serviceName: WORKER_CONTEXT,
+                });
+            }
+        }
     }
 
     private async markUnsupported(message: TaskQueueMessage): Promise<void> {

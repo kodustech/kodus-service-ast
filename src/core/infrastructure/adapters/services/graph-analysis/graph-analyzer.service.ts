@@ -81,7 +81,12 @@ export class GraphAnalyzerService {
                 },
                 error,
             });
-            throw error;
+            // Re-throw with business error classification
+            const businessError = new Error(
+                `Error analyzing code with graph: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            (businessError as any).errorType = 'BUSINESS_ERROR';
+            throw businessError;
         }
     }
 

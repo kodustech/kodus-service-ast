@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
     S3Client,
     PutObjectCommand,
@@ -11,6 +11,7 @@ import {
     getEnvVariableOrExit,
 } from '@/shared/utils/env.js';
 import { PinoLoggerService } from '../logger/pino.service.js';
+import { TaskResultStorageService } from './task-result-storage.service.js';
 import * as crypto from 'crypto';
 
 export interface GraphStorageResult {
@@ -24,8 +25,13 @@ export class S3GraphsService {
     private readonly s3Client: S3Client;
     private readonly bucketName: string;
     private readonly enabled: boolean;
+    private readonly baseTimeout = 30000; // 30s base timeout
 
-    constructor(private readonly logger: PinoLoggerService) {
+    constructor(
+        @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
+        @Inject(TaskResultStorageService)
+        private readonly taskResultStorage: TaskResultStorageService,
+    ) {
         this.enabled = getEnvVariableAsBoolean('S3_ENABLED', false);
         this.bucketName = getEnvVariableOrExit('S3_BUCKET_NAME');
 
@@ -39,15 +45,24 @@ export class S3GraphsService {
             // Performance: Connection pooling
             maxAttempts: 3,
             retryMode: 'adaptive',
-            // Security: Request timeout
+            // Security: Request timeout (will be overridden per request)
             requestHandler: {
-                requestTimeout: 30000, // 30s timeout
+                requestTimeout: this.baseTimeout,
                 httpsAgent: {
                     keepAlive: true,
                     maxSockets: 50,
                 },
             },
         });
+    }
+
+    /**
+     * Calculate adaptive timeout based on data size
+     */
+    private getAdaptiveTimeout(size: number): number {
+        const sizeFactor = Math.ceil(size / (1024 * 1024)); // MB
+        const adaptiveTimeout = this.baseTimeout * Math.max(1, sizeFactor / 10);
+        return Math.min(adaptiveTimeout, 300000); // Max 5 minutes
     }
 
     async saveGraphs(
@@ -80,6 +95,9 @@ export class S3GraphsService {
                 throw new Error(`Graphs too large: ${size} bytes (max 1GB)`);
             }
 
+            // Calculate adaptive timeout based on size
+            const adaptiveTimeout = this.getAdaptiveTimeout(size);
+
             // Security: Server-side encryption
             await this.s3Client.send(
                 new PutObjectCommand({
@@ -103,12 +121,14 @@ export class S3GraphsService {
                         size: size.toString(),
                         timestamp: timestamp.toString(),
                         version: '1.0',
+                        timeout: adaptiveTimeout.toString(),
                     },
                     // eslint-disable-next-line @typescript-eslint/naming-convention
                     ContentMD5: this.calculateMD5(body),
                     // eslint-disable-next-line @typescript-eslint/naming-convention
                     CacheControl: 'no-cache, no-store, must-revalidate',
                 }),
+                { requestTimeout: adaptiveTimeout },
             );
 
             this.logger.log({
@@ -154,11 +174,23 @@ export class S3GraphsService {
         }
 
         try {
-            const sanitizedRepo = this.sanitizeKey(repositoryName);
-            const sanitizedTaskId = this.sanitizeKey(taskId);
+            // Get the s3Key from task_results table
+            const graphsMetadata =
+                await this.taskResultStorage.getGraphsMetadata(taskId);
 
-            // Try to find the most recent graph file for this commit
-            const key = `graphs/${sanitizedRepo}/${sanitizedTaskId}_`;
+            if (!graphsMetadata?.s3Key) {
+                this.logger.warn({
+                    message: 'No S3 key found in task_results for task',
+                    context: S3GraphsService.name,
+                    metadata: {
+                        taskId,
+                        repository: repositoryName,
+                    },
+                });
+                return null;
+            }
+
+            const key = graphsMetadata.s3Key;
 
             const response = await this.s3Client.send(
                 new GetObjectCommand({
@@ -187,9 +219,10 @@ export class S3GraphsService {
                 message: 'Graphs retrieved from S3',
                 context: S3GraphsService.name,
                 metadata: {
-                    repository: sanitizedRepo,
-                    taskId: sanitizedTaskId,
+                    repository: repositoryName,
+                    taskId,
                     key,
+                    size: graphsMetadata.size,
                 },
             });
 
@@ -221,9 +254,23 @@ export class S3GraphsService {
         }
 
         try {
-            const sanitizedRepo = this.sanitizeKey(repositoryName);
-            const sanitizedTaskId = this.sanitizeKey(taskId);
-            const key = `graphs/${sanitizedRepo}/${sanitizedTaskId}_`;
+            // Get the s3Key from task_results table
+            const graphsMetadata =
+                await this.taskResultStorage.getGraphsMetadata(taskId);
+
+            if (!graphsMetadata?.s3Key) {
+                this.logger.warn({
+                    message: 'No S3 key found in task_results for deletion',
+                    context: S3GraphsService.name,
+                    metadata: {
+                        taskId,
+                        repository: repositoryName,
+                    },
+                });
+                return false;
+            }
+
+            const key = graphsMetadata.s3Key;
 
             await this.s3Client.send(
                 new DeleteObjectCommand({
@@ -239,7 +286,7 @@ export class S3GraphsService {
                 context: S3GraphsService.name,
                 metadata: {
                     repository: repositoryName,
-                    taskId: sanitizedTaskId,
+                    taskId,
                     key,
                 },
             });
@@ -288,9 +335,24 @@ export class S3GraphsService {
         }
 
         try {
-            const sanitizedRepo = this.sanitizeKey(repositoryName);
-            const sanitizedTaskId = this.sanitizeKey(taskId);
-            const key = `graphs/${sanitizedRepo}/${sanitizedTaskId}_`;
+            // Get the s3Key from task_results table
+            const graphsMetadata =
+                await this.taskResultStorage.getGraphsMetadata(taskId);
+
+            if (!graphsMetadata?.s3Key) {
+                this.logger.warn({
+                    message:
+                        'No S3 key found in task_results for presigned URL',
+                    context: S3GraphsService.name,
+                    metadata: {
+                        taskId,
+                        repository: repositoryName,
+                    },
+                });
+                return null;
+            }
+
+            const key = graphsMetadata.s3Key;
 
             const presignedUrl = await getSignedUrl(
                 this.s3Client,
@@ -307,9 +369,10 @@ export class S3GraphsService {
                 message: 'Presigned URL generated',
                 context: S3GraphsService.name,
                 metadata: {
-                    repository: sanitizedRepo,
-                    taskId: sanitizedTaskId,
+                    repository: repositoryName,
+                    taskId,
                     expirationMinutes,
+                    key,
                 },
             });
 

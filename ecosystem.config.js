@@ -24,6 +24,10 @@ module.exports = {
                 '--max-http-header-size=16384',
                 '--trace-warnings',
                 '--unhandled-rejections=strict',
+
+                // 🚀 OTIMIZAÇÃO: Habilitar garbage collection manual
+                '--expose-gc',
+                '--optimize-for-size',
             ],
 
             // Controle de ciclo de vida

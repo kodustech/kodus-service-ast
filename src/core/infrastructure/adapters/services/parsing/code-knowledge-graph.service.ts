@@ -48,7 +48,7 @@ export class CodeKnowledgeGraphService {
 
     // Configurações para streaming - Otimizadas
     // 🚀 OTIMIZAÇÃO: Aumentar threshold de memória para melhor performance
-    private readonly memoryThreshold = 0.85; // 85% de uso de memória
+    private readonly memoryThreshold = 0.9; // 90% de uso de memória (increased from 85%)
     private readonly batchPauseMs = 50; // Pausa reduzida entre lotes
     private readonly adaptivePauseMs = 200; // Pausa maior quando memória muito alta
     private readonly gcThreshold = 0.7; // Threshold para forçar GC
@@ -81,9 +81,11 @@ export class CodeKnowledgeGraphService {
             : join(__dirname, 'worker', 'worker.js');
 
         if (!existsSync(workerPath)) {
-            throw new Error(
+            const error = new Error(
                 `Worker file not found at ${workerPath}. Ensure 'yarn build' has been run.`,
             );
+            (error as any).errorType = 'SYSTEM_ERROR';
+            throw error;
         }
 
         const cpuCount = os.cpus().length;
@@ -272,13 +274,17 @@ export class CodeKnowledgeGraphService {
         const hr0 = process.hrtime();
 
         if (!rootDir || rootDir.trim() === '') {
-            throw new Error(`Root directory can't be empty ${rootDir}`);
+            const error = new Error(`Root directory can't be empty ${rootDir}`);
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         try {
             await fs.promises.access(rootDir, fs.constants.F_OK);
         } catch {
-            throw new Error(`Root directory not found: ${rootDir}`);
+            const error = new Error(`Root directory not found: ${rootDir}`);
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         const result: CodeGraph = {
@@ -352,36 +358,90 @@ export class CodeKnowledgeGraphService {
         // Completar relações bidirecionais de tipos
         this.completeBidirectionalTypeRelations(result.types);
 
-        console.timeEnd('streaming-task-ms');
-        console.log(
-            'streaming_perf_hooks:',
-            (performance.now() - t0).toFixed(3) + ' ms',
-        );
+        const streamingTime = performance.now() - t0;
         const [s, ns] = process.hrtime(hr0);
-        console.log(
-            'streaming_hrtime:',
-            (s * 1e3 + ns / 1e6).toFixed(3) + ' ms',
-        );
+        const hrtimeMs = s * 1e3 + ns / 1e6;
+
+        this.logger.debug({
+            message: 'Streaming performance metrics',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                streamingTimeMs: streamingTime.toFixed(3),
+                hrtimeMs: hrtimeMs.toFixed(3),
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
 
         return result;
+    }
+
+    /**
+     * Log detailed memory usage for monitoring
+     */
+    private logMemoryUsage(context: string): void {
+        const memUsage = process.memoryUsage();
+        const memUsageMB = {
+            rss: Math.round(memUsage.rss / 1024 / 1024),
+            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+            external: Math.round(memUsage.external / 1024 / 1024),
+        };
+
+        this.logger.debug({
+            message: 'Memory usage',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                ...memUsageMB,
+                context,
+                memoryPressure: memUsageMB.heapUsed / memUsageMB.heapTotal,
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
+    }
+
+    /**
+     * Force garbage collection if available
+     */
+    private forceGarbageCollection(): void {
+        if (global.gc && Date.now() - this.lastGcTime > this.gcIntervalMs) {
+            try {
+                global.gc();
+                this.lastGcTime = Date.now();
+                this.logger.debug({
+                    message: 'Forced garbage collection',
+                    context: CodeKnowledgeGraphService.name,
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            } catch (error) {
+                this.logger.warn({
+                    message: 'Failed to force garbage collection',
+                    context: CodeKnowledgeGraphService.name,
+                    error,
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            }
+        }
     }
 
     public async buildGraphProgressively(
         rootDir: string,
         filePaths: string[],
     ): Promise<CodeGraph> {
-        console.time('task-ms');
         const t0 = performance.now();
         const hr0 = process.hrtime();
 
         if (!rootDir || rootDir.trim() === '') {
-            throw new Error(`Root directory can't be empty ${rootDir}`);
+            const error = new Error(`Root directory can't be empty ${rootDir}`);
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         try {
             await fs.promises.access(rootDir, fs.constants.F_OK);
         } catch {
-            throw new Error(`Root directory not found: ${rootDir}`);
+            const error = new Error(`Root directory not found: ${rootDir}`);
+            (error as any).errorType = 'BUSINESS_ERROR';
+            throw error;
         }
 
         const result: CodeGraph = {
@@ -515,10 +575,19 @@ export class CodeKnowledgeGraphService {
 
         this.completeBidirectionalTypeRelations(result.types);
 
-        console.timeEnd('task-ms'); // ms via Date
-        console.log('perf_hooks:', (performance.now() - t0).toFixed(3) + ' ms');
+        const progressiveTime = performance.now() - t0;
         const [s, ns] = process.hrtime(hr0);
-        console.log('hrtime:', (s * 1e3 + ns / 1e6).toFixed(3) + ' ms');
+        const hrtimeMs = s * 1e3 + ns / 1e6;
+
+        this.logger.debug({
+            message: 'Progressive performance metrics',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                progressiveTimeMs: progressiveTime.toFixed(3),
+                hrtimeMs: hrtimeMs.toFixed(3),
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
 
         return result;
     }
@@ -594,34 +663,6 @@ export class CodeKnowledgeGraphService {
         }
 
         return heapUsageRatio > this.memoryThreshold;
-    }
-
-    /**
-     * Força garbage collection de forma otimizada
-     */
-    private forceGarbageCollection(): void {
-        if (global.gc) {
-            try {
-                global.gc();
-                this.logger.debug({
-                    message: 'Forced garbage collection executed',
-                    context: CodeKnowledgeGraphService.name,
-                    metadata: {
-                        memoryBefore:
-                            this.streamingMetrics.memoryUsage.toFixed(2),
-                    },
-                    serviceName: CodeKnowledgeGraphService.name,
-                });
-            } catch (error) {
-                this.logger.warn({
-                    message: 'Failed to execute garbage collection',
-                    context: CodeKnowledgeGraphService.name,
-                    error:
-                        error instanceof Error ? error.message : String(error),
-                    serviceName: CodeKnowledgeGraphService.name,
-                });
-            }
-        }
     }
 
     /**

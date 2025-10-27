@@ -1,5 +1,4 @@
 import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
-import { TaskResultStorageService } from '@/core/infrastructure/adapters/services/storage/task-result-storage.service.js';
 
 import { Inject, Injectable } from '@nestjs/common';
 import {
@@ -18,8 +17,6 @@ export class GetGraphsUseCase {
     constructor(
         @Inject(REPOSITORY_MANAGER_TOKEN)
         private readonly repositoryManagerService: IRepositoryManager,
-        @Inject(TaskResultStorageService)
-        private readonly taskResultStorageService: TaskResultStorageService,
         @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}

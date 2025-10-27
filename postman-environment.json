@@ -1,0 +1,55 @@
+{
+    "id": "kodus-ast-env",
+    "name": "Kodus AST Service Environment",
+    "values": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3002",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "apiPort",
+            "value": "3002",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "githubToken",
+            "value": "ghp_your_github_token_here",
+            "type": "secret",
+            "enabled": true
+        },
+        {
+            "key": "organizationId",
+            "value": "org-123",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "repositoryId",
+            "value": "repo-456",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "repositoryName",
+            "value": "my-repository",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "branch",
+            "value": "main",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "repositoryUrl",
+            "value": "https://github.com/org/my-repository",
+            "type": "default",
+            "enabled": true
+        }
+    ],
+    "_postman_variable_scope": "environment"
+}

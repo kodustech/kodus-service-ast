@@ -1,0 +1,286 @@
+{
+    "info": {
+        "name": "Kodus Service AST API",
+        "description": "Coleção de endpoints para testar a API do serviço AST do Kodus",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "version": "1.0.0"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3002",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health Check",
+            "item": [
+                {
+                    "name": "Basic Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/health",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        },
+                        "description": "Endpoint básico de verificação de saúde para balanceadores de carga"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Detailed Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/health/detail",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "health",
+                                "detail"
+                            ]
+                        },
+                        "description": "Verificação de saúde detalhada com métricas do sistema"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Tasks",
+            "item": [
+                {
+                    "name": "Get Task Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/tasks/:taskId",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "tasks",
+                                ":taskId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "taskId",
+                                    "value": "example-task-id",
+                                    "description": "ID da tarefa"
+                                }
+                            ]
+                        },
+                        "description": "Obtém informações sobre uma tarefa específica"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "AST - Repositories",
+            "item": [
+                {
+                    "name": "Initialize Repository",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"taskId\": \"example-task-id\",\n  \"headRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"abc123def456\",\n    \"defaultBranch\": \"main\"\n  },\n  \"baseRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"def456ghi789\",\n    \"defaultBranch\": \"main\"\n  },\n  \"filePaths\": [\n    \"src/components/Button.tsx\",\n    \"src/utils/helpers.ts\"\n  ],\n  \"priority\": 2\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/ast/repositories/initialize",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "ast",
+                                "repositories",
+                                "initialize"
+                            ]
+                        },
+                        "description": "Inicializa a análise de um repositório"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Repository",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"taskId\": \"example-task-id\",\n  \"headRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"abc123def456\",\n    \"defaultBranch\": \"main\"\n  },\n  \"baseRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"def456ghi789\",\n    \"defaultBranch\": \"main\"\n  }\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/ast/repositories/delete",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "ast",
+                                "repositories",
+                                "delete"
+                            ]
+                        },
+                        "description": "Remove dados de um repositório"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "AST - Diff",
+            "item": [
+                {
+                    "name": "Get Content From Diff",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"taskId\": \"example-task-id\",\n  \"headRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"abc123def456\",\n    \"defaultBranch\": \"main\"\n  },\n  \"baseRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"def456ghi789\",\n    \"defaultBranch\": \"main\"\n  },\n  \"diff\": \"diff --git a/src/components/Button.tsx b/src/components/Button.tsx\\nindex 1234567..abcdefg 100644\\n--- a/src/components/Button.tsx\\n+++ b/src/components/Button.tsx\\n@@ -1,5 +1,6 @@\\n import React from 'react';\\n+import { useState } from 'react';\\n \\n export const Button = () => {\\n   return <button>Click me</button>;\\n };\",\n  \"filePath\": \"src/components/Button.tsx\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/ast/diff/content",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "ast",
+                                "diff",
+                                "content"
+                            ]
+                        },
+                        "description": "Obtém o conteúdo de um arquivo baseado em um diff"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "AST - Impact Analysis",
+            "item": [
+                {
+                    "name": "Initialize Impact Analysis",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"taskId\": \"example-task-id\",\n  \"headRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"abc123def456\",\n    \"defaultBranch\": \"main\"\n  },\n  \"baseRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"def456ghi789\",\n    \"defaultBranch\": \"main\"\n  },\n  \"codeChunk\": \"export const Button = () => {\\n  const [count, setCount] = useState(0);\\n  return <button onClick={() => setCount(count + 1)}>Click me {count}</button>;\\n};\",\n  \"fileName\": \"src/components/Button.tsx\",\n  \"graphsTaskId\": \"graphs-task-123\",\n  \"priority\": 2\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/ast/impact-analysis/initialize",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "ast",
+                                "impact-analysis",
+                                "initialize"
+                            ]
+                        },
+                        "description": "Inicializa análise de impacto de código"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Impact Analysis",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"taskId\": \"example-task-id\",\n  \"headRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"abc123def456\",\n    \"defaultBranch\": \"main\"\n  },\n  \"baseRepo\": {\n    \"organizationId\": \"org-123\",\n    \"repositoryId\": \"repo-456\",\n    \"repositoryName\": \"my-repository\",\n    \"branch\": \"main\",\n    \"url\": \"https://github.com/org/my-repository\",\n    \"provider\": \"PROTO_PLATFORM_TYPE_GITHUB\",\n    \"auth\": {\n      \"token\": \"ghp_your_token_here\"\n    },\n    \"commitSha\": \"def456ghi789\",\n    \"defaultBranch\": \"main\"\n  }\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/ast/impact-analysis/retrieve",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "ast",
+                                "impact-analysis",
+                                "retrieve"
+                            ]
+                        },
+                        "description": "Obtém resultados da análise de impacto"
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

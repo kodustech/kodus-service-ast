@@ -17,7 +17,6 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'fs';
 
-// Types para streaming
 interface BatchProgress {
     batch: WorkerOutput;
     progress: number;
@@ -33,6 +32,9 @@ interface StreamingMetrics {
     memoryUsage: number;
     startTime: number;
     lastBatchTime: number;
+    timeoutCount: number;
+    retryCount: number;
+    failedBatches: number;
 }
 
 @Injectable()
@@ -44,17 +46,17 @@ export class CodeKnowledgeGraphService {
         memoryUsage: 0,
         startTime: 0,
         lastBatchTime: 0,
+        timeoutCount: 0,
+        retryCount: 0,
+        failedBatches: 0,
     };
 
-    // Configurações para streaming - Otimizadas
-    // 🚀 OTIMIZAÇÃO: Aumentar threshold de memória para melhor performance
-    private readonly memoryThreshold = 0.9; // 90% de uso de memória (increased from 85%)
-    private readonly batchPauseMs = 50; // Pausa reduzida entre lotes
-    private readonly adaptivePauseMs = 200; // Pausa maior quando memória muito alta
-    private readonly gcThreshold = 0.7; // Threshold para forçar GC
+    private readonly memoryThreshold = 0.85;
+    private readonly batchPauseMs = 50;
+    private readonly adaptivePauseMs = 200;
+    private readonly gcThreshold = 0.7;
     private lastGcTime = 0;
-    // 🚀 OTIMIZAÇÃO: Reduzir frequência de GC para melhor performance
-    private gcIntervalMs = 10000; // GC a cada 10s no máximo
+    private gcIntervalMs = 10000;
 
     constructor(
         @Inject(PinoLoggerService) private readonly logger: PinoLoggerService,
@@ -62,8 +64,8 @@ export class CodeKnowledgeGraphService {
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = dirname(__filename);
 
-        // Se estamos rodando de src/ (tsx), precisamos apontar para dist/
-        // Se estamos rodando de dist/ (node), já estamos no lugar certo
+        // If running from src/ (tsx), we need to point to dist/
+        // If running from dist/ (node), we're already in the right place
         const isRunningFromSource = __dirname.includes('/src/');
 
         const workerPath = isRunningFromSource
@@ -93,7 +95,6 @@ export class CodeKnowledgeGraphService {
         const maxThreads = cpuCount - 1;
         const idleTimeout = 30000;
         const maxQueue = 1000;
-        // 🚀 OTIMIZAÇÃO: Aumentar tasks concorrentes por worker
         const concurrentTasksPerWorker = 2;
 
         this.piscina = new Piscina({
@@ -125,10 +126,6 @@ export class CodeKnowledgeGraphService {
         return files;
     }
 
-    /**
-     * ✅ Streaming com AsyncGenerator - Maior impacto imediato na performance
-     * Processa arquivos em lotes de forma streaming, com controle de backpressure
-     */
     public async *processFilesInBatches(
         files: string[],
         rootDir: string,
@@ -137,54 +134,30 @@ export class CodeKnowledgeGraphService {
             return;
         }
 
-        // Inicializar métricas
         this.streamingMetrics.startTime = performance.now();
         this.streamingMetrics.lastBatchTime = this.streamingMetrics.startTime;
 
-        // Calcular tamanho do lote otimizado para streaming
         const cpuCount = os.cpus().length;
         const batchSize = this.calculateOptimalBatchSize(
             cpuCount,
             files.length,
         );
 
-        // Dividir arquivos em lotes
         const batches = this.chunkArray(files, batchSize);
         const totalFiles = files.length;
         let processedFiles = 0;
 
-        // 🚀 OTIMIZAÇÃO: Logs reduzidos para melhor performance
-        // this.logger.log({
-        //     message: 'Starting streaming file processing',
-        //     context: CodeKnowledgeGraphService.name,
-        //     metadata: {
-        //         totalFiles,
-        //         batchSize,
-        //         totalBatches: batches.length,
-        //     },
-        //     serviceName: CodeKnowledgeGraphService.name,
-        // });
-
-        // Processar cada lote de forma streaming
         for (let i = 0; i < batches.length; i++) {
             const batchStartTime = performance.now();
 
             try {
-                // 🚀 OTIMIZAÇÃO: Desabilitar backpressure que causa overhead
-                // if (this.shouldPauseForMemory()) {
-                //     await this.waitForMemory();
-                // }
-
-                // Processar lote
                 const batchResult = await this.processBatch(
                     batches[i],
                     rootDir,
                 );
 
-                // Limpeza de cache após cada batch para reduzir uso de memória
                 this.clearBatchCache();
 
-                // Atualizar métricas
                 processedFiles += batchResult.files.length;
                 const batchTime = performance.now() - batchStartTime;
                 this.updateStreamingMetrics(
@@ -194,7 +167,6 @@ export class CodeKnowledgeGraphService {
 
                 const progress = (processedFiles / totalFiles) * 100;
 
-                // Yield resultado do lote
                 yield {
                     batch: batchResult,
                     progress,
@@ -204,15 +176,20 @@ export class CodeKnowledgeGraphService {
                     totalBatches: batches.length,
                 };
 
-                // 🚀 OTIMIZAÇÃO: Logs de progresso muito menos frequentes
                 if (
-                    i % Math.ceil(batches.length / 5) === 0 || // A cada 20% em vez de 10%
-                    processedFiles % 500 === 0 // A cada 500 arquivos em vez de 100
+                    i % Math.ceil(batches.length / 5) === 0 ||
+                    processedFiles % 500 === 0
                 ) {
-                    // Log simplificado para melhor performance
-                    console.log(
-                        `📊 Streaming: ${progress.toFixed(1)}% (${processedFiles}/${totalFiles})`,
-                    );
+                    this.logger.debug({
+                        message: 'Streaming progress update',
+                        context: CodeKnowledgeGraphService.name,
+                        metadata: {
+                            progress: progress.toFixed(1),
+                            processedFiles,
+                            totalFiles,
+                        },
+                        serviceName: CodeKnowledgeGraphService.name,
+                    });
                 }
             } catch (error) {
                 this.logger.error({
@@ -227,7 +204,6 @@ export class CodeKnowledgeGraphService {
                     serviceName: CodeKnowledgeGraphService.name,
                 });
 
-                // Continuar com próximo lote mesmo em caso de erro
                 yield {
                     batch: {
                         files: [],
@@ -244,7 +220,6 @@ export class CodeKnowledgeGraphService {
             }
         }
 
-        // Log final
         const totalTime = performance.now() - this.streamingMetrics.startTime;
         this.logger.log({
             message: 'Streaming file processing completed',
@@ -256,20 +231,27 @@ export class CodeKnowledgeGraphService {
                     this.streamingMetrics.averageProcessingTime.toFixed(2),
                 filesPerSecond: (totalFiles / (totalTime / 1000)).toFixed(2),
                 peakMemoryUsage: this.streamingMetrics.memoryUsage.toFixed(2),
+                timeoutCount: this.streamingMetrics.timeoutCount,
+                retryCount: this.streamingMetrics.retryCount,
+                failedBatches: this.streamingMetrics.failedBatches,
+                successRate:
+                    totalFiles > 0
+                        ? (
+                              ((totalFiles -
+                                  this.streamingMetrics.failedBatches) /
+                                  totalFiles) *
+                              100
+                          ).toFixed(2) + '%'
+                        : '100%',
             },
             serviceName: CodeKnowledgeGraphService.name,
         });
     }
 
-    /**
-     * Método principal de streaming que substitui buildGraphProgressively
-     * Mantém compatibilidade com a interface existente
-     */
     public async buildGraphStreaming(
         rootDir: string,
         filePaths: string[],
     ): Promise<CodeGraph> {
-        console.time('streaming-task-ms');
         const t0 = performance.now();
         const hr0 = process.hrtime();
 
@@ -312,18 +294,22 @@ export class CodeKnowledgeGraphService {
         }
 
         const totalFiles = filteredFiles.length;
-        console.log(
-            `Streaming analysis of ${rootDir} with ${totalFiles} files...`,
-        );
+        this.logger.log({
+            message: 'Starting streaming analysis',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                rootDir,
+                totalFiles,
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
 
-        // Processar arquivos usando streaming
         for await (const batchProgress of this.processFilesInBatches(
             filteredFiles,
             rootDir,
         )) {
             const { batch } = batchProgress;
 
-            // Processar resultados do lote
             batch.files.forEach((file) => {
                 result.files.set(
                     file.normalizedPath,
@@ -343,7 +329,6 @@ export class CodeKnowledgeGraphService {
                 }
             });
 
-            // Log de erros do lote
             batch.errors.forEach((error) => {
                 this.logger.warn({
                     message: 'Error in streaming batch',
@@ -355,7 +340,6 @@ export class CodeKnowledgeGraphService {
             });
         }
 
-        // Completar relações bidirecionais de tipos
         this.completeBidirectionalTypeRelations(result.types);
 
         const streamingTime = performance.now() - t0;
@@ -375,33 +359,6 @@ export class CodeKnowledgeGraphService {
         return result;
     }
 
-    /**
-     * Log detailed memory usage for monitoring
-     */
-    private logMemoryUsage(context: string): void {
-        const memUsage = process.memoryUsage();
-        const memUsageMB = {
-            rss: Math.round(memUsage.rss / 1024 / 1024),
-            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
-            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
-            external: Math.round(memUsage.external / 1024 / 1024),
-        };
-
-        this.logger.debug({
-            message: 'Memory usage',
-            context: CodeKnowledgeGraphService.name,
-            metadata: {
-                ...memUsageMB,
-                context,
-                memoryPressure: memUsageMB.heapUsed / memUsageMB.heapTotal,
-            },
-            serviceName: CodeKnowledgeGraphService.name,
-        });
-    }
-
-    /**
-     * Force garbage collection if available
-     */
     private forceGarbageCollection(): void {
         if (global.gc && Date.now() - this.lastGcTime > this.gcIntervalMs) {
             try {
@@ -472,7 +429,15 @@ export class CodeKnowledgeGraphService {
         }
 
         const totalFiles = filteredFiles.length;
-        console.log(`Analyzing ${rootDir} with ${totalFiles} files...`);
+        this.logger.log({
+            message: 'Starting progressive analysis',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                rootDir,
+                totalFiles,
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
 
         const cpuCount = os.cpus().length;
         const batchSize = Math.max(7, Math.min(cpuCount * 5, 50));
@@ -485,37 +450,7 @@ export class CodeKnowledgeGraphService {
         const processBatch = async (
             batchFiles: string[],
         ): Promise<WorkerOutput> => {
-            try {
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    setTimeout(() => {
-                        reject(new Error(`Timeout while processing batch`));
-                    }, 60000);
-                });
-
-                const analysis = await Promise.race([
-                    this.piscina.run(
-                        {
-                            rootDir,
-                            batch: batchFiles,
-                        },
-                        { name: 'analyzeBatch' },
-                    ),
-                    timeoutPromise,
-                ]);
-
-                return analysis;
-            } catch (error) {
-                this.logger.error({
-                    message: 'Error processing batch',
-                    context: CodeKnowledgeGraphService.name,
-                    error,
-                    metadata: {
-                        batchFiles,
-                    },
-                    serviceName: CodeKnowledgeGraphService.name,
-                });
-                throw error;
-            }
+            return this.processBatch(batchFiles, rootDir);
         };
 
         const batchResults = await Promise.allSettled(
@@ -592,46 +527,83 @@ export class CodeKnowledgeGraphService {
         return result;
     }
 
-    /**
-     * Calcula o tamanho otimizado do lote baseado em CPU e número de arquivos
-     */
+    private async calculateAdaptiveTimeout(
+        batchFiles: string[],
+    ): Promise<number> {
+        const baseTimeoutMs = 60000;
+        const batchSize = batchFiles.length;
+
+        let sizeMultiplier = 1;
+        if (batchSize > 100) {
+            sizeMultiplier = 2.5;
+        } else if (batchSize > 50) {
+            sizeMultiplier = 2.0;
+        } else if (batchSize > 20) {
+            sizeMultiplier = 1.5;
+        }
+
+        let complexityMultiplier = 1;
+        let totalFileSize = 0;
+        let largeFiles = 0;
+
+        for (const file of batchFiles) {
+            try {
+                const stats = await fs.promises.stat(file);
+                totalFileSize += stats.size;
+                if (stats.size > 50000) {
+                    largeFiles++;
+                }
+            } catch {}
+        }
+
+        const avgFileSize = totalFileSize / batchFiles.length;
+        const largeFileRatio = largeFiles / batchFiles.length;
+
+        if (avgFileSize > 100000 || largeFileRatio > 0.5) {
+            complexityMultiplier = 1.8;
+        } else if (avgFileSize > 50000 || largeFileRatio > 0.3) {
+            complexityMultiplier = 1.4;
+        }
+
+        const adaptiveTimeout = Math.min(
+            Math.max(
+                baseTimeoutMs * sizeMultiplier * complexityMultiplier,
+                30000,
+            ),
+            300000,
+        );
+
+        return Math.round(adaptiveTimeout);
+    }
+
     private calculateOptimalBatchSize(
         cpuCount: number,
         totalFiles: number,
     ): number {
-        // 🚀 OTIMIZAÇÃO: Batch sizes maiores para melhor performance
-        let baseBatchSize = Math.max(20, Math.min(cpuCount * 8, 100)); // Muito maior!
+        let baseBatchSize = Math.max(20, Math.min(cpuCount * 8, 100));
 
-        // Ajustar baseado no número total de arquivos
-        if (totalFiles > 10000) {
-            baseBatchSize = Math.min(baseBatchSize, 50); // Reduzido mas ainda maior
+        if (totalFiles > 20000) {
+            baseBatchSize = Math.min(baseBatchSize, 30);
+        } else if (totalFiles > 10000) {
+            baseBatchSize = Math.min(baseBatchSize, 40);
         } else if (totalFiles > 5000) {
-            baseBatchSize = Math.min(baseBatchSize, 75); // Reduzido mas ainda maior
+            baseBatchSize = Math.min(baseBatchSize, 50);
         }
 
-        // 🚀 OTIMIZAÇÃO: Menos verificações de memória (causam overhead)
-        // Remover verificações de memória que causam overhead
-        // const memoryUsage = process.memoryUsage();
-        // const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
+        try {
+            const memoryUsage = process.memoryUsage();
+            const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
 
-        // 🚀 OTIMIZAÇÃO: Desabilitar logs de debug para melhor performance
-        // this.logger.debug({
-        //     message: 'Calculated adaptive batch size',
-        //     context: CodeKnowledgeGraphService.name,
-        //     metadata: {
-        //         baseBatchSize,
-        //         totalFiles,
-        //         cpuCount,
-        //     },
-        //     serviceName: CodeKnowledgeGraphService.name,
-        // });
+            if (heapUsageRatio > 0.8) {
+                baseBatchSize = Math.max(5, Math.floor(baseBatchSize * 0.6));
+            } else if (heapUsageRatio > 0.6) {
+                baseBatchSize = Math.max(8, Math.floor(baseBatchSize * 0.8));
+            }
+        } catch {}
 
         return baseBatchSize;
     }
 
-    /**
-     * Divide array em chunks
-     */
     private chunkArray<T>(array: T[], size: number): T[][] {
         const chunks: T[][] = [];
         for (let i = 0; i < array.length; i += size) {
@@ -640,90 +612,8 @@ export class CodeKnowledgeGraphService {
         return chunks;
     }
 
-    /**
-     * Verifica se deve pausar devido ao uso de memória - Otimizado
-     */
-    private shouldPauseForMemory(): boolean {
-        const memoryUsage = process.memoryUsage();
-        const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
-
-        this.streamingMetrics.memoryUsage = Math.max(
-            this.streamingMetrics.memoryUsage,
-            heapUsageRatio,
-        );
-
-        // Forçar GC preventivo se próximo do limite
-        const now = Date.now();
-        if (
-            heapUsageRatio > this.gcThreshold &&
-            now - this.lastGcTime > this.gcIntervalMs
-        ) {
-            this.forceGarbageCollection();
-            this.lastGcTime = now;
-        }
-
-        return heapUsageRatio > this.memoryThreshold;
-    }
-
-    /**
-     * Pausa processamento para liberar memória - Otimizado com pausa adaptativa
-     */
-    private async waitForMemory(): Promise<void> {
-        const memoryUsage = process.memoryUsage();
-        const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
-
-        // Calcular pausa baseada na severidade do uso de memória
-        const severity = heapUsageRatio / this.memoryThreshold;
-        const pauseMs =
-            severity > 1.2 ? this.adaptivePauseMs : this.batchPauseMs;
-
-        this.logger.warn({
-            message: 'Pausing streaming due to high memory usage',
-            context: CodeKnowledgeGraphService.name,
-            metadata: {
-                memoryUsage: heapUsageRatio.toFixed(2),
-                threshold: this.memoryThreshold,
-                severity: severity.toFixed(2),
-                pauseMs,
-            },
-            serviceName: CodeKnowledgeGraphService.name,
-        });
-
-        // Forçar garbage collection agressivo
-        this.forceGarbageCollection();
-
-        // Aguardar um pouco mais para GC ter efeito
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        // Pausa adaptativa baseada na severidade
-        await new Promise((resolve) => setTimeout(resolve, pauseMs));
-
-        // Verificar se memória melhorou após pausa
-        const newMemoryUsage = process.memoryUsage();
-        const newHeapRatio = newMemoryUsage.heapUsed / newMemoryUsage.heapTotal;
-
-        if (newHeapRatio < heapUsageRatio) {
-            this.logger.debug({
-                message: 'Memory usage improved after pause',
-                context: CodeKnowledgeGraphService.name,
-                metadata: {
-                    before: heapUsageRatio.toFixed(2),
-                    after: newHeapRatio.toFixed(2),
-                    improvement:
-                        ((heapUsageRatio - newHeapRatio) * 100).toFixed(1) +
-                        '%',
-                },
-                serviceName: CodeKnowledgeGraphService.name,
-            });
-        }
-    }
-
-    /**
-     * Limpa caches e dados temporários após cada batch
-     */
     private clearBatchCache(): void {
         try {
-            // Limpar caches internos se existirem
             if (this.piscina?.queueSize > 0) {
                 this.logger.debug({
                     message: 'Clearing worker queue cache',
@@ -735,12 +625,15 @@ export class CodeKnowledgeGraphService {
                 });
             }
 
-            // Forçar limpeza de dados temporários se memória alta
             const memoryUsage = process.memoryUsage();
             const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
 
+            // Force garbage collection if heap usage exceeds threshold
+            if (heapUsageRatio > this.gcThreshold) {
+                this.forceGarbageCollection();
+            }
+
             if (heapUsageRatio > 0.5) {
-                // Limpar métricas antigas se necessário
                 if (this.streamingMetrics.filesProcessed > 1000) {
                     this.streamingMetrics.averageProcessingTime = 0;
                     this.streamingMetrics.lastBatchTime = 0;
@@ -756,36 +649,46 @@ export class CodeKnowledgeGraphService {
         }
     }
 
-    /**
-     * Atualiza métricas de streaming
-     */
     private updateStreamingMetrics(
         batchTime: number,
         filesProcessed: number,
     ): void {
         this.streamingMetrics.filesProcessed += filesProcessed;
 
-        // Calcular tempo médio de processamento
         const currentAvg = this.streamingMetrics.averageProcessingTime;
         const newTime = batchTime / filesProcessed;
         this.streamingMetrics.averageProcessingTime =
             (currentAvg + newTime) / 2;
 
         this.streamingMetrics.lastBatchTime = performance.now();
+
+        // Update memory usage metrics
+        const memoryUsage = process.memoryUsage();
+        this.streamingMetrics.memoryUsage = Math.max(
+            this.streamingMetrics.memoryUsage,
+            memoryUsage.heapUsed / 1024 / 1024, // Convert to MB
+        );
     }
 
-    /**
-     * Método processBatch otimizado para streaming
-     */
     private async processBatch(
         batchFiles: string[],
         rootDir: string,
+        retryCount: number = 0,
     ): Promise<WorkerOutput> {
+        const maxRetries = 3;
+
         try {
+            const adaptiveTimeout =
+                await this.calculateAdaptiveTimeout(batchFiles);
+
             const timeoutPromise = new Promise<never>((_, reject) => {
                 setTimeout(() => {
-                    reject(new Error(`Timeout while processing batch`));
-                }, 60000);
+                    reject(
+                        new Error(
+                            `Timeout while processing batch (${adaptiveTimeout}ms timeout, batch size: ${batchFiles.length})`,
+                        ),
+                    );
+                }, adaptiveTimeout);
             });
 
             const analysis = await Promise.race([
@@ -801,22 +704,49 @@ export class CodeKnowledgeGraphService {
 
             return analysis;
         } catch (error) {
-            this.logger.error({
-                message: 'Error processing batch',
-                context: CodeKnowledgeGraphService.name,
-                error,
-                metadata: {
-                    batchFiles,
-                },
-                serviceName: CodeKnowledgeGraphService.name,
-            });
+            const isTimeoutError =
+                error instanceof Error &&
+                error.message.includes('Timeout while processing batch');
+
+            if (isTimeoutError) {
+                this.streamingMetrics.timeoutCount++;
+            }
+            if (retryCount > 0) {
+                this.streamingMetrics.retryCount++;
+            }
+
+            if (isTimeoutError && retryCount < maxRetries) {
+                const backoffMs = Math.min(
+                    1000 * Math.pow(2, retryCount),
+                    10000,
+                );
+
+                this.logger.debug({
+                    message: 'Batch timeout, retrying with exponential backoff',
+                    context: CodeKnowledgeGraphService.name,
+                    error: error.message,
+                    metadata: {
+                        batchSize: batchFiles.length,
+                        retryCount: retryCount + 1,
+                        maxRetries,
+                        backoffMs,
+                        totalTimeouts: this.streamingMetrics.timeoutCount,
+                        totalRetries: this.streamingMetrics.retryCount,
+                    },
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+
+                await new Promise((resolve) => setTimeout(resolve, backoffMs));
+
+                return this.processBatch(batchFiles, rootDir, retryCount + 1);
+            }
+
+            this.streamingMetrics.failedBatches++;
+
             throw error;
         }
     }
 
-    /**
-     * Obtém métricas atuais de streaming
-     */
     public getStreamingMetrics(): StreamingMetrics & {
         uptime: number;
         filesPerSecond: number;
@@ -838,9 +768,6 @@ export class CodeKnowledgeGraphService {
         };
     }
 
-    /**
-     * Reseta métricas de streaming
-     */
     public resetStreamingMetrics(): void {
         this.streamingMetrics = {
             filesProcessed: 0,
@@ -848,6 +775,9 @@ export class CodeKnowledgeGraphService {
             memoryUsage: 0,
             startTime: 0,
             lastBatchTime: 0,
+            timeoutCount: 0,
+            retryCount: 0,
+            failedBatches: 0,
         };
     }
 
@@ -885,15 +815,5 @@ export class CodeKnowledgeGraphService {
                 });
             }
         });
-    }
-
-    private objectToMap<T>(obj: Record<string, T>): Map<string, T> {
-        const map = new Map<string, T>();
-        if (obj && typeof obj === 'object') {
-            Object.entries(obj).forEach(([key, value]) => {
-                map.set(key, value);
-            });
-        }
-        return map;
     }
 }

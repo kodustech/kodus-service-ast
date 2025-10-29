@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 # Default heap size based on common memory configurations
 # Calculated as: (Task Memory × 0.75) - 512MB buffer

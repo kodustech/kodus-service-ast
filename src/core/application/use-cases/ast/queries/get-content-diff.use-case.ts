@@ -51,7 +51,17 @@ export class GetContentFromDiffUseCase {
                 message: `Failed to get content from diff`,
                 error,
                 metadata: {
-                    request,
+                    request: {
+                        filePath: request.filePath,
+                        taskId: request.taskId,
+                        headRepo: request.headRepo?.repositoryName,
+                        baseRepo: request.baseRepo?.repositoryName,
+                    },
+                    errorType: error?.constructor?.name || typeof error,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                    errorStack:
+                        error instanceof Error ? error.stack : undefined,
                 },
                 serviceName: GetContentFromDiffUseCase.name,
             });

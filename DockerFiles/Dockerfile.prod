@@ -36,8 +36,8 @@ COPY --from=builder --chown=node:node /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /usr/src/app/dist ./dist
 COPY --from=builder --chown=node:node /usr/src/app/package.json ./
 
-COPY --chown=node:node docker/entrypoint-api.sh /usr/local/bin/entrypoint-api.sh
-COPY --chown=node:node docker/entrypoint-worker.sh /usr/local/bin/entrypoint-worker.sh
+COPY --chown=node:node scripts/entrypoint-api.sh /usr/local/bin/entrypoint-api.sh
+COPY --chown=node:node scripts/entrypoint-worker.sh /usr/local/bin/entrypoint-worker.sh
 RUN chmod +x /usr/local/bin/entrypoint-api.sh /usr/local/bin/entrypoint-worker.sh
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

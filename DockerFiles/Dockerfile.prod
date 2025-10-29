@@ -1,7 +1,7 @@
 FROM node:22.14.0-slim AS builder
 ARG RELEASE_VERSION
 ENV NODE_ENV=development
-ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_OPTIONS="--max-old-space-size=3072"
 WORKDIR /usr/src/app
 
 RUN apt-get update && \
@@ -14,12 +14,12 @@ RUN yarn install --frozen-lockfile --network-timeout 600000
 COPY . .
 RUN yarn build
 
+# ---------- Runtime ----------
 FROM node:22.14.0-slim
 
-ENV NODE_ENV=production
-ENV NODE_OPTIONS=--max-old-space-size=4096
-ENV PORT=3002
-ENV TZ=UTC
+ENV NODE_ENV=production \
+    PORT=3002 \
+    TZ=UTC
 
 WORKDIR /usr/src/app
 
@@ -32,15 +32,19 @@ RUN apt-get update && \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/src/app/node_modules ./node_modules
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/package.json ./
+COPY --from=builder --chown=node:node /usr/src/app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /usr/src/app/dist ./dist
+COPY --from=builder --chown=node:node /usr/src/app/package.json ./
 
-RUN chmod -R 755 /usr/src/app
+COPY --chown=node:node docker/entrypoint-api.sh /usr/local/bin/entrypoint-api.sh
+COPY --chown=node:node docker/entrypoint-worker.sh /usr/local/bin/entrypoint-worker.sh
+RUN chmod +x /usr/local/bin/entrypoint-api.sh /usr/local/bin/entrypoint-worker.sh
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
 
 EXPOSE ${PORT}
 
-CMD ["node", "dist/main.js"]
+USER node
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-api.sh"]

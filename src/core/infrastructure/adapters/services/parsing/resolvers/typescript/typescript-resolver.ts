@@ -13,6 +13,7 @@ import {
     type ImportedModule,
     type ResolvedImport,
 } from '@/core/domain/parsing/types/language-resolver.js';
+import { tryReadFile } from '@/shared/utils/files.js';
 
 export class TypeScriptResolver
     extends JavaScriptResolver
@@ -43,9 +44,14 @@ export class TypeScriptResolver
         }
 
         const tsConfigFile = readConfigFile(this.tsConfigPath, tsSys.readFile);
+
         if (tsConfigFile.error) {
+            // Try to read file content for debugging
+            const fileContent = await tryReadFile(this.tsConfigPath);
             console.error(
-                `Error reading tsconfig.json at ${this.tsConfigPath}}`,
+                `Error reading tsconfig.json at ${this.tsConfigPath}`,
+                `\nError: ${tsConfigFile.error.messageText}`,
+                `\nFile content:\n${fileContent || 'Could not read file'}`,
             );
             return false;
         }
@@ -55,9 +61,20 @@ export class TypeScriptResolver
             tsSys,
             path.dirname(this.tsConfigPath),
         );
+
         if (parsedConfig.errors.length > 0) {
+            // Read file content for debugging
+            const fileContent = await tryReadFile(this.tsConfigPath);
+            const errorsDetails = parsedConfig.errors
+                .map(
+                    (e) =>
+                        `  - ${e.messageText} (code: ${e.code}, category: ${e.category})`,
+                )
+                .join('\n');
             console.error(
                 `Error parsing tsconfig.json at ${this.tsConfigPath}`,
+                `\nErrors:\n${errorsDetails}`,
+                `\nFile content:\n${fileContent || 'Could not read file'}`,
             );
             return false;
         }

@@ -16,5 +16,6 @@ export function handleError(error: unknown): Error {
     if (isString(error)) {
         return new Error(error);
     }
-    return new Error('Unknown error');
+    // Preserve the original error details for debugging
+    return new Error(`Unknown error: ${JSON.stringify(error)}`);
 }

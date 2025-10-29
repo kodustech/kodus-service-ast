@@ -51,6 +51,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                 stack: errorDetails.stack,
                 name: errorDetails.name,
                 type: errorType,
+                originalError: exception, // Include original error for debugging
             },
             metadata: {
                 method: request.method,

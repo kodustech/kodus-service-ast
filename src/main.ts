@@ -8,6 +8,7 @@ import {
 import { AppModule } from './modules/app.module.js';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service.js';
 import { GlobalExceptionFilter } from './core/infrastructure/http/filters/global-exception.filter.js';
+import { RequestLoggerInterceptor } from './core/infrastructure/http/interceptors/request-logger.interceptor.js';
 
 // Bootstrap logger for early logging (before NestJS app is ready)
 const bootstrapLogger = PinoLoggerService.createBootstrapLogger();
@@ -45,6 +46,9 @@ async function bootstrap() {
 
     // Global exception filter for proper error logging
     app.useGlobalFilters(app.get(GlobalExceptionFilter));
+
+    // Global request/response logging (timing + errors)
+    app.useGlobalInterceptors(app.get(RequestLoggerInterceptor));
 
     app.enableShutdownHooks(['SIGINT', 'SIGTERM']); // graceful shutdown
 

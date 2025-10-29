@@ -18,7 +18,7 @@ services:
             - ./nest-cli.json:/usr/src/app/nest-cli.json
             - ./.swcrc:/usr/src/app/.swcrc
             - /usr/src/app/node_modules
-            - ./tmp:/tmp/cloned-repos
+            - ./tmp:/shared/tmp/cloned-repos
         environment:
             - CHOKIDAR_USEPOLLING=true
             - TZ=UTC
@@ -54,7 +54,7 @@ services:
             - ./nest-cli.json:/usr/src/app/nest-cli.json
             - ./.swcrc:/usr/src/app/.swcrc
             - /usr/src/app/node_modules
-            - ./tmp:/tmp/cloned-repos
+            - ./tmp:/shared/tmp/cloned-repos
         environment:
             - CHOKIDAR_USEPOLLING=true
             - TZ=UTC

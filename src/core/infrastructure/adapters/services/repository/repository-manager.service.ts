@@ -18,7 +18,9 @@ export class RepositoryManagerService implements IRepositoryManager {
 
     static readonly kodusDirectory = '.kodus';
 
-    private readonly baseDir = '/tmp/cloned-repos';
+    private readonly baseDir = process.env.SHARED_STORAGE_PATH
+        ? `${process.env.SHARED_STORAGE_PATH}/tmp/cloned-repos`
+        : '/shared/tmp/cloned-repos';
     private readonly cloneTimeout = 8 * 60 * 1000; // 8 minutes timeout for clone operations
     private readonly allowedProtocols = ['https:', 'http:']; // Only allow HTTP/HTTPS
     private readonly maxRepoSize = 1024 * 1024 * 2048; // 2GB max repo size
@@ -47,12 +49,25 @@ export class RepositoryManagerService implements IRepositoryManager {
             if (!baseDirExists) {
                 await fs.promises.mkdir(this.baseDir, { recursive: true });
             }
+
+            this.logger.log({
+                message: 'Base directory ensured',
+                context: RepositoryManagerService.name,
+                metadata: {
+                    baseDir: this.baseDir,
+                    environment: process.env.NODE_ENV || 'development',
+                },
+                serviceName: RepositoryManagerService.name,
+            });
         } catch (error) {
             this.logger.error({
                 message: 'Error ensuring base directory exists',
                 context: RepositoryManagerService.name,
                 error,
-                metadata: { baseDir: this.baseDir },
+                metadata: {
+                    baseDir: this.baseDir,
+                    environment: process.env.NODE_ENV || 'development',
+                },
                 serviceName: RepositoryManagerService.name,
             });
             throw error;
@@ -376,6 +391,18 @@ export class RepositoryManagerService implements IRepositoryManager {
             }
 
             await git.clone(cloneUrl, repoPath, cloneOptions);
+
+            this.logger.log({
+                message: 'Repository cloned successfully',
+                context: RepositoryManagerService.name,
+                metadata: {
+                    repository: repoData.repositoryName,
+                    branch: repoData.branch,
+                    repoPath,
+                    baseDir: this.baseDir,
+                },
+                serviceName: RepositoryManagerService.name,
+            });
 
             const stats = await this.getDirectorySize(repoPath);
             if (stats > this.maxRepoSize) {

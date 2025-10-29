@@ -51,6 +51,13 @@ export class DiffAnalyzerService {
         repoData: RepositoryData,
         taskId: string,
     ): Promise<string> {
+        this.logger.log({
+            context: DiffAnalyzerService.name,
+            message: `Getting relevant content for file`,
+            metadata: { filePath, taskId },
+            serviceName: DiffAnalyzerService.name,
+        });
+
         if (!filePath || filePath.length === 0 || !path.isAbsolute(filePath)) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
@@ -277,13 +284,20 @@ export class DiffAnalyzerService {
                 result.push(`<-- ${relativeFilePath} -->\n${rangeContent}`);
             }
 
+            this.logger.log({
+                context: DiffAnalyzerService.name,
+                message: `Relevant content obtained`,
+                metadata: { taskId, ...metadata },
+                serviceName: DiffAnalyzerService.name,
+            });
+
             return result.join('\n\n');
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
                 message: `Failed to get relevant content`,
                 error,
-                metadata,
+                metadata: { taskId, ...metadata },
                 serviceName: DiffAnalyzerService.name,
             });
             return '';

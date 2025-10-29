@@ -4,6 +4,7 @@ import { DatabaseModule } from '../core/infrastructure/database/database.module.
 import { QueueModuleApi } from '@/core/infrastructure/queue/queue.module.api.js';
 import { LLMModule } from '@kodus/kodus-common/llm';
 import { PinoLoggerService } from '../core/infrastructure/adapters/services/logger/pino.service.js';
+import { GlobalExceptionFilter } from '../core/infrastructure/http/filters/global-exception.filter.js';
 
 // Feature modules
 import { HealthModule } from './health.module.js';
@@ -29,7 +30,7 @@ import { ASTModule } from './ast.module.js';
             global: true,
         }),
     ],
-    providers: [],
-    exports: [],
+    providers: [GlobalExceptionFilter],
+    exports: [GlobalExceptionFilter],
 })
 export class AppModule {}

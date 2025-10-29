@@ -18,13 +18,17 @@ const shouldPrettyPrint = (process.env.API_LOG_PRETTY || 'false') === 'true';
 
 @Injectable()
 export class PinoLoggerService implements LoggerService {
+    private static handlersRegistered = false;
+
     private baseLogger = pino({
         level: process.env.API_LOG_LEVEL || 'info',
         base: {
             instance: process.env.NODE_APP_INSTANCE ?? '0',
-            pid: false,
+            pid: false, // Not useful in containers/ECS - PID changes on restart
         },
         timestamp: pino.stdTimeFunctions.isoTime,
+        // Pino writes to process.stdout by default, which is correct for Docker/ECS
+        // CloudWatch Logs Driver automatically captures stdout/stderr from containers
         transport:
             shouldPrettyPrint && !isProduction
                 ? {
@@ -46,15 +50,23 @@ export class PinoLoggerService implements LoggerService {
             },
             log(object) {
                 if (isProduction && !shouldPrettyPrint) {
+                    // In production, include stack trace for errors and preserve context/metadata
                     return {
                         message: object.message,
                         serviceName: object.serviceName,
+                        context: object.context,
                         environment: object.environment,
                         error: object.error
                             ? {
                                   message: (object.error as Error)?.message,
+                                  stack: (object.error as Error)?.stack,
                               }
                             : undefined,
+                        // Include metadata if present (but already redacted)
+                        ...(object.metadata &&
+                        Object.keys(object.metadata).length > 0
+                            ? { metadata: object.metadata }
+                            : {}),
                     };
                 }
                 return object;
@@ -117,6 +129,66 @@ export class PinoLoggerService implements LoggerService {
             serviceName,
             error,
             metadata,
+        });
+        // Flush immediately for critical errors to ensure logs aren't lost
+        // This is important in containerized environments (Docker/ECS)
+        this.baseLogger.flush();
+    }
+
+    /**
+     * Public method to get the base logger for advanced usage
+     * Useful for bootstrap logging before NestJS is ready
+     */
+    public static createBootstrapLogger(): pino.Logger {
+        return pino({
+            level: process.env.API_LOG_LEVEL || 'info',
+            base: {
+                instance: process.env.NODE_APP_INSTANCE ?? '0',
+            },
+            timestamp: pino.stdTimeFunctions.isoTime,
+        });
+    }
+
+    /**
+     * Setup error handlers for the application
+     * Should be called early in bootstrap, before NestJS initialization
+     * Uses static method to prevent multiple registrations
+     */
+    public static setupBootstrapErrorHandlers(
+        bootstrapLogger: pino.Logger,
+    ): void {
+        if (PinoLoggerService.handlersRegistered) {
+            return; // Prevent duplicate handlers
+        }
+        PinoLoggerService.handlersRegistered = true;
+
+        process.on('uncaughtException', (error: Error) => {
+            bootstrapLogger.error(
+                {
+                    err: {
+                        message: error.message,
+                        stack: error.stack,
+                        name: error.name,
+                    },
+                },
+                'Uncaught Exception',
+            );
+            bootstrapLogger.flush(); // Ensure log is written before exit
+            process.exit(1);
+        });
+
+        process.on('unhandledRejection', (reason: unknown) => {
+            const errorInfo =
+                reason instanceof Error
+                    ? {
+                          message: reason.message,
+                          stack: reason.stack,
+                          name: reason.name,
+                      }
+                    : { reason: String(reason) };
+
+            bootstrapLogger.error({ err: errorInfo }, 'Unhandled Rejection');
+            bootstrapLogger.flush(); // Ensure log is written
         });
     }
 
@@ -183,7 +255,12 @@ export class PinoLoggerService implements LoggerService {
             contextStr,
         );
 
-        const logObject = this.buildLogObject(serviceName, metadata, error);
+        const logObject = this.buildLogObject(
+            serviceName,
+            contextStr,
+            metadata,
+            error,
+        );
 
         switch (level) {
             case 'info':
@@ -214,6 +291,7 @@ export class PinoLoggerService implements LoggerService {
 
     private buildLogObject(
         serviceName: string | undefined,
+        context: string,
         metadata: Record<string, any>,
         error?: unknown,
     ) {
@@ -225,8 +303,8 @@ export class PinoLoggerService implements LoggerService {
         return {
             environment: process.env.API_NODE_ENV || 'unknown',
             serviceName: serviceName ?? 'UnknownService',
-            ...metadata,
-            metadata,
+            context,
+            ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
             error: err ? { message: err.message, stack: err.stack } : undefined,
         };
     }

@@ -2,32 +2,58 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from '../modules/worker.module.js';
 import { type INestApplicationContext } from '@nestjs/common';
+import { PinoLoggerService } from '../core/infrastructure/adapters/services/logger/pino.service.js';
+
+// Bootstrap logger for early logging (before NestJS app is ready)
+const bootstrapLogger = PinoLoggerService.createBootstrapLogger();
+
+// Setup error handlers early, before any code that might throw
+PinoLoggerService.setupBootstrapErrorHandlers(bootstrapLogger);
 
 async function bootstrap(): Promise<void> {
     let app: INestApplicationContext;
     try {
-        console.log('[KODUS-AST-WORKER] Starting worker bootstrap function...');
+        bootstrapLogger.info('Starting worker bootstrap function...');
         app = await NestFactory.createApplicationContext(WorkerModule, {
             logger: ['log', 'error', 'warn', 'debug', 'verbose'],
         });
 
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        console.log('[KODUS-AST-WORKER] Worker is ready');
+        const logger = app.get(PinoLoggerService);
+        logger.log({
+            message: 'Worker is ready',
+            context: 'Bootstrap',
+            serviceName: 'KodusASTWorker',
+        });
     } catch (error) {
-        console.error('[KODUS-AST-WORKER] Error during bootstrap:', error);
+        bootstrapLogger.error(
+            {
+                err: error instanceof Error ? error : new Error(String(error)),
+                stack: error instanceof Error ? error.stack : undefined,
+            },
+            'Error during bootstrap',
+        );
         throw error;
     }
 
     const shutdown = async (signal: NodeJS.Signals) => {
         try {
             await app.close();
-            console.log('[KODUS-AST-WORKER] Worker shutdown complete', signal);
+            bootstrapLogger.info({ signal }, 'Worker shutdown complete');
+            bootstrapLogger.flush(); // Ensure log is written before exit
         } catch (error) {
-            console.error(
-                '[KODUS-AST-WORKER] Error during worker shutdown:',
-                error,
+            bootstrapLogger.error(
+                {
+                    err:
+                        error instanceof Error
+                            ? error
+                            : new Error(String(error)),
+                    stack: error instanceof Error ? error.stack : undefined,
+                },
+                'Error during worker shutdown',
             );
+            bootstrapLogger.flush(); // Ensure log is written before exit
         } finally {
             process.exit(0);
         }
@@ -46,16 +72,13 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error) => {
-    console.error('Fatal error during worker bootstrap:', error);
-    process.exit(1);
-});
-
-// Tratamento de erros não capturados
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
+    bootstrapLogger.error(
+        {
+            err: error instanceof Error ? error : new Error(String(error)),
+            stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Fatal error during worker bootstrap',
+    );
+    bootstrapLogger.flush(); // Ensure log is written before exit
     process.exit(1);
 });

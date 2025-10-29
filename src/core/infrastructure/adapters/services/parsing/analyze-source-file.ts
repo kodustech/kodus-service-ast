@@ -126,6 +126,9 @@ export class SourceFileAnalyzer {
                 types: context.types,
             };
         } catch (error) {
+            // Note: This is a utility class, not a NestJS service
+            // For now, we'll use console.error as fallback since we don't have logger injection here
+            // TODO: Consider refactoring to accept logger as parameter or use a global logger
             console.error(`Error analyzing file ${filePath}:`, error);
             return this.emptyAnalysis();
         }

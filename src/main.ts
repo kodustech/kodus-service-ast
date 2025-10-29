@@ -7,6 +7,13 @@ import {
 } from './shared/utils/env.js';
 import { AppModule } from './modules/app.module.js';
 import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service.js';
+import { GlobalExceptionFilter } from './core/infrastructure/http/filters/global-exception.filter.js';
+
+// Bootstrap logger for early logging (before NestJS app is ready)
+const bootstrapLogger = PinoLoggerService.createBootstrapLogger();
+
+// Setup error handlers early, before any code that might throw
+PinoLoggerService.setupBootstrapErrorHandlers(bootstrapLogger);
 
 async function bootstrap() {
     const containerName = getEnvVariableOrExit('CONTAINER_NAME');
@@ -14,7 +21,10 @@ async function bootstrap() {
 
     /* ------------ validação simples de intervalo ---------------- */
     if (apiPort < 1 || apiPort > 65535) {
-        console.error('API_PORT must be a value between 1 and 65535');
+        bootstrapLogger.error(
+            { containerName, apiPort },
+            'API_PORT must be a value between 1 and 65535',
+        );
         process.exit(1);
     }
     /* ------------------------------------------------------------ */
@@ -32,12 +42,25 @@ async function bootstrap() {
     });
 
     app.useLogger(app.get(PinoLoggerService));
+
+    // Global exception filter for proper error logging
+    app.useGlobalFilters(app.get(GlobalExceptionFilter));
+
     app.enableShutdownHooks(['SIGINT', 'SIGTERM']); // graceful shutdown
 
     await app.listen(apiPort, '0.0.0.0');
 
-    console.log(`HTTP API    => ${containerName}:${apiPort}`);
-    console.log(`Health      => http://localhost:${apiPort}/health`);
+    const logger = app.get(PinoLoggerService);
+    logger.log({
+        message: 'HTTP API started',
+        context: 'Bootstrap',
+        serviceName: 'KodusAST',
+        metadata: {
+            containerName,
+            apiPort,
+            healthUrl: `http://localhost:${apiPort}/health`,
+        },
+    });
 
     // Avise PM2 que o processo está pronto (wait_ready)
     if (typeof process.send === 'function') {
@@ -46,16 +69,13 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error) => {
-    console.error('Fatal error during bootstrap:', error);
-    process.exit(1);
-});
-
-// Tratamento de erros não capturados
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
+    bootstrapLogger.error(
+        {
+            err: error instanceof Error ? error : new Error(String(error)),
+            stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Fatal error during bootstrap',
+    );
+    bootstrapLogger.flush(); // Ensure log is written before exit
     process.exit(1);
 });

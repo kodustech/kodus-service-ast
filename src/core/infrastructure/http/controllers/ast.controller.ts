@@ -73,4 +73,10 @@ export class AstHttpController {
     ): Promise<GetImpactAnalysisResponse> {
         return this.getImpactAnalysisUseCase.execute(request);
     }
+
+    // Test endpoint to verify error logging
+    @Post('test/error')
+    async testError(): Promise<never> {
+        throw new Error('Test error for logging verification');
+    }
 }

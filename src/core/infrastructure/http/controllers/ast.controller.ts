@@ -1,9 +1,9 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { TaskService } from '@/core/application/services/task/task.service.js';
 import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/commands/delete-repository.use-case.js';
 import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/queries/get-content-diff.use-case.js';
 import { GetImpactAnalysisUseCase } from '@/core/application/use-cases/ast/queries/get-impact-analysis.use-case.js';
-import { TaskService } from '@/core/application/services/task/task.service.js';
 import {
+    ValidateCodeResponse,
     type DeleteRepositoryRequest,
     type DeleteRepositoryResponse,
     type GetContentFromDiffRequest,
@@ -13,7 +13,17 @@ import {
     type InitializeImpactAnalysisResponse,
     type InitializeRepositoryRequest,
     type InitializeRepositoryResponse,
+    type ValidateCodeRequest,
 } from '@/shared/types/ast.js';
+import {
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+} from '@nestjs/common';
 
 @Controller('ast')
 export class AstHttpController {
@@ -78,5 +88,27 @@ export class AstHttpController {
     @Post('test/error')
     async testError(): Promise<never> {
         throw new Error('Test error for logging verification');
+    }
+
+    @Post('validate-code/initialize')
+    async validateCode(
+        @Body() request: ValidateCodeRequest,
+    ): Promise<{ taskId: string }> {
+        const taskId = await this.taskService.createAsyncTask({
+            type: 'AST_VALIDATE_CODE',
+            payload: request,
+        });
+
+        return { taskId };
+    }
+
+    @Get('validate-code/result/:id')
+    async getValidateCodeResult(@Param('id') id: string): Promise<any> {
+        return this.taskService.getTaskResult<ValidateCodeResponse>(id);
+    }
+
+    @Get('ping')
+    ping() {
+        return 'pong';
     }
 }

@@ -1,9 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { TaskPriority } from '@/shared/types/task.js';
 import {
     type ITaskManagerService,
     TASK_MANAGER_TOKEN,
 } from '@/core/domain/task/contracts/task-manager.contract.js';
+import { TaskPersistenceService } from '@/core/infrastructure/persistence/task/task-persistence.service.js';
+import { TaskPriority } from '@/shared/types/task.js';
+import { Inject, Injectable } from '@nestjs/common';
 
 export interface DispatchTaskPayload<TPayload = unknown> {
     taskId: string;
@@ -33,6 +34,7 @@ export class TaskService {
         private readonly taskManagerService: ITaskManagerService,
         @Inject(TASK_JOB_DISPATCHER)
         private readonly taskJobDispatcher: ITaskJobDispatcher,
+        private readonly taskPersistence: TaskPersistenceService,
     ) {}
 
     async createAsyncTask<TPayload>(
@@ -49,5 +51,15 @@ export class TaskService {
         });
 
         return taskId;
+    }
+
+    async getTaskResult<TPayload>(taskId: string): Promise<TPayload> {
+        const result = await this.taskPersistence.getTaskResult(taskId);
+
+        if (!result) {
+            throw new Error(`Task result not found for task ${taskId}`);
+        }
+
+        return result.payload as unknown as TPayload;
     }
 }

@@ -1,5 +1,17 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service.js';
+import {
+    ChangeResult,
+    DiffHunk,
+    ExtendedFunctionInfo,
+} from '@/core/domain/diff/types/diff-analyzer.types.js';
+import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import {
+    getLanguageConfigForFilePath,
+    LanguageConfig,
+} from '@/core/domain/parsing/types/supported-languages.js';
+import {
+    REPOSITORY_MANAGER_TOKEN,
+    type IRepositoryManager,
+} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import {
     EnrichedGraphEdge,
     EnrichedGraphNode,
@@ -11,23 +23,11 @@ import {
     RelationshipType,
     RepositoryData,
 } from '@/shared/types/ast.js';
-import {
-    ChangeResult,
-    DiffHunk,
-    ExtendedFunctionInfo,
-} from '@/core/domain/diff/types/diff-analyzer.types.js';
-import * as path from 'path';
+import { Inject, Injectable } from '@nestjs/common';
 import { parsePatch } from 'diff';
-import {
-    REPOSITORY_MANAGER_TOKEN,
-    type IRepositoryManager,
-} from '@/core/domain/repository/contracts/repository-manager.contract.js';
-import {
-    getLanguageConfigForFilePath,
-    LanguageConfig,
-} from '@/core/domain/parsing/types/supported-languages.js';
+import * as path from 'path';
+import { PinoLoggerService } from '../logger/pino.service.js';
 import { getLanguageResolver } from '../parsing/resolvers/index.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 
 enum RelatedNodeDirection {
     TO,

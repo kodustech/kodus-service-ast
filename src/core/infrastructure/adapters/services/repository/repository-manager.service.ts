@@ -1,16 +1,16 @@
 import { IRepositoryManager } from '@/core/domain/repository/contracts/repository-manager.contract.js';
+import { ProtoPlatformType, RepositoryData } from '@/shared/types/ast.js';
+import { getEnvVariableAsBoolean } from '@/shared/utils/env.js';
+import { handleError } from '@/shared/utils/errors.js';
 import { Inject, Injectable } from '@nestjs/common';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import { minimatch } from 'minimatch';
+import * as path from 'path';
+import { simpleGit } from 'simple-git';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import { S3GraphsService } from '../storage/s3-graphs.service.js';
 import { TaskResultStorageService } from '../storage/task-result-storage.service.js';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { minimatch } from 'minimatch';
-import { simpleGit } from 'simple-git';
-import { ProtoPlatformType, RepositoryData } from '@/shared/types/ast.js';
-import { handleError } from '@/shared/utils/errors.js';
-import { getEnvVariableAsBoolean } from '@/shared/utils/env.js';
 
 @Injectable()
 export class RepositoryManagerService implements IRepositoryManager {
@@ -105,7 +105,7 @@ export class RepositoryManagerService implements IRepositoryManager {
         return path.join(this.baseDir, safeOrgId);
     }
 
-    private async getRepoDir(repoData: RepositoryData): Promise<string> {
+    async getRepoDir(repoData: RepositoryData): Promise<string> {
         const { organizationId, repositoryId, repositoryName, branch } =
             repoData;
         const safeOrgId = this.sanitizeIdentifier(organizationId);

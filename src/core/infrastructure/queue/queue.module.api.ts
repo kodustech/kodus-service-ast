@@ -25,19 +25,19 @@ import { TASK_JOB_DISPATCHER } from '@/core/application/services/task/task.servi
                               {
                                   name: QUEUE_CONFIG.EXCHANGE,
                                   type: 'topic',
-                                  createExchangeIfNotExists: false,
+                                  createExchangeIfNotExists: true,
                                   options: { durable: true },
                               },
                               {
                                   name: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
                                   type: 'topic',
-                                  createExchangeIfNotExists: false,
+                                  createExchangeIfNotExists: true,
                                   options: { durable: true },
                               },
                               {
                                   name: QUEUE_CONFIG.DELAYED_EXCHANGE,
                                   type: 'x-delayed-message',
-                                  createExchangeIfNotExists: false,
+                                  createExchangeIfNotExists: true,
                                   options: {
                                       durable: true,
                                       arguments: { 'x-delayed-type': 'topic' },

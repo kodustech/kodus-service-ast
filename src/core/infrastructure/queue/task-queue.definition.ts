@@ -1,6 +1,6 @@
 import type { Channel } from 'amqplib';
-import type { RabbitMqConfig } from './rabbit.config.js';
 import { QUEUE_CONFIG } from './queue.constants.js';
+import type { RabbitMqConfig } from './rabbit.config.js';
 
 export interface QueueBinding {
     type: string;
@@ -28,6 +28,11 @@ export const TASK_QUEUE_BINDINGS: ReadonlyArray<QueueBinding> = [
         type: 'AST_INITIALIZE_IMPACT_ANALYSIS',
         queue: QUEUE_CONFIG.IMPACT_QUEUE,
         routingKey: QUEUE_CONFIG.IMPACT_ROUTING_KEY,
+    },
+    {
+        type: 'AST_VALIDATE_CODE',
+        queue: QUEUE_CONFIG.VALIDATE_CODE_QUEUE,
+        routingKey: QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY,
     },
 ];
 

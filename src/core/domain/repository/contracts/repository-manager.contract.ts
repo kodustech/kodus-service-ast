@@ -6,6 +6,7 @@ export interface IRepositoryManager {
     readonly graphsFileName: string;
 
     gitCloneWithAuth(params: { repoData: RepositoryData }): Promise<string>;
+    getRepoDir(repoData: RepositoryData): Promise<string>;
     deleteLocalRepository(params: {
         repoData: RepositoryData;
         keepKodusData?: boolean;

@@ -264,3 +264,33 @@ export interface GetImpactAnalysisResponse {
     functionsAffect: FunctionsAffectResult[];
     functionSimilarity: FunctionSimilarity[];
 }
+
+export interface ValidateCodeItem {
+    id: string;
+    encodedData: string;
+    language?: string;
+    filePath: string;
+}
+
+export interface ValidateCodeRequest {
+    files: ValidateCodeItem[];
+}
+
+export enum ValidationStatus {
+    VALID = 'VALID',
+    INVALID_SYNTAX = 'INVALID_SYNTAX',
+    UNSUPPORTED_LANGUAGE = 'UNSUPPORTED_LANGUAGE',
+    ERROR = 'ERROR',
+}
+
+export interface ValidateCodeResult {
+    id: string;
+    isValid: boolean;
+    status: ValidationStatus;
+    error?: string;
+    filePath?: string;
+}
+
+export interface ValidateCodeResponse {
+    results: ValidateCodeResult[];
+}

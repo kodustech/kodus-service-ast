@@ -11,15 +11,15 @@
         ".": "./dist/main.js"
     },
     "scripts": {
-        "start:dev": "concurrently \"nest start --watch --debug 0.0.0.0:9231 -b swc\" \"chokidar 'dist/**/*.js' -c 'tsc-alias -p tsconfig.json'\"",
+        "start:dev": "NODE_OPTIONS='--enable-source-maps' concurrently \"nest start --watch --debug 0.0.0.0:9261 -b swc\" \"chokidar 'dist/**/*.js' -c 'tsc-alias -p tsconfig.json'\"",
         "start:debug": "nest start --debug=0.0.0.0:9229 --watch -b swc",
-        "start:debug:worker": "tsx watch --clear-screen=false --inspect=0.0.0.0:9230 src/worker/main.ts",
-        "start:debug:main": "nest start --debug=0.0.0.0:9231 --watch -b swc",
+        "start:debug:worker": "tsx watch --clear-screen=false --inspect=0.0.0.0:9260 src/worker/main.ts",
+        "start:debug:main": "nest start --debug=0.0.0.0:9261 --watch -b swc",
         "start:debug:both": "concurrently \"yarn start:debug:main\" \"yarn start:debug:worker\"",
         "build": "nest build -b swc --type-check && tsc-alias -p tsconfig.json",
         "start:prod": "node dist/main.js",
         "start:worker": "node dist/worker/main.js",
-        "start:worker:dev": "tsx watch --clear-screen=false --inspect=0.0.0.0:9230 src/worker/main.ts",
+        "start:worker:dev": "NODE_OPTIONS='--enable-source-maps' tsx watch --clear-screen=false --inspect=0.0.0.0:9260 src/worker/main.ts",
         "lint": "eslint \"src/**/*.{ts,tsx}\" \"test/**/*.{ts,tsx}\"",
         "lint:fix": "eslint \"src/**/*.{ts,tsx}\" \"test/**/*.{ts,tsx}\" --fix",
         "format:fix": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\" \"test/**/*.{ts,tsx,js,jsx}\"",
@@ -83,7 +83,11 @@
         "tree-sitter-rust": "^0.24.0",
         "tree-sitter-typescript": "^0.23.2",
         "ts-proto": "^2.8.2",
-        "uuid": "^13.0.0"
+        "typescript-language-server": "^5.1.3",
+        "uuid": "^13.0.0",
+        "vscode-jsonrpc": "^8.2.1",
+        "vscode-languageserver-protocol": "^3.17.5",
+        "vscode-languageserver-types": "^3.17.5"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.3.1",

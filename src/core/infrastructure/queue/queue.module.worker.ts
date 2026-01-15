@@ -1,13 +1,17 @@
 // queue.module.worker.ts (ajustado)
-import { Module } from '@nestjs/common';
 import {
-    RabbitMQModule,
     MessageHandlerErrorBehavior,
+    RabbitMQModule,
 } from '@golevelup/nestjs-rabbitmq';
+import { Module } from '@nestjs/common';
 import { QueueConfigModule } from './queue-config.module.js';
-import { RABBITMQ_CONFIG } from './rabbit.constants.js';
+import {
+    QUEUE_CONFIG,
+    buildTaskQueueOptions,
+    getQueueRuntimeConfig,
+} from './queue.constants.js';
 import type { RabbitMqConfig } from './rabbit.config.js';
-import { QUEUE_CONFIG, getQueueRuntimeConfig } from './queue.constants.js';
+import { RABBITMQ_CONFIG } from './rabbit.constants.js';
 
 const runtime = getQueueRuntimeConfig();
 
@@ -35,26 +39,73 @@ const runtime = getQueueRuntimeConfig();
                               {
                                   name: QUEUE_CONFIG.EXCHANGE,
                                   type: 'topic',
-                                  createExchangeIfNotExists: false,
+                                  createExchangeIfNotExists: true,
                                   options: { durable: true },
                               },
                               {
                                   name: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
                                   type: 'topic',
-                                  createExchangeIfNotExists: false,
+                                  createExchangeIfNotExists: true,
                                   options: { durable: true },
                               },
                               {
                                   name: QUEUE_CONFIG.DELAYED_EXCHANGE,
                                   type: 'x-delayed-message',
-                                  createExchangeIfNotExists: false,
+                                  createExchangeIfNotExists: true,
                                   options: {
                                       durable: true,
                                       arguments: { 'x-delayed-type': 'topic' },
                                   },
                               },
                           ],
-                          // 👇 NÃO declare queues aqui; definitions.json já fez isso
+                          queues: [
+                              // DLQ
+                              {
+                                  name: QUEUE_CONFIG.DEAD_LETTER_QUEUE,
+                                  options: {
+                                      durable: true,
+                                      arguments: { 'x-queue-type': 'quorum' },
+                                  },
+                                  bindToExchange: {
+                                      exchange:
+                                          QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
+                                      routingKey: '#',
+                                  },
+                              },
+                              // Queues de Tasks
+                              {
+                                  name: QUEUE_CONFIG.REPO_ROUTING_KEY,
+                                  options: buildTaskQueueOptions({
+                                      enableSingleActiveConsumer: true,
+                                  }),
+                                  bindToExchange: {
+                                      exchange: QUEUE_CONFIG.EXCHANGE,
+                                      routingKey: QUEUE_CONFIG.REPO_ROUTING_KEY,
+                                  },
+                              },
+                              {
+                                  name: QUEUE_CONFIG.IMPACT_ROUTING_KEY,
+                                  options: buildTaskQueueOptions({
+                                      enableSingleActiveConsumer: true,
+                                  }),
+                                  bindToExchange: {
+                                      exchange: QUEUE_CONFIG.EXCHANGE,
+                                      routingKey:
+                                          QUEUE_CONFIG.IMPACT_ROUTING_KEY,
+                                  },
+                              },
+                              {
+                                  name: QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY,
+                                  options: buildTaskQueueOptions({
+                                      enableSingleActiveConsumer: true,
+                                  }),
+                                  bindToExchange: {
+                                      exchange: QUEUE_CONFIG.EXCHANGE,
+                                      routingKey:
+                                          QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY,
+                                  },
+                              },
+                          ],
                           registerHandlers: true,
                           defaultSubscribeErrorBehavior:
                               MessageHandlerErrorBehavior.NACK, // nack => DLX decide

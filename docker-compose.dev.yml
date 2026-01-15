@@ -7,7 +7,7 @@ services:
             dockerfile: DockerFiles/Dockerfile.dev
         ports:
             - ${API_PORT}:${API_PORT}
-            - 9231:9231 # debug API
+            - 9261:9261 # debug API
         env_file:
             - .env
         restart: unless-stopped
@@ -43,7 +43,7 @@ services:
             dockerfile: DockerFiles/Dockerfile.dev
         command: ["yarn", "start:worker:dev"]
         ports:
-            - 9230:9230 # worker debug
+            - 9260:9260 # worker debug
         env_file:
             - .env
         restart: unless-stopped

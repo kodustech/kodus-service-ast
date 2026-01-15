@@ -5,19 +5,28 @@
             "type": "node",
             "request": "attach",
             "name": "Docker: Attach to API",
-            "port": 9231,
+            "port": 9261,
             "address": "0.0.0.0",
             "sourceMaps": true,
+            "restart": true,
             "localRoot": "${workspaceFolder}",
-            "remoteRoot": "/usr/src/app"
+            "remoteRoot": "/usr/src/app",
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "!**/node_modules/**"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
         },
         {
             "type": "node",
             "request": "attach",
             "name": "Docker: Attach to Worker",
-            "port": 9230,
+            "port": 9260,
             "address": "0.0.0.0",
             "sourceMaps": true,
+            "restart": true,
             "localRoot": "${workspaceFolder}",
             "remoteRoot": "/usr/src/app"
         }

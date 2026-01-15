@@ -13,7 +13,7 @@ WORKDIR /usr/src/app
 # Dependências do sistema
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates git python3 make g++ pkg-config procps \
+    ca-certificates git python3 make g++ pkg-config procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar package / lock
@@ -29,7 +29,7 @@ COPY . .
 # Build inicial (necessário para o worker do piscina)
 RUN npx nest build -b swc && npx tsc-alias -p tsconfig.json
 
-EXPOSE ${PORT} 9300 9301
+EXPOSE ${PORT} 9600 9601
 
 # Rodar em modo watch para hot reload
 CMD ["yarn", "start:dev"]

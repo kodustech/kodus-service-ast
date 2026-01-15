@@ -1,30 +1,33 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
-import {
-    type ITaskManagerService,
-    TASK_MANAGER_TOKEN,
-} from '@/core/domain/task/contracts/task-manager.contract.js';
-import { TaskQueueMessage } from '@/core/infrastructure/queue/task-queue.definition.js';
-import { TaskContextService } from '@/core/infrastructure/persistence/task/task-context.service.js';
-import {
-    RabbitMQCircuitBreaker,
-    DEFAULT_CIRCUIT_CONFIG,
-} from '@/core/infrastructure/queue/rabbitmq-circuit-breaker.js';
+import { GetGraphsUseCase } from '@/core/application/use-cases/ast/queries/get-graphs.use-case.js';
 import {
     type IRepositoryManager,
     REPOSITORY_MANAGER_TOKEN,
 } from '@/core/domain/repository/contracts/repository-manager.contract.js';
-import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
+import {
+    type ITaskManagerService,
+    TASK_MANAGER_TOKEN,
+    TaskContext,
+} from '@/core/domain/task/contracts/task-manager.contract.js';
 import { GraphEnrichmentService } from '@/core/infrastructure/adapters/services/enrichment/graph-enrichment.service.js';
 import { GraphAnalyzerService } from '@/core/infrastructure/adapters/services/graph-analysis/graph-analyzer.service.js';
-import { GetGraphsUseCase } from '@/core/application/use-cases/ast/queries/get-graphs.use-case.js';
+import { PinoLoggerService } from '@/core/infrastructure/adapters/services/logger/pino.service.js';
+import { CodeKnowledgeGraphService } from '@/core/infrastructure/adapters/services/parsing/code-knowledge-graph.service.js';
+import { TaskContextService } from '@/core/infrastructure/persistence/task/task-context.service.js';
 import {
-    InitializeRepositoryRequest,
+    DEFAULT_CIRCUIT_CONFIG,
+    RabbitMQCircuitBreaker,
+} from '@/core/infrastructure/queue/rabbitmq-circuit-breaker.js';
+import { TaskQueueMessage } from '@/core/infrastructure/queue/task-queue.definition.js';
+import {
     InitializeImpactAnalysisRequest,
+    InitializeRepositoryRequest,
+    ValidateCodeRequest,
 } from '@/shared/types/ast.js';
 import { astSerializer } from '@/shared/utils/ast-serialization.js';
 import { handleError } from '@/shared/utils/errors.js';
+import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
+import { ValidateCodeUseCase } from '../../use-cases/ast/commands/validate-code.use-case.js';
 
 const WORKER_CONTEXT = 'TaskQueueProcessor';
 
@@ -49,6 +52,8 @@ export class TaskQueueProcessor {
         private readonly taskContextService: TaskContextService,
         @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
+        @Inject(ValidateCodeUseCase)
+        private readonly validateCodeUseCase: ValidateCodeUseCase,
     ) {}
 
     async process(message: TaskQueueMessage): Promise<void> {
@@ -69,6 +74,12 @@ export class TaskQueueProcessor {
                     case 'AST_INITIALIZE_IMPACT_ANALYSIS':
                         await this.processInitializeImpactAnalysis(
                             message.payload as InitializeImpactAnalysisRequest,
+                            taskContext,
+                        );
+                        return;
+                    case 'AST_VALIDATE_CODE':
+                        await this.processValidateCode(
+                            message.payload as ValidateCodeRequest,
                             taskContext,
                         );
                         return;
@@ -99,7 +110,7 @@ export class TaskQueueProcessor {
 
     private async processInitializeRepository(
         request: InitializeRepositoryRequest,
-        taskContext: any,
+        taskContext: TaskContext,
     ): Promise<void> {
         const { baseRepo, headRepo, filePaths = [] } = request;
         const taskId = request?.taskId ?? taskContext?.taskId;
@@ -186,7 +197,7 @@ export class TaskQueueProcessor {
 
     private async processInitializeImpactAnalysis(
         request: InitializeImpactAnalysisRequest,
-        taskContext: any,
+        taskContext: TaskContext,
     ): Promise<void> {
         const { baseRepo, headRepo, codeChunk, fileName, graphsTaskId } =
             request;
@@ -527,5 +538,85 @@ export class TaskQueueProcessor {
             `Unsupported task type: ${message.type}`,
             'Unsupported task type',
         );
+    }
+
+    // private async processSuggestionDiagnostic(
+    //     request: SuggestionDiagnosticRequest,
+    //     taskContext: TaskContext,
+    // ) {
+    //     const { repoData, files } = request;
+
+    //     try {
+    //         await taskContext.start('Cloning repository');
+
+    //         const repoPath = await this.cloneRepo(repoData);
+
+    //         await taskContext.update('Starting suggestions diagnostic');
+
+    //         return await this.suggestionDiagnosticUseCase.execute(
+    //             {
+    //                 repoPath,
+    //                 files,
+    //             },
+    //             taskContext,
+    //         );
+    //     } catch (error) {
+    //         this.logger.error({
+    //             message: 'Error during suggestion diagnostic',
+    //             context: WORKER_CONTEXT,
+    //             error,
+    //             metadata: {
+    //                 taskId: taskContext?.taskId,
+    //             },
+    //             serviceName: WORKER_CONTEXT,
+    //         });
+
+    //         if (taskContext) {
+    //             await taskContext.fail(
+    //                 error instanceof Error ? error.message : 'Unknown error',
+    //                 'Suggestion diagnostic failed',
+    //             );
+    //         }
+
+    //         throw error;
+    //     }
+    // }
+
+    private async processValidateCode(
+        request: ValidateCodeRequest,
+        taskContext: TaskContext,
+    ): Promise<void> {
+        const { files } = request;
+
+        try {
+            const result = await this.validateCodeUseCase.execute({
+                files,
+            });
+
+            if (taskContext) {
+                await taskContext.complete(
+                    'Code validation completed successfully',
+                    result,
+                );
+            }
+        } catch (error) {
+            this.logger.error({
+                message: 'Error during code validation',
+                context: WORKER_CONTEXT,
+                error,
+                metadata: {
+                    taskId: taskContext?.taskId,
+                },
+                serviceName: WORKER_CONTEXT,
+            });
+
+            if (taskContext) {
+                await taskContext.fail(
+                    error instanceof Error ? error.message : 'Unknown error',
+                    'Code validation failed',
+                );
+            }
+            throw error;
+        }
     }
 }

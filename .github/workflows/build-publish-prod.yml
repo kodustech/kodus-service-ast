@@ -66,7 +66,7 @@ jobs:
           key: ${{ secrets.AWS_PROD_KEY_SSH }}
           script: |
             cd ~/kodus-service-ast
-            ./start-app.sh prod ${{ github.sha }} ${{ github.ref }}
+            ./scripts/start-app.sh prod ${{ github.sha }} ${{ github.ref }}
 
       - name: Remove Github Actions IP from security group
         run: |

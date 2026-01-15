@@ -1,82 +1,87 @@
-name: Build and Publish Docker Images for cloud
+name: CI/CD kodus-service-ast QA
 
 on:
-    release:
-        types: [published]
+  push:
+    branches:
+      - main
 
 jobs:
-    build-and-push:
-        name: Build and Push Docker Image for Production (Cloud)
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-        steps:
-            - name: Checkout Repository
-              uses: actions/checkout@v4.2.2
+  build_and_push_image:
+    name: Build and push image
+    runs-on: ubuntu-latest
 
-            - name: Capture release version
-              run: echo "RELEASE_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
 
-            - name: Configure AWS Credentials
-              uses: aws-actions/configure-aws-credentials@v4.1.0
-              with:
-                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-                  aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-            - name: Login to Amazon ECR
-              id: login-ecr
-              uses: aws-actions/amazon-ecr-login@v2.0.1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2.0.1
 
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3.10.0
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: kodus-service-ast-qa
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f DockerFiles/Dockerfile.prod -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-            - name: Build and Push Docker Image
-              env:
-                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-                  ECR_REPOSITORY: kodus-service-ast-qa
-                  IMAGE_TAG_SHA: ${{ github.sha }}
-                  IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
-              run: |
-                  docker buildx build \
-                    --platform linux/arm64 \
-                    --build-arg RELEASE_VERSION=$IMAGE_TAG_VERSION \
-                    --build-arg API_CLOUD_MODE=true \
-                    -f DockerFiles/Dockerfile.prod \
-                    -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA \
-                    -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION \
-                    --push .
+      - name: Log out of Amazon ECR
+        if: always()
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}
 
-            - name: Log out of Amazon ECR
-              if: always()
-              run: docker logout ${{ steps.login-ecr.outputs.registry }}
+  deploy_in_server:
+    name: Deploy in server
+    runs-on: ubuntu-latest
+    needs: build_and_push_image
 
-            - name: Cleanup Docker images
-              run: |
-                  docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_SHA || true
-                  docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_VERSION || true
-              env:
-                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-                  ECR_REPOSITORY: kodus-service-ast-qa
-                  IMAGE_TAG_SHA: ${{ github.sha }}
-                  IMAGE_TAG_VERSION: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Get runner IP
+        run: |
+          ip=`curl https://ipinfo.io/ip`
+          echo $ip
+          echo "runner_ip=$ip" >> $GITHUB_ENV
 
-            - name: Notificar Discord sobre Sucesso
-              if: success()
-              uses: sarisia/actions-status-discord@v1.15.3
-              with:
-                  webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":tada: A imagem Docker `${{ env.RELEASE_VERSION }}` foi publicada no Amazon ECR com sucesso."
-                  title: "Build e Push: kodus-orchestrator"
-                  username: "GitHub Actions"
-                  color: 0x00FF00
+      - name: Add Github Actions IP to Security group as a Postgres inbound rule
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.AWS_SECURITY_GROUP }} --protocol tcp --port 22 --cidr ${{ env.runner_ip }}/32
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
-            - name: Notificar Discord sobre Falha
-              if: failure()
-              uses: sarisia/actions-status-discord@v1.15.3
-              with:
-                  webhook: ${{ secrets.DISCORD_WEBHOOK }}
-                  content: ":x: Falha ao publicar a imagem Docker `${{ env.RELEASE_VERSION }}` no Amazon ECR."
-                  title: "Build e Push: kodus-orchestrator"
-                  username: "GitHub Actions"
-                  color: 0xFF0000
+      - name: Execute start-app.sh on EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.AWS_QA_HOST }}
+          username: ${{ secrets.AWS_QA_USERNAME }}
+          key: ${{ secrets.AWS_QA_KEY_SSH }}
+          script: |
+            cd ~/kodus-service-ast
+            ./start-app.sh qa ${{ github.sha }} ${{ github.ref }}
+
+      - name: Remove Github Actions IP from security group
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SECURITY_GROUP }} --protocol tcp --port 22 --cidr ${{ env.runner_ip }}/32
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        if: always()
+
+      - name: Actions for Discord
+        uses: sarisia/actions-status-discord@v1.13.0
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          content: ":clap: Build successful!"
+          title: "Deploy QA: kodus-service-ast"
+          username: GitHub Actions

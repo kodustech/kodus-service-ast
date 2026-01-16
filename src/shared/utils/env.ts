@@ -1,5 +1,25 @@
+function normalizeEnvValue(value: string | undefined): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (value.length >= 2) {
+        const firstChar = value[0];
+        const lastChar = value[value.length - 1];
+        if (
+            (firstChar === "'" && lastChar === "'") ||
+            (firstChar === '"' && lastChar === '"')
+        ) {
+            return value.slice(1, -1);
+        }
+    }
+
+    return value;
+}
+
 export function isEnvVariableSet(variable: string): boolean {
-    return process.env[variable] !== undefined && process.env[variable] !== '';
+    const value = normalizeEnvValue(process.env[variable]);
+    return value !== undefined && value !== '';
 }
 
 export function getEnvVariable(
@@ -10,7 +30,7 @@ export function getEnvVariable(
         return defaultValue;
     }
 
-    return process.env[variable];
+    return normalizeEnvValue(process.env[variable]);
 }
 
 export function getEnvVariableOrExit(variable: string): string {

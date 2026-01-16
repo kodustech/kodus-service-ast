@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './shared/utils/env-loader.js';
 import { NestFactory } from '@nestjs/core';
 import { RequestMethod } from '@nestjs/common';
 import {

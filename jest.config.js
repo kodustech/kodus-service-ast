@@ -26,5 +26,5 @@ export default {
     collectCoverageFrom: ['src/**/*.{ts,js}', 'test/**/*.{ts,js}'],
     coverageDirectory: 'coverage',
     testEnvironment: 'node',
-    setupFiles: ['dotenv/config'],
+    setupFiles: ['<rootDir>/src/shared/utils/env-loader.ts'],
 };

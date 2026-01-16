@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../shared/utils/env-loader.js';
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from '../modules/worker.module.js';
 import { type INestApplicationContext } from '@nestjs/common';

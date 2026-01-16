@@ -3,25 +3,12 @@
 ENVIRONMENT=$1
 
 KEYS=(
-    "/qa/kodus-service-ast/NODE_ENV"
-    "/qa/kodus-service-ast/API_NODE_ENV"
-    "/qa/kodus-service-ast/API_LOG_PRETTY"
-    "/qa/kodus-service-ast/API_LOG_LEVEL"
-    "/qa/kodus-service-ast/CONTAINER_NAME"
-    "/qa/kodus-service-ast/API_PORT"
-    "/qa/kodus-service-ast/API_DATABASE_ENV"
-    "/qa/kodus-service-ast/API_PG_DB_HOST"
-    "/qa/kodus-service-ast/API_PG_DB_PORT"
-    "/qa/kodus-service-ast/API_PG_DB_USERNAME"
-    "/qa/kodus-service-ast/API_PG_DB_PASSWORD"
-    "/qa/kodus-service-ast/API_PG_DB_DATABASE"
-    "/qa/kodus-service-ast/API_PG_DB_SCHEMA"
+    "/qa/kodus-orchestrator/API_PG_DB_HOST"
+    "/qa/kodus-orchestrator/API_PG_DB_PORT"
+    "/qa/kodus-orchestrator/API_PG_DB_USERNAME"
+    "/qa/kodus-orchestrator/API_PG_DB_PASSWORD"
+    "/qa/kodus-orchestrator/API_PG_DB_DATABASE"
     "/qa/kodus-service-ast/RABBIT_URL"
-    "/qa/kodus-service-ast/RABBIT_RETRY_QUEUE"
-    "/qa/kodus-service-ast/RABBIT_RETRY_TTL_MS"
-    "/qa/kodus-service-ast/RABBIT_PREFETCH"
-    "/qa/kodus-service-ast/RABBIT_PUBLISH_TIMEOUT_MS"
-    "/qa/kodus-service-ast/RABBIT_SAC"
     "/qa/kodus-service-ast/S3_ENABLED"
     "/qa/kodus-service-ast/S3_BUCKET_NAME"
     "/qa/kodus-service-ast/AWS_REGION"
@@ -41,3 +28,19 @@ for KEY in "${KEYS[@]}"; do
     echo "${KEY##*/}=$VALUE" >> "$ENV_FILE"
   fi
 done
+
+cat <<'EOF' >> "$ENV_FILE"
+NODE_ENV=production
+API_NODE_ENV=production
+API_LOG_PRETTY=true
+API_LOG_LEVEL=info
+API_PORT=3002
+API_DATABASE_ENV=production
+API_PG_DB_SCHEMA=kodus_workflow
+CONTAINER_NAME=kodus-service-ast
+RABBIT_RETRY_QUEUE=ast.jobs.retry.q
+RABBIT_RETRY_TTL_MS=60000
+RABBIT_PREFETCH=1
+RABBIT_PUBLISH_TIMEOUT_MS=5000
+RABBIT_SAC=false
+EOF

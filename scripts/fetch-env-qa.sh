@@ -19,13 +19,34 @@ ENV_FILE=".env.$ENVIRONMENT"
 
 > "$ENV_FILE"
 
+quote_env_value() {
+  local value="$1"
+  if [[ ! "$value" =~ [[:space:]#\$] ]]; then
+    printf "%s" "$value"
+    return
+  fi
+
+  if [[ "$value" != *"'"* ]]; then
+    printf "'%s'" "$value"
+    return
+  fi
+
+  if [[ "$value" != *'"'* ]]; then
+    printf "\"%s\"" "$value"
+    return
+  fi
+
+  printf "%s" "$value"
+}
+
 for KEY in "${KEYS[@]}"; do
   VALUE=$(aws ssm get-parameter --name "$KEY" --with-decryption --query "Parameter.Value" --output text 2>/dev/null)
 
   if [ -z "$VALUE" ] || [[ "$VALUE" == "ParameterNotFound" ]]; then
     echo "WARNING: Parâmetro $KEY não encontrado." >&2
   else
-    echo "${KEY##*/}=$VALUE" >> "$ENV_FILE"
+    FORMATTED_VALUE=$(quote_env_value "$VALUE")
+    printf '%s=%s\n' "${KEY##*/}" "$FORMATTED_VALUE" >> "$ENV_FILE"
   fi
 done
 

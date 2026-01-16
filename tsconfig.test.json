@@ -10,7 +10,7 @@
     "include": [
         "src/**/*",
         "test/**/*",
-        "ecosystem.config.js",
+        "ecosystem.config.cjs",
         "tsconfig-paths-bootstrap.js"
     ],
     "exclude": ["node_modules", "dist"]

@@ -37,11 +37,14 @@ RUN npm install -g pm2 && npm cache clean --force
 COPY --from=builder --chown=node:node /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /usr/src/app/dist ./dist
 COPY --from=builder --chown=node:node /usr/src/app/package.json ./
-COPY --from=builder --chown=node:node /usr/src/app/ecosystem.config.js ./
+COPY --from=builder --chown=node:node /usr/src/app/ecosystem.config.cjs ./
 
 COPY --chown=node:node scripts/entrypoint-api.sh /usr/local/bin/entrypoint-api.sh
 COPY --chown=node:node scripts/entrypoint-worker.sh /usr/local/bin/entrypoint-worker.sh
 RUN chmod +x /usr/local/bin/entrypoint-api.sh /usr/local/bin/entrypoint-worker.sh
+
+RUN mkdir -p /shared/tmp/cloned-repos /tmp/s3-cache && \
+    chown -R node:node /shared /tmp/s3-cache
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
@@ -50,4 +53,4 @@ EXPOSE ${PORT}
 
 USER node
 
-CMD ["pm2-runtime", "ecosystem.config.js"]
+CMD ["pm2-runtime", "ecosystem.config.cjs"]

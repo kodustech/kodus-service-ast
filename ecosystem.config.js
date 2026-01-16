@@ -3,7 +3,7 @@
 // Otimizada para AST parsing de base de código inteira
 // Máquina: n2d-standard-4 (4 vCPUs, 16 GB RAM)
 
-module.exports = {
+export default {
     apps: [
         {
             name: 'kodus-service-ast',

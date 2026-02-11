@@ -44,7 +44,7 @@
         "@kodus/kodus-common": "^1.2.16",
         "@langchain/anthropic": "^0.3.31",
         "@langchain/cohere": "^0.3.4",
-        "@langchain/community": "^0.3.57",
+        "@langchain/community": "^1.1.14",
         "@langchain/core": "^0.3.78",
         "@langchain/google-genai": "^0.2.18",
         "@langchain/google-vertexai": "^0.2.18",

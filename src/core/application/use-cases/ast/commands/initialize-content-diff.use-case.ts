@@ -14,16 +14,20 @@ import {
     decompressString,
 } from '@/shared/utils/compression.js';
 import { decrypt, encrypt } from '@/shared/utils/crypto.js';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { parsePatch } from 'diff';
 import { extname } from 'node:path';
 
 @Injectable()
 export class InitializeContentFromDiffUseCase {
     constructor(
+        @Inject(DiffAnalyzerService)
         private readonly differService: DiffAnalyzerService,
+        @Inject(CodeKnowledgeGraphService)
         private readonly codeKnowledgeGraphService: CodeKnowledgeGraphService,
+        @Inject(GraphEnrichmentService)
         private readonly graphEnrichmentService: GraphEnrichmentService,
+        @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
 
@@ -42,33 +46,37 @@ export class InitializeContentFromDiffUseCase {
             const promisesResult = await Promise.allSettled(promises);
 
             const result = promisesResult
-                .map((result, index) => {
-                    const metadata = {
-                        taskId: taskContext.taskId,
-                        filePath: files[index].filePath,
-                        fileId: files[index].id,
-                    };
+                .map<GetContentFromDiffResponse['files'][number] | null>(
+                    (result, index) => {
+                        const metadata = {
+                            taskId: taskContext.taskId,
+                            filePath: files[index].filePath,
+                            fileId: files[index].id,
+                        };
 
-                    if (result.status === 'fulfilled') {
-                        this.log(
-                            `Successfully analyzed file: ${files[index].filePath}`,
-                            metadata,
-                        );
+                        if (result.status === 'fulfilled') {
+                            this.log(
+                                `Successfully analyzed file: ${files[index].filePath}`,
+                                metadata,
+                            );
 
-                        return result.value;
-                    } else {
-                        this.logError(
-                            `Failed to analyze file: ${files[index].filePath}. Error: ${result.reason}`,
-                            result.reason,
-                            metadata,
-                        );
+                            return result.value;
+                        } else {
+                            this.logError(
+                                `Failed to analyze file: ${files[index].filePath}. Error: ${result.reason}`,
+                                result.reason,
+                                metadata,
+                            );
 
-                        return null;
-                    }
-                })
+                            return null;
+                        }
+                    },
+                )
                 .filter((res) => res !== null);
 
-            await taskContext.complete('Analyzed all files', result);
+            await taskContext.complete('Analyzed all files', {
+                files: result,
+            });
         } catch (error) {
             this.logError(
                 'Failed to initialize content from diff',

@@ -26,7 +26,7 @@ export class AstHttpController {
         return { taskId };
     }
 
-    @Post('diff/content/result/:id')
+    @Get('diff/content/result/:id')
     async getContentFromDiffResult(
         @Param('id') id: string,
     ): Promise<GetContentFromDiffResponse> {

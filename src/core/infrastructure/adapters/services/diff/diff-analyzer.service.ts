@@ -123,7 +123,26 @@ export class DiffAnalyzerService {
 
             const relationships = graphs.enrichedGraph.relationships;
 
-            const nodesRanges = mainNodes.flatMap((node) =>
+            const withRelated = mainNodes.flatMap((node) => {
+                let direction = RelatedNodeDirection.BOTH;
+                if (node.type !== NodeType.NODE_TYPE_FUNCTION) {
+                    direction = RelatedNodeDirection.TO;
+                }
+
+                const relatedNodes = this.getRelatedNodes(
+                    mainFileNodes,
+                    relationships,
+                    node,
+                    filePath,
+                    {
+                        direction,
+                    },
+                );
+
+                return [...relatedNodes, node];
+            });
+
+            const nodesRanges = withRelated.flatMap((node) =>
                 this.getNodeRanges(
                     node,
                     mainFileNodes,
@@ -726,11 +745,13 @@ export class DiffAnalyzerService {
             // Pick the smallest node (by range size)
             const smallestNode = containingNodes.reduce((min, curr) => {
                 const minSize =
-                    min?.position?.endIndex && min?.position?.startIndex
+                    min?.position?.endIndex !== undefined &&
+                    min?.position?.startIndex !== undefined
                         ? min.position.endIndex - min.position.startIndex
                         : 0;
                 const currSize =
-                    curr?.position?.endIndex && curr?.position?.startIndex
+                    curr?.position?.endIndex !== undefined &&
+                    curr?.position?.startIndex !== undefined
                         ? curr.position.endIndex - curr.position.startIndex
                         : 0;
                 return currSize < minSize ? curr : min;
@@ -837,49 +858,14 @@ export class DiffAnalyzerService {
                 if (!node) {
                     return false;
                 }
+                if (node.filePath !== filePath) {
+                    return false;
+                }
                 if (nodeTypeFilter.length === 0) {
                     return true;
                 }
                 return nodeTypeFilter.includes(node.type);
             });
-
-        const otherFileFunctions = relatedNodes.filter(
-            (n: EnrichedGraphNode | null) =>
-                n &&
-                n.filePath !== filePath &&
-                n.type === NodeType.NODE_TYPE_FUNCTION,
-        );
-
-        const otherFileFunctionsClass = relations
-            .filter((relation) => {
-                // filter relations that connect functions to classes in other files
-                return (
-                    relation.type ===
-                        RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD &&
-                    otherFileFunctions.some(
-                        (f: EnrichedGraphNode | null) =>
-                            f && f.id === relation.to,
-                    )
-                );
-            })
-            .map((relation) => {
-                // find the class node in the file nodes
-                const classNode = fileNodes.find(
-                    (n) =>
-                        n.id === relation.from &&
-                        n.type === NodeType.NODE_TYPE_CLASS,
-                );
-
-                return classNode || null;
-            })
-            .filter((n: EnrichedGraphNode | null) => n !== null);
-
-        // Combine related nodes from the same file and classes from other files
-        relatedNodes.push(
-            ...otherFileFunctionsClass.filter(
-                (node): node is EnrichedGraphNode => node !== null,
-            ),
-        );
 
         return relatedNodes;
     }

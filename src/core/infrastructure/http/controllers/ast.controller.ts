@@ -1,75 +1,24 @@
 import { TaskService } from '@/core/application/services/task/task.service.js';
-import { DeleteRepositoryUseCase } from '@/core/application/use-cases/ast/commands/delete-repository.use-case.js';
-import { GetContentFromDiffUseCase } from '@/core/application/use-cases/ast/queries/get-content-diff.use-case.js';
-import { GetImpactAnalysisUseCase } from '@/core/application/use-cases/ast/queries/get-impact-analysis.use-case.js';
 import {
+    GetContentFromDiffResponse,
+    InitializeContentFromDiffResponse,
     ValidateCodeResponse,
-    type DeleteRepositoryRequest,
-    type DeleteRepositoryResponse,
     type GetContentFromDiffRequest,
-    type GetImpactAnalysisRequest,
-    type GetImpactAnalysisResponse,
-    type InitializeImpactAnalysisRequest,
-    type InitializeImpactAnalysisResponse,
-    type InitializeRepositoryRequest,
-    type InitializeRepositoryResponse,
+    type InitializeContentFromDiffRequest,
     type ValidateCodeRequest,
 } from '@/shared/types/ast.js';
-import {
-    Body,
-    Controller,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Param,
-    Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 
 @Controller('ast')
 export class AstHttpController {
-    constructor(
-        private readonly taskService: TaskService,
-        private readonly deleteRepositoryUseCase: DeleteRepositoryUseCase,
-        private readonly getContentFromDiffUseCase: GetContentFromDiffUseCase,
-        private readonly getImpactAnalysisUseCase: GetImpactAnalysisUseCase,
-    ) {}
+    constructor(private readonly taskService: TaskService) {}
 
-    @Post('repositories/initialize')
-    @HttpCode(HttpStatus.ACCEPTED)
-    async initializeRepository(
-        @Body() request: InitializeRepositoryRequest,
-    ): Promise<InitializeRepositoryResponse> {
-        const taskId = await this.taskService.createAsyncTask({
-            type: 'AST_INITIALIZE_REPOSITORY',
-            priority: request.priority,
-            payload: request,
-        });
-
-        return { taskId };
-    }
-
-    @Post('repositories/delete')
-    async deleteRepository(
-        @Body() request: DeleteRepositoryRequest,
-    ): Promise<DeleteRepositoryResponse> {
-        return this.deleteRepositoryUseCase.execute(request);
-    }
-
-    @Post('diff/content')
+    @Post('diff/content/initialize')
     async getContentFromDiff(
-        @Body() request: GetContentFromDiffRequest,
-    ): Promise<{ content: string }> {
-        const content = await this.getContentFromDiffUseCase.execute(request);
-        return { content };
-    }
-
-    @Post('impact-analysis/initialize')
-    @HttpCode(HttpStatus.ACCEPTED)
-    async initializeImpactAnalysis(
-        @Body() request: InitializeImpactAnalysisRequest,
-    ): Promise<InitializeImpactAnalysisResponse> {
+        @Body() request: InitializeContentFromDiffRequest,
+    ): Promise<InitializeContentFromDiffResponse> {
         const taskId = await this.taskService.createAsyncTask({
-            type: 'AST_INITIALIZE_IMPACT_ANALYSIS',
+            type: 'AST_INITIALIZE_DIFF_ANALYSIS',
             priority: request.priority,
             payload: request,
         });
@@ -77,17 +26,13 @@ export class AstHttpController {
         return { taskId };
     }
 
-    @Post('impact-analysis/retrieve')
-    async getImpactAnalysis(
-        @Body() request: GetImpactAnalysisRequest,
-    ): Promise<GetImpactAnalysisResponse> {
-        return this.getImpactAnalysisUseCase.execute(request);
-    }
-
-    // Test endpoint to verify error logging
-    @Post('test/error')
-    async testError(): Promise<never> {
-        throw new Error('Test error for logging verification');
+    @Post('diff/content/retrieve')
+    async getContentFromDiffResult(
+        @Body() request: GetContentFromDiffRequest,
+    ): Promise<GetContentFromDiffResponse> {
+        return this.taskService.getTaskResult<GetContentFromDiffResponse>(
+            request.taskId,
+        );
     }
 
     @Post('validate-code/initialize')
@@ -105,10 +50,5 @@ export class AstHttpController {
     @Get('validate-code/result/:id')
     async getValidateCodeResult(@Param('id') id: string): Promise<any> {
         return this.taskService.getTaskResult<ValidateCodeResponse>(id);
-    }
-
-    @Get('ping')
-    ping() {
-        return 'pong';
     }
 }

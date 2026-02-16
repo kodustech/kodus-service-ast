@@ -1,9 +1,20 @@
 // worker/worker.ts
 
-export type WorkerInput = {
-    rootDir: string;
-    batch: string[];
+export type BatchWorkerInput = {
+    batch: {
+        id: string;
+        content: string;
+        filePath: string;
+    }[];
 };
+
+export type SingleWorkerInput = {
+    content: string;
+    filePath: string;
+    rootDir?: string;
+};
+
+export type WorkerInput = BatchWorkerInput | SingleWorkerInput;
 
 export type WorkerOutput = {
     files: {
@@ -14,8 +25,10 @@ export type WorkerOutput = {
     errors: string[];
 };
 
-export async function analyzeBatch(params: WorkerInput): Promise<WorkerOutput> {
-    const { rootDir, batch } = params;
+export async function analyzeBatch(
+    params: BatchWorkerInput,
+): Promise<WorkerOutput> {
+    const { batch } = params;
 
     const { SourceFileAnalyzer } = await import('../analyze-source-file.js');
     const path = (await import('path')).default;
@@ -27,31 +40,76 @@ export async function analyzeBatch(params: WorkerInput): Promise<WorkerOutput> {
 
     const sourceFileAnalyzer = new SourceFileAnalyzer();
 
-    for (const filePath of batch) {
+    for (const file of batch) {
         try {
             const normalizedPath = path
-                .resolve(rootDir, filePath)
+                .resolve('/', file.filePath)
                 .replace(/\\/g, '/');
 
             const analysis = await sourceFileAnalyzer.analyzeSourceFile(
-                rootDir,
-                filePath,
+                '/',
+                file.filePath,
                 normalizedPath,
+                file.content,
             );
 
             results.files.push({
-                filePath,
+                filePath: file.filePath,
                 normalizedPath,
                 analysis,
             });
         } catch (error) {
-            console.error(`Error analyzing file ${filePath}:`, error);
+            console.error(`Error analyzing file ${file.filePath}:`, error);
             results.errors.push(
-                `Error analyzing file ${filePath}: ${
+                `Error analyzing file ${file.filePath}: ${
                     error instanceof Error ? error.message : String(error)
                 }`,
             );
         }
+    }
+
+    return results;
+}
+
+export async function analyzeContent(
+    params: SingleWorkerInput,
+): Promise<WorkerOutput> {
+    const { content, filePath, rootDir = '.' } = params;
+
+    const { SourceFileAnalyzer } = await import('../analyze-source-file.js');
+    const path = (await import('path')).default;
+
+    const results: WorkerOutput = {
+        files: [],
+        errors: [],
+    };
+
+    const sourceFileAnalyzer = new SourceFileAnalyzer();
+
+    try {
+        const normalizedPath = path
+            .resolve(rootDir, filePath)
+            .replace(/\\/g, '/');
+
+        const analysis = await sourceFileAnalyzer.analyzeSourceFile(
+            rootDir,
+            filePath,
+            normalizedPath,
+            content,
+        );
+
+        results.files.push({
+            filePath,
+            normalizedPath,
+            analysis,
+        });
+    } catch (error) {
+        const errorMessage =
+            error instanceof Error ? error.message : String(error);
+        console.error(`Error analyzing content for ${filePath}:`, error);
+        results.errors.push(
+            `Error analyzing content for ${filePath}: ${errorMessage}`,
+        );
     }
 
     return results;

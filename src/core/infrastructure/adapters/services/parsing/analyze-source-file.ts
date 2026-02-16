@@ -1,18 +1,19 @@
-import * as fs from 'fs';
-import { getParserByFilePath } from './parsers/index.js';
-import { type BaseParser } from './parsers/base-parser.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     type ParseContext,
     type ParserAnalysis,
 } from '@/core/domain/parsing/types/parser.js';
-import { getLanguageResolver } from './resolvers/index.js';
-import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     type AnalysisNode,
     type Call,
     type FunctionAnalysis,
     type TypeAnalysis,
 } from '@/shared/types/ast.js';
+import * as fs from 'fs';
+import { type BaseParser } from './parsers/base-parser.js';
+import { getParserByFilePath } from './parsers/index.js';
+import { getLanguageResolver } from './resolvers/index.js';
+import { NoOpResolver } from './resolvers/noop-resolver.js';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;
@@ -22,26 +23,47 @@ export class SourceFileAnalyzer {
         rootDir: string,
         filePath: string,
         absolutePath: string,
+        inputContent?: string,
     ): Promise<ParserAnalysis> {
         try {
             await this.initializeImportResolver(rootDir);
+
+            if (inputContent && !this.importPathResolver) {
+                this.importPathResolver = new NoOpResolver();
+            }
+
             if (!this.importPathResolver) {
                 console.warn(`No import resolver found for ${rootDir}`);
                 return this.emptyAnalysis();
             }
 
-            const content = await this.readFileContent(filePath);
-            if (!content) {
-                return this.emptyAnalysis();
-            }
+            let content: string;
 
-            const fileStats = await fs.promises.stat(filePath);
-            const fileSizeInMB = fileStats?.size / (1024 * 1024);
-            if (fileSizeInMB > 5) {
-                console.warn(
-                    `File too large for analysis (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
-                );
-                return this.emptyAnalysis();
+            if (inputContent) {
+                content = inputContent;
+                const fileSizeInMB =
+                    Buffer.byteLength(content, 'utf8') / (1024 * 1024);
+                if (fileSizeInMB > 5) {
+                    console.warn(
+                        `Content too large for analysis (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
+                    );
+                    return this.emptyAnalysis();
+                }
+            } else {
+                const readContent = await this.readFileContent(filePath);
+                if (!readContent) {
+                    return this.emptyAnalysis();
+                }
+                content = readContent;
+
+                const fileStats = await fs.promises.stat(filePath);
+                const fileSizeInMB = fileStats?.size / (1024 * 1024);
+                if (fileSizeInMB > 5) {
+                    console.warn(
+                        `File too large for analysis (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
+                    );
+                    return this.emptyAnalysis();
+                }
             }
 
             const context: ParseContext = {

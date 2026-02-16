@@ -1,6 +1,6 @@
-import { TaskQueueProcessor } from '@/core/application/services/task/task-queue-processor.service.js';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable } from '@nestjs/common';
+import { TaskQueueProcessor } from '../../application/services/task/task-queue-processor.service.js';
 import { QUEUE_CONFIG } from './queue.constants.js';
 import type { TaskQueueMessage } from './task-queue.definition.js';
 
@@ -13,19 +13,10 @@ export class TaskQueueConsumer {
 
     @RabbitSubscribe({
         exchange: QUEUE_CONFIG.EXCHANGE,
-        routingKey: QUEUE_CONFIG.REPO_ROUTING_KEY,
-        queue: QUEUE_CONFIG.REPO_QUEUE,
+        routingKey: QUEUE_CONFIG.DIFF_ROUTING_KEY,
+        queue: QUEUE_CONFIG.DIFF_QUEUE,
     })
-    async handleInitializeRepo(msg: TaskQueueMessage) {
-        await this.processor.process(msg);
-    }
-
-    @RabbitSubscribe({
-        exchange: QUEUE_CONFIG.EXCHANGE,
-        routingKey: QUEUE_CONFIG.IMPACT_ROUTING_KEY,
-        queue: QUEUE_CONFIG.IMPACT_QUEUE,
-    })
-    async handleInitializeImpact(msg: TaskQueueMessage) {
+    async handleInitializeDiff(msg: TaskQueueMessage) {
         await this.processor.process(msg);
     }
 

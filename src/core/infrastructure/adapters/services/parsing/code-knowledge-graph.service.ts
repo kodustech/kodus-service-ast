@@ -1,21 +1,18 @@
-import { Inject, Injectable } from '@nestjs/common';
-import fg from 'fast-glob';
-import * as fs from 'fs';
-import * as os from 'os';
 import {
     CodeGraph,
     FileAnalysis,
     FunctionAnalysis,
     TypeAnalysis,
 } from '@/shared/types/ast.js';
+import { Inject, Injectable } from '@nestjs/common';
+import * as os from 'os';
 
+import { existsSync } from 'fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Piscina } from 'piscina';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 import { PinoLoggerService } from '../logger/pino.service.js';
 import { WorkerInput, WorkerOutput } from './worker/worker.js';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'fs';
 
 interface BatchProgress {
     batch: WorkerOutput;
@@ -106,29 +103,12 @@ export class CodeKnowledgeGraphService {
             concurrentTasksPerWorker,
         });
     }
-
-    public async getAllSourceFiles(baseDir: string): Promise<string[]> {
-        const allExtensions = Object.values(SUPPORTED_LANGUAGES)
-            .flatMap((lang) => lang.extensions)
-            .map((ext) => `**/*${ext}`);
-
-        const ignoreDirs = [
-            '**/{node_modules,dist,build,coverage,.git,.vscode}/**',
-        ];
-
-        const files = await fg(allExtensions, {
-            cwd: baseDir,
-            absolute: true,
-            ignore: ignoreDirs,
-            concurrency: os.cpus().length,
-        });
-
-        return files;
-    }
-
-    public async *processFilesInBatches(
-        files: string[],
-        rootDir: string,
+    private async *processFilesInBatches(
+        files: {
+            id: string;
+            content: string;
+            filePath: string;
+        }[],
     ): AsyncGenerator<BatchProgress> {
         if (files.length === 0) {
             return;
@@ -151,10 +131,7 @@ export class CodeKnowledgeGraphService {
             const batchStartTime = performance.now();
 
             try {
-                const batchResult = await this.processBatch(
-                    batches[i],
-                    rootDir,
-                );
+                const batchResult = await this.processBatch(batches[i]);
 
                 this.clearBatchCache();
 
@@ -249,24 +226,17 @@ export class CodeKnowledgeGraphService {
     }
 
     public async buildGraphStreaming(
-        rootDir: string,
-        filePaths: string[],
+        files: {
+            id: string;
+            content: string;
+            filePath: string;
+        }[],
     ): Promise<CodeGraph> {
         const t0 = performance.now();
         const hr0 = process.hrtime();
 
-        if (!rootDir || rootDir.trim() === '') {
-            const error = new Error(`Root directory can't be empty ${rootDir}`);
-            (error as any).errorType = 'BUSINESS_ERROR';
-            throw error;
-        }
-
-        try {
-            await fs.promises.access(rootDir, fs.constants.F_OK);
-        } catch {
-            const error = new Error(`Root directory not found: ${rootDir}`);
-            (error as any).errorType = 'BUSINESS_ERROR';
-            throw error;
+        if (!Array.isArray(files) || files.length === 0) {
+            throw new Error('No files provided for analysis');
         }
 
         const result: CodeGraph = {
@@ -275,39 +245,16 @@ export class CodeKnowledgeGraphService {
             types: new Map<string, TypeAnalysis>(),
         };
 
-        const sourceFiles = await this.getAllSourceFiles(rootDir);
-        const filteredFiles =
-            filePaths.length > 0
-                ? sourceFiles.filter((file) =>
-                      filePaths.some((keyword) => file.includes(keyword)),
-                  )
-                : sourceFiles;
-
-        if (filteredFiles.length === 0) {
-            this.logger.warn({
-                message: 'No source files found',
-                context: CodeKnowledgeGraphService.name,
-                metadata: { rootDir },
-                serviceName: CodeKnowledgeGraphService.name,
-            });
-            return result;
-        }
-
-        const totalFiles = filteredFiles.length;
         this.logger.log({
             message: 'Starting streaming analysis',
             context: CodeKnowledgeGraphService.name,
             metadata: {
-                rootDir,
-                totalFiles,
+                fileCount: files.length,
             },
             serviceName: CodeKnowledgeGraphService.name,
         });
 
-        for await (const batchProgress of this.processFilesInBatches(
-            filteredFiles,
-            rootDir,
-        )) {
+        for await (const batchProgress of this.processFilesInBatches(files)) {
             const { batch } = batchProgress;
 
             batch.files.forEach((file) => {
@@ -380,155 +327,10 @@ export class CodeKnowledgeGraphService {
         }
     }
 
-    public async buildGraphProgressively(
-        rootDir: string,
-        filePaths: string[],
-    ): Promise<CodeGraph> {
-        const t0 = performance.now();
-        const hr0 = process.hrtime();
-
-        if (!rootDir || rootDir.trim() === '') {
-            const error = new Error(`Root directory can't be empty ${rootDir}`);
-            (error as any).errorType = 'BUSINESS_ERROR';
-            throw error;
-        }
-
-        try {
-            await fs.promises.access(rootDir, fs.constants.F_OK);
-        } catch {
-            const error = new Error(`Root directory not found: ${rootDir}`);
-            (error as any).errorType = 'BUSINESS_ERROR';
-            throw error;
-        }
-
-        const result: CodeGraph = {
-            files: new Map<string, FileAnalysis>(),
-            functions: new Map<string, FunctionAnalysis>(),
-            types: new Map<string, TypeAnalysis>(),
-        };
-
-        const sourceFiles = await this.getAllSourceFiles(rootDir);
-
-        const filteredFiles =
-            filePaths.length > 0
-                ? sourceFiles.filter((file) =>
-                      filePaths.some((keyword) => file.includes(keyword)),
-                  )
-                : sourceFiles;
-
-        if (filteredFiles.length === 0) {
-            this.logger.warn({
-                message: 'No source files found',
-                context: CodeKnowledgeGraphService.name,
-                metadata: {
-                    rootDir,
-                },
-                serviceName: CodeKnowledgeGraphService.name,
-            });
-            return result;
-        }
-
-        const totalFiles = filteredFiles.length;
-        this.logger.log({
-            message: 'Starting progressive analysis',
-            context: CodeKnowledgeGraphService.name,
-            metadata: {
-                rootDir,
-                totalFiles,
-            },
-            serviceName: CodeKnowledgeGraphService.name,
-        });
-
-        const cpuCount = os.cpus().length;
-        const batchSize = Math.max(7, Math.min(cpuCount * 5, 50));
-
-        const batches = Array.from(
-            { length: Math.ceil(totalFiles / batchSize) },
-            (_, i) => filteredFiles.slice(i * batchSize, (i + 1) * batchSize),
-        );
-
-        const processBatch = async (
-            batchFiles: string[],
-        ): Promise<WorkerOutput> => {
-            return this.processBatch(batchFiles, rootDir);
-        };
-
-        const batchResults = await Promise.allSettled(
-            batches.map((batchFiles) => processBatch(batchFiles)),
-        );
-
-        batchResults.forEach((resultItem, index) => {
-            if (resultItem.status === 'fulfilled') {
-                const item = resultItem.value;
-                item.files.forEach((file) => {
-                    result.files.set(
-                        file.normalizedPath,
-                        file.analysis.fileAnalysis,
-                    );
-
-                    if (file.analysis.functions) {
-                        for (const [
-                            k,
-                            v,
-                        ] of file.analysis.functions.entries()) {
-                            result.functions.set(k, v);
-                        }
-                    }
-
-                    if (file.analysis.types) {
-                        for (const [k, v] of file.analysis.types.entries()) {
-                            result.types.set(k, v);
-                        }
-                    }
-                });
-
-                item.errors.forEach((error) => {
-                    this.logger.warn({
-                        message: 'Error in batch processing',
-                        context: CodeKnowledgeGraphService.name,
-                        error,
-                        metadata: {
-                            index,
-                            batchFiles: batches[index],
-                        },
-                        serviceName: CodeKnowledgeGraphService.name,
-                    });
-                });
-            } else {
-                this.logger.warn({
-                    message: 'Failed to process batch',
-                    context: CodeKnowledgeGraphService.name,
-                    error: resultItem.reason,
-                    metadata: {
-                        index,
-                        batchFiles: batches[index],
-                    },
-                    serviceName: CodeKnowledgeGraphService.name,
-                });
-            }
-        });
-
-        this.completeBidirectionalTypeRelations(result.types);
-
-        const progressiveTime = performance.now() - t0;
-        const [s, ns] = process.hrtime(hr0);
-        const hrtimeMs = s * 1e3 + ns / 1e6;
-
-        this.logger.debug({
-            message: 'Progressive performance metrics',
-            context: CodeKnowledgeGraphService.name,
-            metadata: {
-                progressiveTimeMs: progressiveTime.toFixed(3),
-                hrtimeMs: hrtimeMs.toFixed(3),
-            },
-            serviceName: CodeKnowledgeGraphService.name,
-        });
-
-        return result;
-    }
-
     private async calculateAdaptiveTimeout(
-        batchFiles: string[],
+        batchFiles: {
+            content: string;
+        }[],
     ): Promise<number> {
         const baseTimeoutMs = 60000;
         const batchSize = batchFiles.length;
@@ -548,9 +350,9 @@ export class CodeKnowledgeGraphService {
 
         for (const file of batchFiles) {
             try {
-                const stats = await fs.promises.stat(file);
-                totalFileSize += stats.size;
-                if (stats.size > 50000) {
+                const size = Buffer.byteLength(file.content || '', 'utf8');
+                totalFileSize += size;
+                if (size > 50000) {
                     largeFiles++;
                 }
             } catch {}
@@ -671,8 +473,11 @@ export class CodeKnowledgeGraphService {
     }
 
     private async processBatch(
-        batchFiles: string[],
-        rootDir: string,
+        batchFiles: {
+            id: string;
+            content: string;
+            filePath: string;
+        }[],
         retryCount: number = 0,
     ): Promise<WorkerOutput> {
         const maxRetries = 3;
@@ -694,7 +499,6 @@ export class CodeKnowledgeGraphService {
             const analysis = await Promise.race([
                 this.piscina.run(
                     {
-                        rootDir,
                         batch: batchFiles,
                     },
                     { name: 'analyzeBatch' },
@@ -738,7 +542,7 @@ export class CodeKnowledgeGraphService {
 
                 await new Promise((resolve) => setTimeout(resolve, backoffMs));
 
-                return this.processBatch(batchFiles, rootDir, retryCount + 1);
+                return this.processBatch(batchFiles, retryCount + 1);
             }
 
             this.streamingMetrics.failedBatches++;

@@ -9,10 +9,6 @@ import {
     LanguageConfig,
 } from '@/core/domain/parsing/types/supported-languages.js';
 import {
-    REPOSITORY_MANAGER_TOKEN,
-    type IRepositoryManager,
-} from '@/core/domain/repository/contracts/repository-manager.contract.js';
-import {
     EnrichedGraphEdge,
     EnrichedGraphNode,
     FunctionAnalysis,
@@ -21,7 +17,6 @@ import {
     Point,
     Range,
     RelationshipType,
-    RepositoryData,
 } from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { parsePatch } from 'diff';
@@ -38,8 +33,6 @@ enum RelatedNodeDirection {
 @Injectable()
 export class DiffAnalyzerService {
     constructor(
-        @Inject(REPOSITORY_MANAGER_TOKEN)
-        private readonly repositoryManagerService: IRepositoryManager,
         @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
@@ -48,8 +41,8 @@ export class DiffAnalyzerService {
         filePath: string,
         diff: string,
         graphs: GetGraphsResponseData,
-        repoData: RepositoryData,
         taskId: string,
+        fileContent?: string,
     ): Promise<string> {
         this.logger.log({
             context: DiffAnalyzerService.name,
@@ -58,10 +51,20 @@ export class DiffAnalyzerService {
             serviceName: DiffAnalyzerService.name,
         });
 
-        if (!filePath || filePath.length === 0 || !path.isAbsolute(filePath)) {
+        if (!filePath || filePath.length === 0) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
-                message: `File path not provided or is not absolute: ${filePath}`,
+                message: `File path not provided: ${filePath}`,
+                metadata: { filePath },
+                serviceName: DiffAnalyzerService.name,
+            });
+            return '';
+        }
+
+        if (!path.isAbsolute(filePath) && !fileContent) {
+            this.logger.error({
+                context: DiffAnalyzerService.name,
+                message: `File path is not absolute and no content provided: ${filePath}`,
                 metadata: { filePath },
                 serviceName: DiffAnalyzerService.name,
             });
@@ -81,7 +84,7 @@ export class DiffAnalyzerService {
 
         const absoluteRootDir = graphs.headGraph.dir;
         const resolver = await getLanguageResolver(absoluteRootDir);
-        if (!resolver) {
+        if (!resolver && !fileContent) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
                 message: `No language resolver found for directory: ${absoluteRootDir}`,
@@ -90,7 +93,9 @@ export class DiffAnalyzerService {
             });
             return '';
         }
-        await resolver.initialize();
+        if (resolver) {
+            await resolver.initialize();
+        }
 
         const metadata = {
             filePath: filePath || 'unknown',
@@ -108,13 +113,7 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const mainFileContent =
-                await this.repositoryManagerService.readFile({
-                    repoData,
-                    filePath,
-                    taskId,
-                    absolute: true,
-                });
+            let mainFileContent: string | undefined | null = fileContent;
 
             if (!mainFileContent) {
                 this.logger.error({
@@ -229,13 +228,7 @@ export class DiffAnalyzerService {
                 if (file === filePath) {
                     fileContent = mainFileContent;
                 } else {
-                    // If the node is from a different file, read that file's content
-                    fileContent = await this.repositoryManagerService.readFile({
-                        repoData,
-                        filePath: file,
-                        taskId,
-                        absolute: true,
-                    });
+                    fileContent = null;
                 }
 
                 if (!fileContent) {
@@ -1041,12 +1034,16 @@ export class DiffAnalyzerService {
     }
 
     private getImportNodes(
-        resolver: LanguageResolver,
+        resolver: LanguageResolver | null,
         fileNodes: EnrichedGraphNode[],
         fromFile: string,
         rootDir: string,
         paths: string[],
     ): EnrichedGraphNode[] {
+        if (!resolver) {
+            return [];
+        }
+
         if (!fileNodes || !paths || paths.length === 0) {
             this.logger.warn({
                 context: DiffAnalyzerService.name,

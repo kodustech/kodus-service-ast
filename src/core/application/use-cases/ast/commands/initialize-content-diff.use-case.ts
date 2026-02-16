@@ -9,9 +9,14 @@ import {
     GetGraphsResponseData,
     InitializeContentFromDiffRequest,
 } from '@/shared/types/ast.js';
-import { decrypt } from '@/shared/utils/crypto.js';
+import {
+    compressString,
+    decompressString,
+} from '@/shared/utils/compression.js';
+import { decrypt, encrypt } from '@/shared/utils/crypto.js';
 import { Injectable } from '@nestjs/common';
 import { parsePatch } from 'diff';
+import { extname } from 'node:path';
 
 @Injectable()
 export class InitializeContentFromDiffUseCase {
@@ -77,17 +82,30 @@ export class InitializeContentFromDiffUseCase {
         }
     }
 
+    private async decryptAndDecompress(
+        encryptedContent: string,
+    ): Promise<string> {
+        const compressedContent = decrypt(encryptedContent);
+        return await decompressString(compressedContent);
+    }
+
+    private async compressAndEncrypt(content: string): Promise<string> {
+        const compressedContent = await compressString(content);
+        return encrypt(compressedContent);
+    }
+
     private async analyzeFile(
         file: InitializeContentFromDiffRequest['files'][number],
         taskId: string,
     ): Promise<GetContentFromDiffResponse['files'][number]> {
-        const { id, content: encryptedContent, filePath, diff } = file;
-        const content = decrypt(encryptedContent);
+        const { id, content: originalEncrypted, filePath, diff } = file;
+
+        const fullContent = await this.decryptAndDecompress(originalEncrypted);
 
         try {
             const relevantContent = await this.analyzeDiffFile(
                 filePath,
-                content,
+                fullContent,
                 diff,
                 taskId,
             );
@@ -95,7 +113,7 @@ export class InitializeContentFromDiffUseCase {
             if (relevantContent.trim().length > 0) {
                 return {
                     id,
-                    content: relevantContent,
+                    content: await this.compressAndEncrypt(relevantContent),
                     flag: FileContentFlag.DIFF,
                 };
             }
@@ -111,12 +129,12 @@ export class InitializeContentFromDiffUseCase {
         }
 
         try {
-            const simpleContent = this.analyzeSimpleFile(content, diff);
+            const simpleContent = this.analyzeSimpleFile(fullContent, diff);
 
             if (simpleContent.trim().length > 0) {
                 return {
                     id,
-                    content: simpleContent,
+                    content: await this.compressAndEncrypt(simpleContent),
                     flag: FileContentFlag.SIMPLE,
                 };
             }
@@ -133,7 +151,7 @@ export class InitializeContentFromDiffUseCase {
 
         return {
             id,
-            content,
+            content: originalEncrypted,
             flag: FileContentFlag.FULL,
         };
     }
@@ -144,29 +162,42 @@ export class InitializeContentFromDiffUseCase {
         diff: string,
         taskId: string,
     ): Promise<string> {
+        const languageHintPath = this.buildLanguageHintPath(filePath);
+
         const graph = await this.codeKnowledgeGraphService.buildGraphStreaming([
             {
-                id: filePath,
+                id: 'analysis-file',
                 content,
-                filePath,
+                filePath: languageHintPath,
             },
         ]);
 
         const enrichedGraph = this.graphEnrichmentService.enrichGraph(graph);
 
         const graphs: GetGraphsResponseData = {
-            baseGraph: { graph, dir: '/' },
-            headGraph: { graph, dir: '/' },
-            enrichHeadGraph: enrichedGraph,
+            graph,
+            enrichedGraph,
         };
 
         return this.differService.getRelevantContent(
-            filePath,
+            languageHintPath,
             diff,
             graphs,
             taskId,
             content,
         );
+    }
+
+    private buildLanguageHintPath(filePath: string): string {
+        const extension = extname(filePath || '')
+            .trim()
+            .toLowerCase();
+
+        if (!extension) {
+            return 'input.unknown';
+        }
+
+        return `input${extension}`;
     }
 
     private analyzeSimpleFile(content: string, diff: string): string {

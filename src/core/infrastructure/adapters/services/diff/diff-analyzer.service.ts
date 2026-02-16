@@ -3,7 +3,6 @@ import {
     DiffHunk,
     ExtendedFunctionInfo,
 } from '@/core/domain/diff/types/diff-analyzer.types.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     getLanguageConfigForFilePath,
     LanguageConfig,
@@ -22,7 +21,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { parsePatch } from 'diff';
 import * as path from 'path';
 import { PinoLoggerService } from '../logger/pino.service.js';
-import { getLanguageResolver } from '../parsing/resolvers/index.js';
 
 enum RelatedNodeDirection {
     TO,
@@ -42,7 +40,7 @@ export class DiffAnalyzerService {
         diff: string,
         graphs: GetGraphsResponseData,
         taskId: string,
-        fileContent?: string,
+        fileContent: string,
     ): Promise<string> {
         this.logger.log({
             context: DiffAnalyzerService.name,
@@ -61,16 +59,6 @@ export class DiffAnalyzerService {
             return '';
         }
 
-        if (!path.isAbsolute(filePath) && !fileContent) {
-            this.logger.error({
-                context: DiffAnalyzerService.name,
-                message: `File path is not absolute and no content provided: ${filePath}`,
-                metadata: { filePath },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return '';
-        }
-
         const languageConfig = getLanguageConfigForFilePath(filePath);
         if (!languageConfig) {
             this.logger.error({
@@ -80,21 +68,6 @@ export class DiffAnalyzerService {
                 serviceName: DiffAnalyzerService.name,
             });
             return '';
-        }
-
-        const absoluteRootDir = graphs.headGraph.dir;
-        const resolver = await getLanguageResolver(absoluteRootDir);
-        if (!resolver && !fileContent) {
-            this.logger.error({
-                context: DiffAnalyzerService.name,
-                message: `No language resolver found for directory: ${absoluteRootDir}`,
-                metadata: { filePath },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return '';
-        }
-        if (resolver) {
-            await resolver.initialize();
         }
 
         const metadata = {
@@ -113,17 +86,7 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            let mainFileContent: string | undefined | null = fileContent;
-
-            if (!mainFileContent) {
-                this.logger.error({
-                    context: DiffAnalyzerService.name,
-                    message: `No content found for file ${filePath}`,
-                    metadata,
-                    serviceName: DiffAnalyzerService.name,
-                });
-                return '';
-            }
+            const mainFileContent = fileContent;
 
             const ranges = this.getModifiedRanges(diff, mainFileContent);
             if (ranges.length === 0) {
@@ -136,11 +99,11 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const mainFileNodes = this.getFileNodes(graphs, filePath);
+            const mainFileNodes = this.getGraphNodes(graphs);
             if (mainFileNodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
-                    message: `No file nodes found for ${filePath}`,
+                    message: 'No graph nodes found for analysis',
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
@@ -158,124 +121,26 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const relationships = graphs.enrichHeadGraph.relationships;
-            const withRelated = mainNodes.flatMap((node) => {
-                let direction = RelatedNodeDirection.BOTH;
-                if (node.type !== NodeType.NODE_TYPE_FUNCTION) {
-                    direction = RelatedNodeDirection.TO;
-                }
+            const relationships = graphs.enrichedGraph.relationships;
 
-                const relatedNodes = this.getRelatedNodes(
-                    graphs.enrichHeadGraph.nodes,
-                    relationships,
+            const nodesRanges = mainNodes.flatMap((node) =>
+                this.getNodeRanges(
                     node,
+                    mainFileNodes,
+                    relationships,
+                    mainFileContent,
                     filePath,
-                    {
-                        direction,
-                    },
-                );
-
-                return [...relatedNodes, node];
-            });
-
-            const groupedByFilePath = withRelated.reduce(
-                (accumulator, node) => {
-                    const key = node.filePath;
-
-                    if (!accumulator[key]) {
-                        accumulator[key] = [];
-                    }
-
-                    accumulator[key].push(node);
-
-                    return accumulator;
-                },
-                {} as Record<string, EnrichedGraphNode[]>,
+                    languageConfig,
+                ),
             );
 
-            for (const [file] of Object.entries(groupedByFilePath)) {
-                if (file === filePath) {
-                    continue;
-                }
+            const mergedRanges = this.mergeRanges(nodesRanges);
 
-                const fileNodes = this.getFileNodes(graphs, file);
-
-                if (fileNodes.length === 0) {
-                    this.logger.warn({
-                        context: DiffAnalyzerService.name,
-                        message: `No nodes found for file ${file}`,
-                        metadata,
-                        serviceName: DiffAnalyzerService.name,
-                    });
-                    continue;
-                }
-
-                const importNodes = this.getImportNodes(
-                    resolver,
-                    fileNodes,
-                    file,
-                    absoluteRootDir,
-                    [filePath],
-                );
-
-                groupedByFilePath[file].push(...importNodes);
-            }
-
-            const result: string[] = [];
-            for (const [file, nodes] of Object.entries(groupedByFilePath)) {
-                let fileContent: string | null;
-
-                if (file === filePath) {
-                    fileContent = mainFileContent;
-                } else {
-                    fileContent = null;
-                }
-
-                if (!fileContent) {
-                    this.logger.warn({
-                        context: DiffAnalyzerService.name,
-                        message: `No content found for file ${file}`,
-                        metadata,
-                        serviceName: DiffAnalyzerService.name,
-                    });
-                    continue;
-                }
-
-                let fileNodes: EnrichedGraphNode[];
-                if (file === filePath) {
-                    // Use the main file nodes if it's the same file
-                    fileNodes = mainFileNodes;
-                } else {
-                    // Otherwise, get the nodes for the other file
-                    fileNodes = this.getFileNodes(graphs, file);
-                }
-
-                const nodesRanges = nodes.flatMap((node) =>
-                    this.getNodeRanges(
-                        node,
-                        fileNodes,
-                        relationships,
-                        fileContent,
-                        file,
-                        languageConfig,
-                    ),
-                );
-
-                const mergedRanges = this.mergeRanges(nodesRanges);
-
-                const rangeContent = this.contentFromRanges(
-                    fileContent,
-                    mergedRanges,
-                    languageConfig,
-                );
-
-                const relativeFilePath = this.relativizePath(
-                    absoluteRootDir,
-                    file,
-                );
-
-                result.push(`<-- ${relativeFilePath} -->\n${rangeContent}`);
-            }
+            const rangeContent = this.contentFromRanges(
+                mainFileContent,
+                mergedRanges,
+                languageConfig,
+            );
 
             this.logger.log({
                 context: DiffAnalyzerService.name,
@@ -284,7 +149,7 @@ export class DiffAnalyzerService {
                 serviceName: DiffAnalyzerService.name,
             });
 
-            return result.join('\n\n');
+            return rangeContent;
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
@@ -822,23 +687,17 @@ export class DiffAnalyzerService {
         return isOverlapping && hasRealChanges;
     }
 
-    private getFileNodes(
-        graphs: GetGraphsResponseData,
-        filePath: string,
-    ): EnrichedGraphNode[] {
-        if (!graphs || !graphs.enrichHeadGraph) {
+    private getGraphNodes(graphs: GetGraphsResponseData): EnrichedGraphNode[] {
+        if (!graphs || !graphs.enrichedGraph) {
             this.logger.warn({
                 context: DiffAnalyzerService.name,
                 message: `Graphs not provided or invalid`,
-                metadata: { filePath },
                 serviceName: DiffAnalyzerService.name,
             });
             return [];
         }
 
-        return graphs.enrichHeadGraph.nodes.filter((node) =>
-            node.filePath.includes(filePath),
-        );
+        return graphs.enrichedGraph.nodes;
     }
 
     private getNodesForRanges(
@@ -1031,67 +890,5 @@ export class DiffAnalyzerService {
         const row = lines.length - 1;
         const column = lines[lines.length - 1].length;
         return { row, column };
-    }
-
-    private getImportNodes(
-        resolver: LanguageResolver | null,
-        fileNodes: EnrichedGraphNode[],
-        fromFile: string,
-        rootDir: string,
-        paths: string[],
-    ): EnrichedGraphNode[] {
-        if (!resolver) {
-            return [];
-        }
-
-        if (!fileNodes || !paths || paths.length === 0) {
-            this.logger.warn({
-                context: DiffAnalyzerService.name,
-                message: `Invalid input for getting import nodes`,
-                metadata: { fileNodes, paths },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return [];
-        }
-
-        return fileNodes.filter((node) => {
-            if (node.type !== NodeType.NODE_TYPE_IMPORT) {
-                return false;
-            }
-
-            const resolvedPath = resolver.resolveImport(
-                { origin: node.name, imported: [] },
-                fromFile,
-            );
-
-            if (!resolvedPath.normalizedPath.startsWith(rootDir)) {
-                return false;
-            }
-
-            return paths.some((path) =>
-                resolvedPath.normalizedPath.includes(path),
-            );
-        });
-    }
-
-    private relativizePath(
-        absoluteRootDir: string,
-        absoluteFilePath: string,
-    ): string {
-        if (!absoluteRootDir || !absoluteFilePath) {
-            this.logger.warn({
-                context: DiffAnalyzerService.name,
-                message: `Invalid paths for relativization`,
-                metadata: { absoluteRootDir, absoluteFilePath },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return absoluteFilePath;
-        }
-
-        // Ensure the root directory ends with a separator
-        const normalizedRoot = path.normalize(absoluteRootDir);
-        const normalizedFile = path.normalize(absoluteFilePath);
-
-        return path.relative(normalizedRoot, normalizedFile);
     }
 }

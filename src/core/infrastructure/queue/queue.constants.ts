@@ -19,13 +19,12 @@ export const QUEUE_CONFIG = {
     // Queues
     DIFF_QUEUE: 'ast.initialize.diff.q',
     DEAD_LETTER_QUEUE: 'ast.jobs.dlq',
-    ECHO_QUEUE: 'ast.test.echo.q',
     VALIDATE_CODE_QUEUE: 'ast.validate.code.q',
 
     // Routing keys
     DIFF_ROUTING_KEY: 'ast.initialize.diff',
-    ECHO_ROUTING_KEY: 'ast.test.echo',
     VALIDATE_CODE_ROUTING_KEY: 'ast.validate.code',
+    DEAD_LETTER_ROUTING_KEY: 'ast.jobs',
 } as const;
 
 // Runtime configuration with feature flags

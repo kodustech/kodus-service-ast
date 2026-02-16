@@ -11,7 +11,6 @@ export type BatchWorkerInput = {
 export type SingleWorkerInput = {
     content: string;
     filePath: string;
-    rootDir?: string;
 };
 
 export type WorkerInput = BatchWorkerInput | SingleWorkerInput;
@@ -43,11 +42,10 @@ export async function analyzeBatch(
     for (const file of batch) {
         try {
             const normalizedPath = path
-                .resolve('/', file.filePath)
+                .normalize(file.filePath)
                 .replace(/\\/g, '/');
 
             const analysis = await sourceFileAnalyzer.analyzeSourceFile(
-                '/',
                 file.filePath,
                 normalizedPath,
                 file.content,
@@ -74,7 +72,7 @@ export async function analyzeBatch(
 export async function analyzeContent(
     params: SingleWorkerInput,
 ): Promise<WorkerOutput> {
-    const { content, filePath, rootDir = '.' } = params;
+    const { content, filePath } = params;
 
     const { SourceFileAnalyzer } = await import('../analyze-source-file.js');
     const path = (await import('path')).default;
@@ -87,12 +85,9 @@ export async function analyzeContent(
     const sourceFileAnalyzer = new SourceFileAnalyzer();
 
     try {
-        const normalizedPath = path
-            .resolve(rootDir, filePath)
-            .replace(/\\/g, '/');
+        const normalizedPath = path.normalize(filePath).replace(/\\/g, '/');
 
         const analysis = await sourceFileAnalyzer.analyzeSourceFile(
-            rootDir,
             filePath,
             normalizedPath,
             content,

@@ -1,5 +1,3 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { PinoLoggerService } from '../logger/pino.service.js';
 import {
     CodeGraph,
     EnrichedGraph,
@@ -8,6 +6,8 @@ import {
     NodeType,
     RelationshipType,
 } from '@/shared/types/ast.js';
+import { Inject, Injectable } from '@nestjs/common';
+import { PinoLoggerService } from '../logger/pino.service.js';
 
 @Injectable()
 export class GraphEnrichmentService {
@@ -43,9 +43,6 @@ export class GraphEnrichmentService {
 
         this.processTypes(data);
         this.processFunctions(data);
-        this.processImports(data);
-
-        this.processFunctionCalls(data);
 
         return {
             nodes: this.nodes || [],
@@ -200,114 +197,6 @@ export class GraphEnrichmentService {
         });
     }
 
-    private processImports(data: CodeGraph) {
-        data.files.forEach((fileData, filePath) => {
-            if (!fileData.imports || !fileData.imports.length) {
-                return;
-            }
-
-            const normalizedPath = this.normalizePath(filePath);
-
-            fileData.imports.forEach((importedFile) => {
-                const { filePath: importedFilePath, identifier } =
-                    this.extractFilePathAndIdentifier(importedFile);
-
-                const normalizedImportedPath =
-                    this.normalizePath(importedFilePath);
-
-                const node = this.findNode(
-                    identifier || importedFile,
-                    normalizedImportedPath,
-                );
-                if (!node) {
-                    this.logger.warn({
-                        message: `Node not found for imported identifier ${identifier || importedFile} in file ${normalizedImportedPath}`,
-                        context: GraphEnrichmentService.name,
-                        metadata: {
-                            filePath: normalizedPath,
-                            importedFile,
-                            identifier,
-                        },
-                    });
-                    return;
-                }
-
-                this.addRelationship({
-                    from: node.id,
-                    to: node.id,
-                    type: RelationshipType.RELATIONSHIP_TYPE_IMPORTS,
-                    fromPath: normalizedPath,
-                    toPath: normalizedImportedPath,
-                });
-            });
-        });
-    }
-
-    private processFunctionCalls(data: CodeGraph) {
-        for (const [key, func] of data.functions.entries()) {
-            if (!func.nodeId || func.nodeId === '') {
-                continue;
-            }
-
-            const { filePath } = this.extractFilePathAndIdentifier(key);
-            const normalizedFilePath = this.normalizePath(filePath);
-
-            for (const call of func.calls || []) {
-                if (!call.function || !call.file) {
-                    continue;
-                }
-
-                const { filePath: calledFilePath } =
-                    this.extractFilePathAndIdentifier(call.file);
-                const normalizedCalledFilePath =
-                    this.normalizePath(calledFilePath);
-
-                const calledNode = this.findNode(
-                    call.function,
-                    normalizedCalledFilePath,
-                    call.caller,
-                );
-
-                if (!calledNode) {
-                    this.logger.warn({
-                        message: `Called node not found for ${call.function} in file ${calledFilePath}`,
-                        context: GraphEnrichmentService.name,
-                        metadata: {
-                            function: call.function,
-                            caller: call.caller,
-                            filePath: normalizedFilePath,
-                            calledFilePath: normalizedCalledFilePath,
-                        },
-                    });
-                    continue;
-                }
-
-                this.addRelationship({
-                    from: func.nodeId,
-                    to: calledNode.id,
-                    type: RelationshipType.RELATIONSHIP_TYPE_CALLS,
-                    fromPath: normalizedFilePath,
-                    toPath: normalizedCalledFilePath,
-                });
-
-                const implMethod = this.findImplementation(
-                    call.file,
-                    call.function,
-                    data,
-                );
-                if (implMethod) {
-                    this.addRelationship({
-                        from: func.nodeId,
-                        to: implMethod.id,
-                        type: RelationshipType.RELATIONSHIP_TYPE_CALLS_IMPLEMENTATION,
-                        fromPath: normalizedFilePath,
-                        toPath: implMethod.filePath,
-                    });
-                }
-            }
-        }
-    }
-
     private normalizePath(path: string): string {
         const cached = this.normalizedPathCache?.get(path);
         if (cached !== undefined) {
@@ -388,91 +277,6 @@ export class GraphEnrichmentService {
                 this.relationshipKeys[key] = true;
             }
         }
-    }
-
-    private inferClassName(filePath: string, data: CodeGraph): string | null {
-        if (data.files instanceof Map) {
-            return this.inferClassNameFromMap(filePath, data);
-        }
-
-        const foundClass = Array.from(data.types.values()).find(
-            (type) =>
-                type &&
-                type.file === filePath &&
-                type.type === NodeType.NODE_TYPE_CLASS,
-        ) as { name?: string } | undefined;
-
-        return foundClass?.name || null;
-    }
-
-    private inferClassNameFromMap(
-        filePath: string,
-        data: CodeGraph,
-    ): string | null {
-        const normalizedPath = this.normalizePath(filePath);
-
-        const fileData = data.files.get(normalizedPath);
-        if (!fileData || !fileData.className || !fileData.className.length) {
-            return null;
-        }
-
-        return fileData.className[0];
-    }
-
-    private findMethodId(
-        filePath: string,
-        functionName: string,
-        data: CodeGraph,
-    ): string | null {
-        const fileData = data.files.get(filePath);
-        if (!fileData) {
-            return null;
-        }
-
-        const className = fileData.className?.[0] || 'undefined';
-
-        return `${className}.${functionName}`;
-    }
-
-    private findImplementation(
-        interfacePath: string,
-        methodName: string,
-        data: CodeGraph,
-    ): { id: string; filePath: string } | null {
-        // 🚀 OTIMIZAÇÃO: Iterar diretamente em vez de Array.from()
-        let matchingClass: any = null;
-        for (const [, type] of data.types) {
-            if (
-                type.type === NodeType.NODE_TYPE_CLASS &&
-                Array.isArray(type.implements) &&
-                type.implements.some((impl: string) =>
-                    impl.startsWith(interfacePath),
-                )
-            ) {
-                matchingClass = type;
-                break; // Pegar o primeiro match
-            }
-        }
-
-        if (!matchingClass || !matchingClass.name) {
-            return null;
-        }
-
-        // 🚀 OTIMIZAÇÃO: Buscar função diretamente em vez de Array.from()
-        for (const [, func] of data.functions) {
-            if (
-                func.className === matchingClass.name &&
-                func.name === methodName
-            ) {
-                const normalizedFilePath = this.normalizePath(func.file);
-                return {
-                    id: func.nodeId,
-                    filePath: normalizedFilePath,
-                };
-            }
-        }
-
-        return null;
     }
 
     private findNode(

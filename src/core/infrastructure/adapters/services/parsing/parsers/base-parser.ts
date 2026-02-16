@@ -1,11 +1,5 @@
-import Parser from 'tree-sitter';
-import {
-    Query,
-    type QueryCapture,
-    type QueryMatch,
-    type SyntaxNode,
-} from 'tree-sitter';
-import { type Language } from 'tree-sitter';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
+import { type ResolvedImport } from '@/core/domain/parsing/types/language-resolver.js';
 import {
     type CallChain,
     ChainType,
@@ -15,12 +9,6 @@ import {
     type ParseContext,
 } from '@/core/domain/parsing/types/parser.js';
 import {
-    objQueries,
-    type ParserQuery,
-    queryToNodeTypeMap,
-    QueryType,
-} from './query.js';
-import {
     type AnalysisNode,
     type Call,
     NodeType,
@@ -29,16 +17,27 @@ import {
     type TypeAnalysis,
 } from '@/shared/types/ast.js';
 import {
-    normalizeAST,
-    normalizeSignature,
-} from '@/shared/utils/ast-helpers.js';
-import {
     appendOrUpdateElement,
     findLastIndexOf,
 } from '@/shared/utils/arrays.js';
-import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
-import { type ResolvedImport } from '@/core/domain/parsing/types/language-resolver.js';
+import {
+    normalizeAST,
+    normalizeSignature,
+} from '@/shared/utils/ast-helpers.js';
 import { nanoid } from 'nanoid';
+import Parser, {
+    type Language,
+    Query,
+    type QueryCapture,
+    type QueryMatch,
+    type SyntaxNode,
+} from 'tree-sitter';
+import {
+    objQueries,
+    type ParserQuery,
+    queryToNodeTypeMap,
+    QueryType,
+} from './query.js';
 
 export abstract class BaseParser {
     private static readonly parserByLang = new Map<string, Parser>();
@@ -178,19 +177,8 @@ export abstract class BaseParser {
                 captures,
                 analysisNode,
             );
-            const resolvedImport = this.resolveImportWithCache(
-                originName,
-                imported,
-                filePath,
-            );
-            if (!resolvedImport) {
-                continue;
-            }
-
-            const normalizedPath = resolvedImport.normalizedPath || originName;
-            this.context.fileImports.add(normalizedPath);
-
-            this.registerImportedSymbols(imported, normalizedPath);
+            this.context.fileImports.add(originName);
+            this.registerImportedSymbols(imported, originName);
         }
     }
 
@@ -490,15 +478,7 @@ export abstract class BaseParser {
         if (!objAnalysis.extends) {
             objAnalysis.extends = [];
         }
-        const mapped = this.context.importedMapping.get(extension);
-        let key: string;
-        if (mapped) {
-            key = `${mapped}::${extension}`;
-        } else {
-            key = `${objAnalysis.file}::${extension}`;
-        }
-
-        objAnalysis.extends.push(key);
+        objAnalysis.extends.push(`${objAnalysis.file}::${extension}`);
     }
 
     protected addObjImplementation(
@@ -508,15 +488,7 @@ export abstract class BaseParser {
         if (!objAnalysis.implements) {
             objAnalysis.implements = [];
         }
-        const mapped = this.context.importedMapping.get(implementation);
-        let key: string;
-        if (mapped) {
-            key = `${mapped}::${implementation}`;
-        } else {
-            key = `${objAnalysis.file}::${implementation}`;
-        }
-
-        objAnalysis.implements.push(key);
+        objAnalysis.implements.push(`${objAnalysis.file}::${implementation}`);
     }
 
     protected addNewMethod(methods: Method[], node: SyntaxNode): void {
@@ -1087,26 +1059,9 @@ export abstract class BaseParser {
         absolutePath: string,
         scope: Scope[],
     ): string {
-        let newScope: Scope[] = scope;
-        const noMethodScopeIdx = findLastIndexOf(
-            scope,
-            (s) => s.type === NodeType.NODE_TYPE_FUNCTION,
-        );
-        if (noMethodScopeIdx !== -1) {
-            newScope = scope.slice(0, scope.length - noMethodScopeIdx);
-        }
-
-        let typeName = this.context.instanceMapping.get(
-            `${this.scopeToString(newScope)}::${instanceName}`,
-        );
-
-        if (typeName) {
-            typeName = typeName.split('::').pop() || instanceName;
-        } else {
-            typeName = instanceName;
-        }
-
-        return this.context.importedMapping.get(typeName) || absolutePath;
+        void instanceName;
+        void scope;
+        return absolutePath;
     }
 
     protected scopeToString(scope: Scope[]): string {

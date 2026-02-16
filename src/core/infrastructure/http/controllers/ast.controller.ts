@@ -3,10 +3,10 @@ import {
     GetContentFromDiffResponse,
     InitializeContentFromDiffResponse,
     ValidateCodeResponse,
-    type GetContentFromDiffRequest,
     type InitializeContentFromDiffRequest,
     type ValidateCodeRequest,
 } from '@/shared/types/ast.js';
+import { TaskPriority } from '@/shared/types/task.js';
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 
 @Controller('ast')
@@ -19,20 +19,18 @@ export class AstHttpController {
     ): Promise<InitializeContentFromDiffResponse> {
         const taskId = await this.taskService.createAsyncTask({
             type: 'AST_INITIALIZE_DIFF_ANALYSIS',
-            priority: request.priority,
+            priority: TaskPriority.TASK_PRIORITY_MEDIUM,
             payload: request,
         });
 
         return { taskId };
     }
 
-    @Post('diff/content/retrieve')
+    @Post('diff/content/result/:id')
     async getContentFromDiffResult(
-        @Body() request: GetContentFromDiffRequest,
+        @Param('id') id: string,
     ): Promise<GetContentFromDiffResponse> {
-        return this.taskService.getTaskResult<GetContentFromDiffResponse>(
-            request.taskId,
-        );
+        return this.taskService.getTaskResult<GetContentFromDiffResponse>(id);
     }
 
     @Post('validate-code/initialize')

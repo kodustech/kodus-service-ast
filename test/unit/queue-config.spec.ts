@@ -7,13 +7,13 @@ describe('Queue Configuration Tests', () => {
         EXCHANGE: 'ast.jobs.x',
         DEAD_LETTER_EXCHANGE: 'ast.jobs.dlx',
         DELAYED_EXCHANGE: 'ast.jobs.delayed.x',
-        REPO_QUEUE: 'ast.initialize.repo.q',
-        IMPACT_QUEUE: 'ast.initialize.impact.q',
+        DIFF_QUEUE: 'ast.initialize.diff.q',
+        VALIDATE_CODE_QUEUE: 'ast.validate.code.q',
         DEAD_LETTER_QUEUE: 'ast.jobs.dlq',
-        REPO_ROUTING_KEY: 'ast.initialize.repo',
-        IMPACT_ROUTING_KEY: 'ast.initialize.impact',
+        DIFF_ROUTING_KEY: 'ast.initialize.diff',
+        VALIDATE_CODE_ROUTING_KEY: 'ast.validate.code',
         ECHO_ROUTING_KEY: 'ast.test.echo',
-        DELIVERY_LIMIT: 5,
+        DELIVERY_LIMIT: 3,
         QUEUE_TYPE: 'quorum',
     };
     describe('Exchange Configuration', () => {
@@ -37,15 +37,17 @@ describe('Queue Configuration Tests', () => {
 
     describe('Queue Configuration', () => {
         test('should have all required queues defined', () => {
-            expect(QUEUE_CONFIG.REPO_QUEUE).toBe('ast.initialize.repo.q');
-            expect(QUEUE_CONFIG.IMPACT_QUEUE).toBe('ast.initialize.impact.q');
+            expect(QUEUE_CONFIG.DIFF_QUEUE).toBe('ast.initialize.diff.q');
+            expect(QUEUE_CONFIG.VALIDATE_CODE_QUEUE).toBe(
+                'ast.validate.code.q',
+            );
             expect(QUEUE_CONFIG.DEAD_LETTER_QUEUE).toBe('ast.jobs.dlq');
         });
 
         test('should have consistent naming pattern', () => {
             const queues = [
-                QUEUE_CONFIG.REPO_QUEUE,
-                QUEUE_CONFIG.IMPACT_QUEUE,
+                QUEUE_CONFIG.DIFF_QUEUE,
+                QUEUE_CONFIG.VALIDATE_CODE_QUEUE,
                 QUEUE_CONFIG.DEAD_LETTER_QUEUE,
             ];
 
@@ -63,17 +65,17 @@ describe('Queue Configuration Tests', () => {
 
     describe('Routing Keys', () => {
         test('should have all required routing keys defined', () => {
-            expect(QUEUE_CONFIG.REPO_ROUTING_KEY).toBe('ast.initialize.repo');
-            expect(QUEUE_CONFIG.IMPACT_ROUTING_KEY).toBe(
-                'ast.initialize.impact',
+            expect(QUEUE_CONFIG.DIFF_ROUTING_KEY).toBe('ast.initialize.diff');
+            expect(QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY).toBe(
+                'ast.validate.code',
             );
             expect(QUEUE_CONFIG.ECHO_ROUTING_KEY).toBe('ast.test.echo');
         });
 
         test('should have consistent routing key pattern', () => {
             const routingKeys = [
-                QUEUE_CONFIG.REPO_ROUTING_KEY,
-                QUEUE_CONFIG.IMPACT_ROUTING_KEY,
+                QUEUE_CONFIG.DIFF_ROUTING_KEY,
+                QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY,
                 QUEUE_CONFIG.ECHO_ROUTING_KEY,
             ];
 
@@ -96,13 +98,15 @@ describe('Queue Configuration Tests', () => {
 
     describe('Configuration Consistency', () => {
         test('should have matching queue and routing key pairs', () => {
-            // Repo queue should match repo routing key
-            expect(QUEUE_CONFIG.REPO_QUEUE).toContain('repo');
-            expect(QUEUE_CONFIG.REPO_ROUTING_KEY).toContain('repo');
+            // Diff queue should match diff routing key
+            expect(QUEUE_CONFIG.DIFF_QUEUE).toContain('diff');
+            expect(QUEUE_CONFIG.DIFF_ROUTING_KEY).toContain('diff');
 
-            // Impact queue should match impact routing key
-            expect(QUEUE_CONFIG.IMPACT_QUEUE).toContain('impact');
-            expect(QUEUE_CONFIG.IMPACT_ROUTING_KEY).toContain('impact');
+            // Validate-code queue should match validate-code routing key
+            expect(QUEUE_CONFIG.VALIDATE_CODE_QUEUE).toContain('validate');
+            expect(QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY).toContain(
+                'validate',
+            );
         });
 
         test('should have dead letter exchange referenced in queue names', () => {

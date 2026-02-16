@@ -4,11 +4,9 @@ import {
     type EnrichedGraph,
     type FileAnalysis,
     type FunctionAnalysis,
-    type GraphWithDir,
     type SerializedCodeGraph,
     type SerializedFileAnalysis,
     type SerializedGetGraphsResponseData,
-    type SerializedGraphWithDir,
     type TypeAnalysis,
 } from '@/shared/types/ast.js';
 
@@ -114,48 +112,26 @@ function deserializeCodeGraph(serialized: SerializedCodeGraph): CodeGraph {
     };
 }
 
-function serializeGraphWithDir(
-    graph: GraphWithDir<CodeGraph>,
-): SerializedGraphWithDir {
-    return {
-        dir: graph.dir,
-        graph: serializeCodeGraph(graph.graph),
-    };
-}
-
-function deserializeGraphWithDir(
-    graph: SerializedGraphWithDir,
-): GraphWithDir<CodeGraph> {
-    return {
-        dir: graph.dir,
-        graph: deserializeCodeGraph(graph.graph),
-    };
-}
-
 export const astSerializer = {
     serializeGetGraphsResponseData(data: {
-        baseGraph: GraphWithDir<CodeGraph>;
-        headGraph: GraphWithDir<CodeGraph>;
-        enrichHeadGraph: EnrichedGraph;
+        graph: CodeGraph;
+        enrichedGraph: EnrichedGraph;
     }): SerializedGetGraphsResponseData {
         return {
-            baseGraph: serializeGraphWithDir(data.baseGraph),
-            headGraph: serializeGraphWithDir(data.headGraph),
-            enrichHeadGraph: data.enrichHeadGraph,
+            graph: serializeCodeGraph(data.graph),
+            enrichedGraph: data.enrichedGraph,
         };
     },
 };
 
 export const astDeserializer = {
     deserializeGetGraphsResponseData(data: SerializedGetGraphsResponseData): {
-        baseGraph: GraphWithDir<CodeGraph>;
-        headGraph: GraphWithDir<CodeGraph>;
-        enrichHeadGraph: EnrichedGraph;
+        graph: CodeGraph;
+        enrichedGraph: EnrichedGraph;
     } {
         return {
-            baseGraph: deserializeGraphWithDir(data.baseGraph),
-            headGraph: deserializeGraphWithDir(data.headGraph),
-            enrichHeadGraph: data.enrichHeadGraph,
+            graph: deserializeCodeGraph(data.graph),
+            enrichedGraph: data.enrichedGraph,
         };
     },
 };

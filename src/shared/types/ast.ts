@@ -1,5 +1,3 @@
-import { type TaskPriority } from './task.js';
-
 export interface Point {
     row: number;
     column: number;
@@ -125,11 +123,6 @@ export interface EnrichedGraph {
     relationships: EnrichedGraphEdge[];
 }
 
-export interface GraphWithDir<T> {
-    graph: T;
-    dir: string;
-}
-
 export interface SerializedFileAnalysis {
     defines: string[];
     calls: Call[];
@@ -144,22 +137,17 @@ export interface SerializedCodeGraph {
     types: Record<string, TypeAnalysis>;
 }
 
-export type SerializedGraphWithDir = GraphWithDir<SerializedCodeGraph>;
-
 export interface SerializedGetGraphsResponseData {
-    baseGraph: SerializedGraphWithDir;
-    headGraph: SerializedGraphWithDir;
-    enrichHeadGraph: EnrichedGraph;
+    graph: SerializedCodeGraph;
+    enrichedGraph: EnrichedGraph;
 }
 
 export interface GetGraphsResponseData {
-    baseGraph: GraphWithDir<CodeGraph>;
-    headGraph: GraphWithDir<CodeGraph>;
-    enrichHeadGraph: EnrichedGraph;
+    graph: CodeGraph;
+    enrichedGraph: EnrichedGraph;
 }
 
 export interface InitializeContentFromDiffRequest {
-    priority: TaskPriority;
     files: {
         id: string;
         content: string;
@@ -169,10 +157,6 @@ export interface InitializeContentFromDiffRequest {
 }
 
 export interface InitializeContentFromDiffResponse {
-    taskId: string;
-}
-
-export interface GetContentFromDiffRequest {
     taskId: string;
 }
 

@@ -140,8 +140,6 @@ export class RabbitMQCircuitBreaker {
 
         // Business errors that should NOT open circuit breaker
         const businessErrorPatterns = [
-            'repository',
-            'clone',
             'file not found',
             'access denied',
             'authentication',

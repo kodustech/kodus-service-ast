@@ -76,7 +76,8 @@ const runtime = getQueueRuntimeConfig();
                               {
                                   name: QUEUE_CONFIG.DIFF_QUEUE,
                                   options: buildTaskQueueOptions({
-                                      enableSingleActiveConsumer: true,
+                                      enableSingleActiveConsumer:
+                                          runtime.enableSingleActiveConsumer,
                                   }),
                                   bindToExchange: {
                                       exchange: QUEUE_CONFIG.EXCHANGE,
@@ -86,7 +87,8 @@ const runtime = getQueueRuntimeConfig();
                               {
                                   name: QUEUE_CONFIG.VALIDATE_CODE_QUEUE,
                                   options: buildTaskQueueOptions({
-                                      enableSingleActiveConsumer: true,
+                                      enableSingleActiveConsumer:
+                                          runtime.enableSingleActiveConsumer,
                                   }),
                                   bindToExchange: {
                                       exchange: QUEUE_CONFIG.EXCHANGE,

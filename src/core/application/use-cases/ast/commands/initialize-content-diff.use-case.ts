@@ -106,9 +106,17 @@ export class InitializeContentFromDiffUseCase {
         file: InitializeContentFromDiffRequest['files'][number],
         taskId: string,
     ): Promise<GetContentFromDiffResponse['files'][number]> {
-        const { id, content: originalEncrypted, filePath, diff } = file;
+        const {
+            id,
+            content: originalEncryptedContent,
+            filePath,
+            diff: encryptedDiff,
+        } = file;
 
-        const fullContent = await this.decryptAndDecompress(originalEncrypted);
+        const fullContent = await this.decryptAndDecompress(
+            originalEncryptedContent,
+        );
+        const diff = await this.decryptAndDecompress(encryptedDiff);
 
         try {
             const relevantContent = await this.analyzeDiffFile(
@@ -159,7 +167,7 @@ export class InitializeContentFromDiffUseCase {
 
         return {
             id,
-            content: originalEncrypted,
+            content: originalEncryptedContent,
             flag: FileContentFlag.FULL,
         };
     }

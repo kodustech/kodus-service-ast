@@ -74,7 +74,7 @@ const runtime = getQueueRuntimeConfig();
                               },
                               // Queues de Tasks
                               {
-                                  name: QUEUE_CONFIG.DIFF_QUEUE,
+                                  name: QUEUE_CONFIG.DIFF_ROUTING_KEY,
                                   options: buildTaskQueueOptions({
                                       enableSingleActiveConsumer:
                                           runtime.enableSingleActiveConsumer,
@@ -85,7 +85,7 @@ const runtime = getQueueRuntimeConfig();
                                   },
                               },
                               {
-                                  name: QUEUE_CONFIG.VALIDATE_CODE_QUEUE,
+                                  name: QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY,
                                   options: buildTaskQueueOptions({
                                       enableSingleActiveConsumer:
                                           runtime.enableSingleActiveConsumer,

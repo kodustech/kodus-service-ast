@@ -1,4 +1,4 @@
-FROM node:22.14.0-slim
+FROM docker.io/library/node:22.22.0-slim AS base
 
 ENV NODE_ENV=development \
     NODE_OPTIONS=--max-old-space-size=4096 \

@@ -5,10 +5,14 @@ on:
         branches:
             - main
 
+permissions:
+    contents: read
+
 jobs:
     build_and_push_image:
         name: Build and push image
         runs-on: ubuntu-latest
+        environment: qa
 
         steps:
             - name: Checkout code
@@ -41,6 +45,7 @@ jobs:
     deploy_in_server:
         name: Deploy in server
         runs-on: ubuntu-latest
+        environment: QA
         needs: build_and_push_image
 
         steps:
@@ -82,6 +87,6 @@ jobs:
               with:
                   webhook: ${{ secrets.DISCORD_WEBHOOK }}
                   status: ${{ job.status }}
-                  content: ":clap: Build successful!"
-                  title: "Deploy QA: kodus-service-ast"
+                  content: ':clap: Build successful!'
+                  title: 'Deploy QA: kodus-service-ast'
                   username: GitHub Actions

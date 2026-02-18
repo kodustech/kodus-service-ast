@@ -1,17 +1,17 @@
-import { BaseParser } from '../base-parser.js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const TreeSitterTypeScript = require('tree-sitter-typescript');
-const TypeScriptLang = TreeSitterTypeScript.typescript;
-import { typeScriptQueries } from './typescript-queries.js';
-import { type Language, type SyntaxNode } from 'tree-sitter';
-import { type ParserQuery, type QueryType } from '../query.js';
 import {
     type CallChain,
     ChainType,
 } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
+import { createRequire } from 'module';
+import { type Language, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import { typeScriptQueries } from './typescript-queries.js';
+const require = createRequire(import.meta.url);
+const TreeSitterTypeScript = require('tree-sitter-typescript');
+const TypeScriptLang = TreeSitterTypeScript.typescript;
 
 export class TypeScriptParser extends BaseParser {
     private static readonly language = TypeScriptLang as Language;

@@ -1,11 +1,14 @@
+import { type CallChain } from '@/core/domain/parsing/types/parser.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
+import { type NodeType, type Scope } from '@/shared/types/ast.js';
+import { createRequire } from 'module';
 import { type Language, type SyntaxNode } from 'tree-sitter';
 import { BaseParser } from '../base-parser.js';
-import * as GoLang from 'tree-sitter-go';
-import { goQueries } from './go-queries.js';
 import { type ParserQuery, type QueryType } from '../query.js';
-import { type CallChain } from '@/core/domain/parsing/types/parser.js';
-import { type NodeType, type Scope } from '@/shared/types/ast.js';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
+import { goQueries } from './go-queries.js';
+const require = createRequire(import.meta.url);
+const TreeSitterGo = require('tree-sitter-go');
+const GoLang = TreeSitterGo;
 
 export class GoParser extends BaseParser {
     private static readonly language = GoLang as unknown as Language;

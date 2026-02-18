@@ -38,7 +38,6 @@ import {
     queryToNodeTypeMap,
     QueryType,
 } from './query.js';
-
 export abstract class BaseParser {
     private static readonly parserByLang = new Map<string, Parser>();
     private static readonly queryCacheByLang = new Map<

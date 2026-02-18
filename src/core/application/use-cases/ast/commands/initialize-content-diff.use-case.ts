@@ -113,9 +113,9 @@ export class InitializeContentFromDiffUseCase {
             diff: encryptedDiff,
         } = file;
 
-        const fullContent = await this.decryptAndDecompress(
-            originalEncryptedContent,
-        );
+        const fullContent = (
+            await this.decryptAndDecompress(originalEncryptedContent)
+        ).trim();
         const diff = await this.decryptAndDecompress(encryptedDiff);
 
         try {

@@ -42,10 +42,17 @@ export class DiffAnalyzerService {
         taskId: string,
         fileContent: string,
     ): Promise<string> {
+        const analysisStart = performance.now();
+
         this.logger.log({
             context: DiffAnalyzerService.name,
             message: `Getting relevant content for file`,
-            metadata: { filePath, taskId },
+            metadata: {
+                filePath,
+                taskId,
+                diffChars: diff?.length ?? 0,
+                contentChars: fileContent?.length ?? 0,
+            },
             serviceName: DiffAnalyzerService.name,
         });
 
@@ -73,6 +80,8 @@ export class DiffAnalyzerService {
         const metadata = {
             filePath: filePath || 'unknown',
             diff: diff ? diff.slice(0, 100) : 'no diff provided',
+            diffChars: diff?.length ?? 0,
+            contentChars: fileContent?.length ?? 0,
         };
 
         try {
@@ -99,6 +108,17 @@ export class DiffAnalyzerService {
                 return '';
             }
 
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Modified ranges resolved',
+                metadata: {
+                    taskId,
+                    filePath,
+                    rangesCount: ranges.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
             const mainFileNodes = this.getGraphNodes(graphs, filePath);
             if (mainFileNodes.length === 0) {
                 this.logger.warn({
@@ -110,6 +130,17 @@ export class DiffAnalyzerService {
                 return '';
             }
 
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'File-scoped graph nodes resolved',
+                metadata: {
+                    taskId,
+                    filePath,
+                    nodesCount: mainFileNodes.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
             const mainNodes = this.getNodesForRanges(mainFileNodes, ranges);
             if (mainNodes.length === 0) {
                 this.logger.warn({
@@ -120,6 +151,17 @@ export class DiffAnalyzerService {
                 });
                 return '';
             }
+
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Primary nodes selected for modified ranges',
+                metadata: {
+                    taskId,
+                    filePath,
+                    mainNodesCount: mainNodes.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
 
             const relationships = graphs.enrichedGraph.relationships;
 
@@ -155,6 +197,19 @@ export class DiffAnalyzerService {
 
             const mergedRanges = this.mergeRanges(nodesRanges);
 
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Final content ranges prepared',
+                metadata: {
+                    taskId,
+                    filePath,
+                    relatedNodesCount: withRelated.length,
+                    rawRangesCount: nodesRanges.length,
+                    mergedRangesCount: mergedRanges.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
             const rangeContent = this.contentFromRanges(
                 mainFileContent,
                 mergedRanges,
@@ -164,7 +219,12 @@ export class DiffAnalyzerService {
             this.logger.log({
                 context: DiffAnalyzerService.name,
                 message: `Relevant content obtained`,
-                metadata: { taskId, ...metadata },
+                metadata: {
+                    taskId,
+                    ...metadata,
+                    outputChars: rangeContent.length,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
                 serviceName: DiffAnalyzerService.name,
             });
 
@@ -174,7 +234,11 @@ export class DiffAnalyzerService {
                 context: DiffAnalyzerService.name,
                 message: `Failed to get relevant content`,
                 error,
-                metadata: { taskId, ...metadata },
+                metadata: {
+                    taskId,
+                    ...metadata,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
                 serviceName: DiffAnalyzerService.name,
             });
             return '';
@@ -539,6 +603,8 @@ export class DiffAnalyzerService {
             baseFilePath: string;
         },
     ): ChangeResult {
+        const analysisStart = performance.now();
+
         const result: ChangeResult = {
             added: [],
             modified: [],
@@ -617,12 +683,34 @@ export class DiffAnalyzerService {
                 }
             }
 
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Diff function analysis completed',
+                metadata: {
+                    prFilePath: prContent.prFilePath,
+                    baseFilePath: baseContent.baseFilePath,
+                    hunksCount: hunks.length,
+                    prFunctionsCount: prFunctions.length,
+                    baseFunctionsCount: baseFunctions.length,
+                    addedCount: result.added.length,
+                    modifiedCount: result.modified.length,
+                    deletedCount: result.deleted.length,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
             return result;
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
                 message: 'Error analyzing diff',
                 error,
+                metadata: {
+                    prFilePath: prContent.prFilePath,
+                    baseFilePath: baseContent.baseFilePath,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
                 serviceName: DiffAnalyzerService.name,
             });
             return result;

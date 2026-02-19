@@ -35,10 +35,20 @@ export class InitializeContentFromDiffUseCase {
         taskContext: TaskContext,
         request: InitializeContentFromDiffRequest,
     ): Promise<void> {
+        const executionStart = performance.now();
+
         try {
             const { files } = request;
+            const taskMetadata = {
+                taskId: taskContext.taskId,
+                filesCount: files.length,
+            };
+
+            this.log('Starting content initialization from diff', taskMetadata);
 
             await taskContext.start('Analyzing files from diff');
+
+            const preparationStart = performance.now();
 
             const preparedFiles = await Promise.all(
                 files.map(async (file) => {
@@ -61,7 +71,26 @@ export class InitializeContentFromDiffUseCase {
                 }),
             );
 
+            const preparationDurationMs = Math.round(
+                performance.now() - preparationStart,
+            );
+
+            this.log('Prepared files for analysis', {
+                ...taskMetadata,
+                durationMs: preparationDurationMs,
+                totalContentChars: preparedFiles.reduce(
+                    (total, file) => total + file.fullContent.length,
+                    0,
+                ),
+                totalDiffChars: preparedFiles.reduce(
+                    (total, file) => total + file.diff.length,
+                    0,
+                ),
+            });
+
             let graphs: GetGraphsResponseData | null = null;
+
+            const graphBuildStart = performance.now();
 
             try {
                 const filesToAnalyze = preparedFiles.map((file) => ({
@@ -82,22 +111,46 @@ export class InitializeContentFromDiffUseCase {
                     graph,
                     enrichedGraph,
                 };
+
+                this.log('Built shared graph for diff analysis', {
+                    ...taskMetadata,
+                    durationMs: Math.round(performance.now() - graphBuildStart),
+                    graphFilesCount: graph.files.size,
+                    graphFunctionsCount: graph.functions.size,
+                    graphTypesCount: graph.types.size,
+                    enrichedNodesCount: enrichedGraph.nodes.length,
+                    enrichedRelationshipsCount:
+                        enrichedGraph.relationships.length,
+                });
             } catch (error) {
                 this.logError(
                     'Failed to build shared graph for diff analysis, falling back to simple diff strategy',
                     error as Error,
                     {
-                        taskId: taskContext.taskId,
-                        filesCount: preparedFiles.length,
+                        ...taskMetadata,
+                        durationMs: Math.round(
+                            performance.now() - graphBuildStart,
+                        ),
                     },
                 );
             }
+
+            const perFileAnalysisStart = performance.now();
+
+            this.log('Starting per-file content extraction', {
+                ...taskMetadata,
+                graphEnabled: Boolean(graphs),
+            });
 
             const promisesResult = await Promise.allSettled(
                 preparedFiles.map((file) =>
                     this.analyzePreparedFile(file, taskContext.taskId, graphs),
                 ),
             );
+
+            const rejectedCount = promisesResult.filter(
+                (analysisResult) => analysisResult.status === 'rejected',
+            ).length;
 
             const result = promisesResult
                 .map<GetContentFromDiffResponse['files'][number] | null>(
@@ -132,8 +185,35 @@ export class InitializeContentFromDiffUseCase {
                         res !== null,
                 );
 
+            const byFlag = result.reduce(
+                (acc, fileResult) => {
+                    acc[fileResult.flag] = (acc[fileResult.flag] ?? 0) + 1;
+                    return acc;
+                },
+                {} as Record<FileContentFlag, number>,
+            );
+
+            this.log('Completed per-file content extraction', {
+                ...taskMetadata,
+                durationMs: Math.round(
+                    performance.now() - perFileAnalysisStart,
+                ),
+                succeededCount: result.length,
+                failedCount: rejectedCount,
+                diffCount: byFlag[FileContentFlag.DIFF] ?? 0,
+                simpleCount: byFlag[FileContentFlag.SIMPLE] ?? 0,
+                fullCount: byFlag[FileContentFlag.FULL] ?? 0,
+            });
+
             await taskContext.complete('Analyzed all files', {
                 files: result,
+            });
+
+            this.log('Finished content initialization from diff', {
+                ...taskMetadata,
+                durationMs: Math.round(performance.now() - executionStart),
+                completedFilesCount: result.length,
+                rejectedCount,
             });
         } catch (error) {
             this.logError(
@@ -141,6 +221,7 @@ export class InitializeContentFromDiffUseCase {
                 error as Error,
                 {
                     taskId: taskContext.taskId,
+                    durationMs: Math.round(performance.now() - executionStart),
                 },
             );
 
@@ -172,6 +253,8 @@ export class InitializeContentFromDiffUseCase {
         taskId: string,
         graphs: GetGraphsResponseData | null,
     ): Promise<GetContentFromDiffResponse['files'][number]> {
+        const fileAnalysisStart = performance.now();
+
         const {
             id,
             originalEncryptedContent,
@@ -180,6 +263,17 @@ export class InitializeContentFromDiffUseCase {
             fullContent,
             languageHintPath,
         } = file;
+
+        const fileMetadata = {
+            taskId,
+            fileId: id,
+            filePath,
+            languageHintPath,
+            diffChars: diff.length,
+            contentChars: fullContent.length,
+        };
+
+        this.log('Starting file analysis', fileMetadata);
 
         if (graphs) {
             try {
@@ -193,44 +287,74 @@ export class InitializeContentFromDiffUseCase {
                     );
 
                 if (relevantContent.trim().length > 0) {
+                    this.log('Completed file analysis with AST diff strategy', {
+                        ...fileMetadata,
+                        durationMs: Math.round(
+                            performance.now() - fileAnalysisStart,
+                        ),
+                        outputChars: relevantContent.length,
+                    });
+
                     return {
                         id,
                         content: await this.compressAndEncrypt(relevantContent),
                         flag: FileContentFlag.DIFF,
                     };
                 }
+
+                this.logWarn(
+                    'AST diff analysis returned empty content, trying simple diff strategy',
+                    fileMetadata,
+                );
             } catch (error) {
                 this.logError(
                     `AST diff analysis failed for file: ${filePath}`,
                     error as Error,
-                    {
-                        filePath,
-                        fileId: id,
-                    },
+                    fileMetadata,
                 );
             }
+        } else {
+            this.logWarn(
+                'Shared graph unavailable, skipping AST diff analysis and trying simple strategy',
+                fileMetadata,
+            );
         }
 
         try {
             const simpleContent = this.analyzeSimpleFile(fullContent, diff);
 
             if (simpleContent.trim().length > 0) {
+                this.log('Completed file analysis with simple diff strategy', {
+                    ...fileMetadata,
+                    durationMs: Math.round(
+                        performance.now() - fileAnalysisStart,
+                    ),
+                    outputChars: simpleContent.length,
+                });
+
                 return {
                     id,
                     content: await this.compressAndEncrypt(simpleContent),
                     flag: FileContentFlag.SIMPLE,
                 };
             }
+
+            this.logWarn(
+                'Simple diff analysis returned empty content, falling back to full content',
+                fileMetadata,
+            );
         } catch (error) {
             this.logError(
                 `Simple diff analysis failed for file: ${filePath}`,
                 error as Error,
-                {
-                    filePath,
-                    fileId: id,
-                },
+                fileMetadata,
             );
         }
+
+        this.logWarn('Returning full file content as fallback', {
+            ...fileMetadata,
+            durationMs: Math.round(performance.now() - fileAnalysisStart),
+        });
 
         return {
             id,
@@ -315,6 +439,14 @@ export class InitializeContentFromDiffUseCase {
 
     private log(message: string, metadata?: any): void {
         this.logger.log({
+            message,
+            context: InitializeContentFromDiffUseCase.name,
+            metadata,
+        });
+    }
+
+    private logWarn(message: string, metadata?: any): void {
+        this.logger.warn({
             message,
             context: InitializeContentFromDiffUseCase.name,
             metadata,

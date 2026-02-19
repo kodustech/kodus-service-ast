@@ -84,6 +84,19 @@ export class CodeKnowledgeGraphService {
                 `Worker file not found at ${workerPath}. Ensure 'yarn build' has been run.`,
             );
             (error as any).errorType = 'SYSTEM_ERROR';
+
+            this.logger.error({
+                message: 'Worker file path resolution failed',
+                context: CodeKnowledgeGraphService.name,
+                error,
+                metadata: {
+                    workerPath,
+                    cwd: process.cwd(),
+                    isRunningFromSource,
+                },
+                serviceName: CodeKnowledgeGraphService.name,
+            });
+
             throw error;
         }
 
@@ -101,6 +114,21 @@ export class CodeKnowledgeGraphService {
             idleTimeout,
             maxQueue,
             concurrentTasksPerWorker,
+        });
+
+        this.logger.log({
+            message: 'CodeKnowledgeGraphService initialized',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                workerPath,
+                cpuCount,
+                minThreads,
+                maxThreads,
+                idleTimeout,
+                maxQueue,
+                concurrentTasksPerWorker,
+            },
+            serviceName: CodeKnowledgeGraphService.name,
         });
     }
     private async *processFilesInBatches(
@@ -127,11 +155,36 @@ export class CodeKnowledgeGraphService {
         const totalFiles = files.length;
         let processedFiles = 0;
 
+        this.logger.log({
+            message: 'Starting batch processing for file analysis',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                totalFiles,
+                cpuCount,
+                batchSize,
+                totalBatches: batches.length,
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
+
         for (let i = 0; i < batches.length; i++) {
             const batchStartTime = performance.now();
+            const currentBatch = batches[i];
+
+            this.logger.debug({
+                message: 'Processing batch',
+                context: CodeKnowledgeGraphService.name,
+                metadata: {
+                    batchIndex: i,
+                    batchSize: currentBatch.length,
+                    processedFiles,
+                    totalFiles,
+                },
+                serviceName: CodeKnowledgeGraphService.name,
+            });
 
             try {
-                const batchResult = await this.processBatch(batches[i]);
+                const batchResult = await this.processBatch(currentBatch, i);
 
                 this.clearBatchCache();
 
@@ -164,6 +217,10 @@ export class CodeKnowledgeGraphService {
                             progress: progress.toFixed(1),
                             processedFiles,
                             totalFiles,
+                            batchIndex: i,
+                            batchTimeMs: Math.round(batchTime),
+                            batchErrorsCount: batchResult.errors.length,
+                            queueSize: this.piscina.queueSize,
                         },
                         serviceName: CodeKnowledgeGraphService.name,
                     });
@@ -175,8 +232,10 @@ export class CodeKnowledgeGraphService {
                     error,
                     metadata: {
                         batchIndex: i,
-                        batchFiles: batches[i],
+                        batchSize: currentBatch.length,
+                        batchPaths: currentBatch.map((file) => file.filePath),
                         processedFiles,
+                        totalFiles,
                     },
                     serviceName: CodeKnowledgeGraphService.name,
                 });
@@ -250,6 +309,8 @@ export class CodeKnowledgeGraphService {
             context: CodeKnowledgeGraphService.name,
             metadata: {
                 fileCount: files.length,
+                queueSize: this.piscina.queueSize,
+                completed: this.piscina.completed,
             },
             serviceName: CodeKnowledgeGraphService.name,
         });
@@ -281,7 +342,12 @@ export class CodeKnowledgeGraphService {
                     message: 'Error in streaming batch',
                     context: CodeKnowledgeGraphService.name,
                     error,
-                    metadata: { batchIndex: batchProgress.batchIndex },
+                    metadata: {
+                        batchIndex: batchProgress.batchIndex,
+                        progress: batchProgress.progress.toFixed(1),
+                        processedFiles: batchProgress.processedFiles,
+                        totalFiles: batchProgress.totalFiles,
+                    },
                     serviceName: CodeKnowledgeGraphService.name,
                 });
             });
@@ -299,6 +365,10 @@ export class CodeKnowledgeGraphService {
             metadata: {
                 streamingTimeMs: streamingTime.toFixed(3),
                 hrtimeMs: hrtimeMs.toFixed(3),
+                parsedFilesCount: result.files.size,
+                parsedFunctionsCount: result.functions.size,
+                parsedTypesCount: result.types.size,
+                finalQueueSize: this.piscina.queueSize,
             },
             serviceName: CodeKnowledgeGraphService.name,
         });
@@ -430,6 +500,27 @@ export class CodeKnowledgeGraphService {
             const memoryUsage = process.memoryUsage();
             const heapUsageRatio = memoryUsage.heapUsed / memoryUsage.heapTotal;
 
+            if (heapUsageRatio > this.memoryThreshold) {
+                this.logger.warn({
+                    message: 'High heap usage detected during batch cleanup',
+                    context: CodeKnowledgeGraphService.name,
+                    metadata: {
+                        heapUsageRatio: heapUsageRatio.toFixed(3),
+                        heapUsedMb: (
+                            memoryUsage.heapUsed /
+                            1024 /
+                            1024
+                        ).toFixed(2),
+                        heapTotalMb: (
+                            memoryUsage.heapTotal /
+                            1024 /
+                            1024
+                        ).toFixed(2),
+                    },
+                    serviceName: CodeKnowledgeGraphService.name,
+                });
+            }
+
             // Force garbage collection if heap usage exceeds threshold
             if (heapUsageRatio > this.gcThreshold) {
                 this.forceGarbageCollection();
@@ -478,13 +569,28 @@ export class CodeKnowledgeGraphService {
             content: string;
             filePath: string;
         }[],
+        batchIndex: number,
         retryCount: number = 0,
     ): Promise<WorkerOutput> {
         const maxRetries = 3;
+        const runStart = performance.now();
 
         try {
             const adaptiveTimeout =
                 await this.calculateAdaptiveTimeout(batchFiles);
+
+            this.logger.debug({
+                message: 'Dispatching batch to worker pool',
+                context: CodeKnowledgeGraphService.name,
+                metadata: {
+                    batchIndex,
+                    batchSize: batchFiles.length,
+                    retryCount,
+                    adaptiveTimeout,
+                    queueSize: this.piscina.queueSize,
+                },
+                serviceName: CodeKnowledgeGraphService.name,
+            });
 
             const timeoutPromise = new Promise<never>((_, reject) => {
                 setTimeout(() => {
@@ -505,6 +611,20 @@ export class CodeKnowledgeGraphService {
                 ),
                 timeoutPromise,
             ]);
+
+            this.logger.debug({
+                message: 'Batch processed successfully by worker pool',
+                context: CodeKnowledgeGraphService.name,
+                metadata: {
+                    batchIndex,
+                    batchSize: batchFiles.length,
+                    retryCount,
+                    durationMs: Math.round(performance.now() - runStart),
+                    outputFiles: analysis.files.length,
+                    outputErrors: analysis.errors.length,
+                },
+                serviceName: CodeKnowledgeGraphService.name,
+            });
 
             return analysis;
         } catch (error) {
@@ -530,6 +650,7 @@ export class CodeKnowledgeGraphService {
                     context: CodeKnowledgeGraphService.name,
                     error: error.message,
                     metadata: {
+                        batchIndex,
                         batchSize: batchFiles.length,
                         retryCount: retryCount + 1,
                         maxRetries,
@@ -542,10 +663,30 @@ export class CodeKnowledgeGraphService {
 
                 await new Promise((resolve) => setTimeout(resolve, backoffMs));
 
-                return this.processBatch(batchFiles, retryCount + 1);
+                return this.processBatch(
+                    batchFiles,
+                    batchIndex,
+                    retryCount + 1,
+                );
             }
 
             this.streamingMetrics.failedBatches++;
+
+            this.logger.error({
+                message: 'Batch processing failed after retries',
+                context: CodeKnowledgeGraphService.name,
+                error,
+                metadata: {
+                    batchIndex,
+                    batchSize: batchFiles.length,
+                    retryCount,
+                    maxRetries,
+                    durationMs: Math.round(performance.now() - runStart),
+                    timeoutCount: this.streamingMetrics.timeoutCount,
+                    failedBatches: this.streamingMetrics.failedBatches,
+                },
+                serviceName: CodeKnowledgeGraphService.name,
+            });
 
             throw error;
         }
@@ -573,6 +714,8 @@ export class CodeKnowledgeGraphService {
     }
 
     public resetStreamingMetrics(): void {
+        const previousMetrics = this.streamingMetrics;
+
         this.streamingMetrics = {
             filesProcessed: 0,
             averageProcessingTime: 0,
@@ -583,6 +726,15 @@ export class CodeKnowledgeGraphService {
             retryCount: 0,
             failedBatches: 0,
         };
+
+        this.logger.debug({
+            message: 'Streaming metrics reset',
+            context: CodeKnowledgeGraphService.name,
+            metadata: {
+                previousMetrics,
+            },
+            serviceName: CodeKnowledgeGraphService.name,
+        });
     }
 
     private completeBidirectionalTypeRelations(

@@ -24,10 +24,66 @@ export type WorkerOutput = {
     errors: string[];
 };
 
+function logWorkerEvent(
+    level: 'warn' | 'error',
+    message: string,
+    metadata?: Record<string, unknown>,
+): void {
+    const payload = {
+        timestamp: new Date().toISOString(),
+        level,
+        context: 'ParsingWorker',
+        pid: process.pid,
+        message,
+        metadata,
+    };
+
+    const serialized = `${JSON.stringify(payload)}\n`;
+    process.stderr.write(serialized);
+}
+
+function formatWorkerError(error: unknown): {
+    message: string;
+    name?: string;
+    stack?: string;
+} {
+    if (error instanceof Error) {
+        return {
+            message: error.message,
+            name: error.name,
+            stack: error.stack,
+        };
+    }
+
+    return {
+        message: String(error),
+    };
+}
+
 export async function analyzeBatch(
     params: BatchWorkerInput,
 ): Promise<WorkerOutput> {
+    const startedAt = performance.now();
     const { batch } = params;
+
+    if (!Array.isArray(batch)) {
+        const message = 'Invalid batch input: expected an array';
+        logWorkerEvent('error', message, {
+            receivedType: typeof batch,
+        });
+
+        return {
+            files: [],
+            errors: [message],
+        };
+    }
+
+    if (batch.length === 0) {
+        return {
+            files: [],
+            errors: [],
+        };
+    }
 
     const { SourceFileAnalyzer } = await import('../analyze-source-file.js');
     const path = (await import('path')).default;
@@ -57,13 +113,28 @@ export async function analyzeBatch(
                 analysis,
             });
         } catch (error) {
-            console.error(`Error analyzing file ${file.filePath}:`, error);
+            const parsedError = formatWorkerError(error);
+
+            logWorkerEvent('error', 'Failed to analyze file in worker batch', {
+                filePath: file.filePath,
+                errorMessage: parsedError.message,
+                errorName: parsedError.name,
+                stack: parsedError.stack,
+            });
+
             results.errors.push(
-                `Error analyzing file ${file.filePath}: ${
-                    error instanceof Error ? error.message : String(error)
-                }`,
+                `Error analyzing file ${file.filePath}: ${parsedError.message}`,
             );
         }
+    }
+
+    if (results.errors.length > 0) {
+        logWorkerEvent('warn', 'Worker batch finished with errors', {
+            batchSize: batch.length,
+            analyzedFiles: results.files.length,
+            errorsCount: results.errors.length,
+            durationMs: Math.round(performance.now() - startedAt),
+        });
     }
 
     return results;
@@ -72,7 +143,20 @@ export async function analyzeBatch(
 export async function analyzeContent(
     params: SingleWorkerInput,
 ): Promise<WorkerOutput> {
+    const startedAt = performance.now();
     const { content, filePath } = params;
+
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+        const message = 'Invalid filePath for worker analyzeContent';
+        logWorkerEvent('error', message, {
+            filePath,
+        });
+
+        return {
+            files: [],
+            errors: [message],
+        };
+    }
 
     const { SourceFileAnalyzer } = await import('../analyze-source-file.js');
     const path = (await import('path')).default;
@@ -99,11 +183,18 @@ export async function analyzeContent(
             analysis,
         });
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : String(error);
-        console.error(`Error analyzing content for ${filePath}:`, error);
+        const parsedError = formatWorkerError(error);
+
+        logWorkerEvent('error', 'Failed to analyze single content in worker', {
+            filePath,
+            errorMessage: parsedError.message,
+            errorName: parsedError.name,
+            stack: parsedError.stack,
+            durationMs: Math.round(performance.now() - startedAt),
+        });
+
         results.errors.push(
-            `Error analyzing content for ${filePath}: ${errorMessage}`,
+            `Error analyzing content for ${filePath}: ${parsedError.message}`,
         );
     }
 

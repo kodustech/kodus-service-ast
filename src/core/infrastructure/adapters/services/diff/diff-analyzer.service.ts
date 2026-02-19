@@ -99,7 +99,7 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const mainFileNodes = this.getGraphNodes(graphs);
+            const mainFileNodes = this.getGraphNodes(graphs, filePath);
             if (mainFileNodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
@@ -619,7 +619,12 @@ export class DiffAnalyzerService {
 
             return result;
         } catch (error) {
-            console.error('Error analyzing diff:', error);
+            this.logger.error({
+                context: DiffAnalyzerService.name,
+                message: 'Error analyzing diff',
+                error,
+                serviceName: DiffAnalyzerService.name,
+            });
             return result;
         }
     }
@@ -706,7 +711,10 @@ export class DiffAnalyzerService {
         return isOverlapping && hasRealChanges;
     }
 
-    private getGraphNodes(graphs: GetGraphsResponseData): EnrichedGraphNode[] {
+    private getGraphNodes(
+        graphs: GetGraphsResponseData,
+        filePath: string,
+    ): EnrichedGraphNode[] {
         if (!graphs || !graphs.enrichedGraph) {
             this.logger.warn({
                 context: DiffAnalyzerService.name,
@@ -716,7 +724,9 @@ export class DiffAnalyzerService {
             return [];
         }
 
-        return graphs.enrichedGraph.nodes;
+        return graphs.enrichedGraph.nodes.filter(
+            (node) => node.filePath === filePath,
+        );
     }
 
     private getNodesForRanges(

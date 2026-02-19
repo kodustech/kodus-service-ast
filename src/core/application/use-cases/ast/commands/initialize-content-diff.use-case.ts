@@ -40,39 +40,97 @@ export class InitializeContentFromDiffUseCase {
 
             await taskContext.start('Analyzing files from diff');
 
-            const promises = files.map((file) =>
-                this.analyzeFile(file, taskContext.taskId),
+            const preparedFiles = await Promise.all(
+                files.map(async (file) => {
+                    const fullContent = (
+                        await this.decryptAndDecompress(file.content)
+                    ).trim();
+                    const diff = await this.decryptAndDecompress(file.diff);
+
+                    return {
+                        id: file.id,
+                        originalEncryptedContent: file.content,
+                        filePath: file.filePath,
+                        diff,
+                        fullContent,
+                        languageHintPath: this.buildLanguageHintPath(
+                            file.id,
+                            file.filePath,
+                        ),
+                    };
+                }),
             );
-            const promisesResult = await Promise.allSettled(promises);
+
+            let graphs: GetGraphsResponseData | null = null;
+
+            try {
+                const filesToAnalyze = preparedFiles.map((file) => ({
+                    id: file.id,
+                    content: file.fullContent,
+                    filePath: file.languageHintPath,
+                }));
+
+                const graph =
+                    await this.codeKnowledgeGraphService.buildGraphStreaming(
+                        filesToAnalyze,
+                    );
+
+                const enrichedGraph =
+                    this.graphEnrichmentService.enrichGraph(graph);
+
+                graphs = {
+                    graph,
+                    enrichedGraph,
+                };
+            } catch (error) {
+                this.logError(
+                    'Failed to build shared graph for diff analysis, falling back to simple diff strategy',
+                    error as Error,
+                    {
+                        taskId: taskContext.taskId,
+                        filesCount: preparedFiles.length,
+                    },
+                );
+            }
+
+            const promisesResult = await Promise.allSettled(
+                preparedFiles.map((file) =>
+                    this.analyzePreparedFile(file, taskContext.taskId, graphs),
+                ),
+            );
 
             const result = promisesResult
                 .map<GetContentFromDiffResponse['files'][number] | null>(
-                    (result, index) => {
+                    (analysisResult, index) => {
+                        const file = preparedFiles[index];
                         const metadata = {
                             taskId: taskContext.taskId,
-                            filePath: files[index].filePath,
-                            fileId: files[index].id,
+                            filePath: file.filePath,
+                            fileId: file.id,
                         };
 
-                        if (result.status === 'fulfilled') {
+                        if (analysisResult.status === 'fulfilled') {
                             this.log(
-                                `Successfully analyzed file: ${files[index].filePath}`,
+                                `Successfully analyzed file: ${file.filePath}`,
                                 metadata,
                             );
 
-                            return result.value;
-                        } else {
-                            this.logError(
-                                `Failed to analyze file: ${files[index].filePath}. Error: ${result.reason}`,
-                                result.reason,
-                                metadata,
-                            );
-
-                            return null;
+                            return analysisResult.value;
                         }
+
+                        this.logError(
+                            `Failed to analyze file: ${file.filePath}. Error: ${analysisResult.reason}`,
+                            analysisResult.reason,
+                            metadata,
+                        );
+
+                        return null;
                     },
                 )
-                .filter((res) => res !== null);
+                .filter(
+                    (res): res is GetContentFromDiffResponse['files'][number] =>
+                        res !== null,
+                );
 
             await taskContext.complete('Analyzed all files', {
                 files: result,
@@ -102,46 +160,55 @@ export class InitializeContentFromDiffUseCase {
         return encrypt(compressedContent);
     }
 
-    private async analyzeFile(
-        file: InitializeContentFromDiffRequest['files'][number],
+    private async analyzePreparedFile(
+        file: {
+            id: string;
+            originalEncryptedContent: string;
+            filePath: string;
+            diff: string;
+            fullContent: string;
+            languageHintPath: string;
+        },
         taskId: string,
+        graphs: GetGraphsResponseData | null,
     ): Promise<GetContentFromDiffResponse['files'][number]> {
         const {
             id,
-            content: originalEncryptedContent,
+            originalEncryptedContent,
             filePath,
-            diff: encryptedDiff,
+            diff,
+            fullContent,
+            languageHintPath,
         } = file;
 
-        const fullContent = (
-            await this.decryptAndDecompress(originalEncryptedContent)
-        ).trim();
-        const diff = await this.decryptAndDecompress(encryptedDiff);
+        if (graphs) {
+            try {
+                const relevantContent =
+                    await this.differService.getRelevantContent(
+                        languageHintPath,
+                        diff,
+                        graphs,
+                        taskId,
+                        fullContent,
+                    );
 
-        try {
-            const relevantContent = await this.analyzeDiffFile(
-                filePath,
-                fullContent,
-                diff,
-                taskId,
-            );
-
-            if (relevantContent.trim().length > 0) {
-                return {
-                    id,
-                    content: await this.compressAndEncrypt(relevantContent),
-                    flag: FileContentFlag.DIFF,
-                };
+                if (relevantContent.trim().length > 0) {
+                    return {
+                        id,
+                        content: await this.compressAndEncrypt(relevantContent),
+                        flag: FileContentFlag.DIFF,
+                    };
+                }
+            } catch (error) {
+                this.logError(
+                    `AST diff analysis failed for file: ${filePath}`,
+                    error as Error,
+                    {
+                        filePath,
+                        fileId: id,
+                    },
+                );
             }
-        } catch (error) {
-            this.logError(
-                `AST diff analysis failed for file: ${filePath}`,
-                error as Error,
-                {
-                    filePath,
-                    fileId: id,
-                },
-            );
         }
 
         try {
@@ -172,48 +239,16 @@ export class InitializeContentFromDiffUseCase {
         };
     }
 
-    private async analyzeDiffFile(
-        filePath: string,
-        content: string,
-        diff: string,
-        taskId: string,
-    ): Promise<string> {
-        const languageHintPath = this.buildLanguageHintPath(filePath);
-
-        const graph = await this.codeKnowledgeGraphService.buildGraphStreaming([
-            {
-                id: 'analysis-file',
-                content,
-                filePath: languageHintPath,
-            },
-        ]);
-
-        const enrichedGraph = this.graphEnrichmentService.enrichGraph(graph);
-
-        const graphs: GetGraphsResponseData = {
-            graph,
-            enrichedGraph,
-        };
-
-        return this.differService.getRelevantContent(
-            languageHintPath,
-            diff,
-            graphs,
-            taskId,
-            content,
-        );
-    }
-
-    private buildLanguageHintPath(filePath: string): string {
+    private buildLanguageHintPath(fileId: string, filePath: string): string {
         const extension = extname(filePath || '')
             .trim()
             .toLowerCase();
 
         if (!extension) {
-            return 'input.unknown';
+            return `input/${fileId}.unknown`;
         }
 
-        return `input${extension}`;
+        return `input/${fileId}${extension}`;
     }
 
     private analyzeSimpleFile(content: string, diff: string): string {

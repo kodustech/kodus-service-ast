@@ -60,7 +60,7 @@
         "amqplib": "^0.10.9",
         "diff": "^8.0.3",
         "fast-xml-parser": "^5.3.5",
-        "minimatch": "^10.1.2",
+        "minimatch": "^10.2.1",
         "nanoid": "^5.1.6",
         "nestjs-pino": "^4.5.0",
         "pg": "^8.18.0",

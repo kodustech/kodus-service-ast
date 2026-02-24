@@ -13,6 +13,7 @@ KEYS=(
     "/prod/kodus-service-ast/S3_BUCKET_NAME"
     "/prod/kodus-service-ast/AWS_REGION"
     "/prod/kodus-service-ast/SHARED_STORAGE_PATH"
+    "/prod/kodus-service-ast/API_CRYPTO_KEY"
 )
 
 ENV_FILE=".env.$ENVIRONMENT"

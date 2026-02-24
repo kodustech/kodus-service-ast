@@ -17,17 +17,14 @@ export const QUEUE_CONFIG = {
     DELAYED_EXCHANGE: 'ast.jobs.delayed.x',
 
     // Queues
-    REPO_QUEUE: 'ast.initialize.repo.q',
-    IMPACT_QUEUE: 'ast.initialize.impact.q',
+    DIFF_QUEUE: 'ast.initialize.diff.q',
     DEAD_LETTER_QUEUE: 'ast.jobs.dlq',
-    ECHO_QUEUE: 'ast.test.echo.q',
     VALIDATE_CODE_QUEUE: 'ast.validate.code.q',
 
     // Routing keys
-    REPO_ROUTING_KEY: 'ast.initialize.repo',
-    IMPACT_ROUTING_KEY: 'ast.initialize.impact',
-    ECHO_ROUTING_KEY: 'ast.test.echo',
+    DIFF_ROUTING_KEY: 'ast.initialize.diff',
     VALIDATE_CODE_ROUTING_KEY: 'ast.validate.code',
+    DEAD_LETTER_ROUTING_KEY: 'ast.jobs',
 } as const;
 
 // Runtime configuration with feature flags

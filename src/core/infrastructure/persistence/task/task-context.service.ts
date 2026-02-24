@@ -1,7 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { TaskContext } from '@/core/domain/task/contracts/task-manager.contract.js';
-import { TaskPersistenceService } from './task-persistence.service.js';
 import { TaskStatus } from '@/shared/types/task.js';
+import { Inject, Injectable } from '@nestjs/common';
+import { TaskPersistenceService } from './task-persistence.service.js';
 
 @Injectable()
 export class TaskContextService {

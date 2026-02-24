@@ -6,8 +6,8 @@ Este documento descreve a configuração centralizada das filas RabbitMQ para o 
 
 ```
 ast.jobs.x (exchange topic)
-├── ast.initialize.repo.q → Worker (InitializeRepositoryUseCase)
-├── ast.initialize.impact.q → Worker (InitializeImpactAnalysisUseCase)
+├── ast.initialize.diff.q → Worker (InitializeContentFromDiffUseCase)
+├── ast.validate.code.q → Worker (ValidateCodeUseCase)
 └── ast.jobs.dlx (dead letter exchange)
     └── ast.jobs.dlq (dead letter queue)
 ```
@@ -23,15 +23,13 @@ export const QUEUE_CONFIG = {
     DEAD_LETTER_EXCHANGE: 'ast.jobs.dlx',
 
     // Queues
-    REPO_QUEUE: 'ast.initialize.repo.q',
-    IMPACT_QUEUE: 'ast.initialize.impact.q',
+    DIFF_QUEUE: 'ast.initialize.diff.q',
+    VALIDATE_CODE_QUEUE: 'ast.validate.code.q',
     DEAD_LETTER_QUEUE: 'ast.jobs.dlq',
-    ECHO_QUEUE: 'ast.test.echo.q',
 
     // Routing Keys
-    REPO_ROUTING_KEY: 'ast.initialize.repo',
-    IMPACT_ROUTING_KEY: 'ast.initialize.impact',
-    ECHO_ROUTING_KEY: 'ast.test.echo',
+    DIFF_ROUTING_KEY: 'ast.initialize.diff',
+    VALIDATE_CODE_ROUTING_KEY: 'ast.validate.code',
 
     // Queue Settings
     DELIVERY_LIMIT: 3,
@@ -53,7 +51,7 @@ export function getQueueRuntimeConfig() {
 
 ## Argumentos das Filas
 
-### Filas de Trabalho (repo/impact)
+### Filas de Trabalho (diff/validate)
 
 ```typescript
 {
@@ -76,8 +74,8 @@ export function getQueueRuntimeConfig() {
 ```typescript
 @RabbitSubscribe({
     exchange: QUEUE_CONFIG.EXCHANGE,
-    routingKey: QUEUE_CONFIG.REPO_ROUTING_KEY,
-    queue: QUEUE_CONFIG.REPO_QUEUE,
+    routingKey: QUEUE_CONFIG.DIFF_ROUTING_KEY,
+    queue: QUEUE_CONFIG.DIFF_QUEUE,
     queueOptions: buildConsumerQueueOptions({
         deadLetterExchange: QUEUE_CONFIG.DEAD_LETTER_EXCHANGE,
         deliveryLimit: QUEUE_CONFIG.DELIVERY_LIMIT,

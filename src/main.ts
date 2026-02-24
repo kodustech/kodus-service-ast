@@ -1,14 +1,14 @@
-import './shared/utils/env-loader.js';
-import { NestFactory } from '@nestjs/core';
 import { RequestMethod } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service.js';
+import { GlobalExceptionFilter } from './core/infrastructure/http/filters/global-exception.filter.js';
+import { RequestLoggerInterceptor } from './core/infrastructure/http/interceptors/request-logger.interceptor.js';
+import { AppModule } from './modules/app.module.js';
+import './shared/utils/env-loader.js';
 import {
     getEnvVariableAsNumberOrExit,
     getEnvVariableOrExit,
 } from './shared/utils/env.js';
-import { AppModule } from './modules/app.module.js';
-import { PinoLoggerService } from './core/infrastructure/adapters/services/logger/pino.service.js';
-import { GlobalExceptionFilter } from './core/infrastructure/http/filters/global-exception.filter.js';
-import { RequestLoggerInterceptor } from './core/infrastructure/http/interceptors/request-logger.interceptor.js';
 
 // Bootstrap logger for early logging (before NestJS app is ready)
 const bootstrapLogger = PinoLoggerService.createBootstrapLogger();

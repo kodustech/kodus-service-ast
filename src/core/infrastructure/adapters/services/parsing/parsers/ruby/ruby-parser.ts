@@ -1,17 +1,20 @@
-import { BaseParser } from '../base-parser.js';
-import * as RubyLang from 'tree-sitter-ruby';
-import { rubyQueries } from './ruby-queries.js';
-import { type Language, type QueryCapture, type SyntaxNode } from 'tree-sitter';
-import { type ParserQuery, type QueryType } from '../query.js';
 import {
-    type Method,
-    type ObjectProperties,
     ChainType,
     type CallChain,
+    type Method,
+    type ObjectProperties,
 } from '@/core/domain/parsing/types/parser.js';
+import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
 import { NodeType, type Scope, type TypeAnalysis } from '@/shared/types/ast.js';
 import { appendOrUpdateElement } from '@/shared/utils/arrays.js';
-import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
+import { createRequire } from 'module';
+import { type Language, type QueryCapture, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import { rubyQueries } from './ruby-queries.js';
+const require = createRequire(import.meta.url);
+const TreeSitterRuby = require('tree-sitter-ruby');
+const RubyLang = TreeSitterRuby;
 
 export class RubyParser extends BaseParser {
     private static readonly language = RubyLang as Language;

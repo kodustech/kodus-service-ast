@@ -1,33 +1,3 @@
-import { type TaskPriority } from './task.js';
-
-export enum ProtoPlatformType {
-    PROTO_PLATFORM_TYPE_UNSPECIFIED = 'PROTO_PLATFORM_TYPE_UNSPECIFIED',
-    PROTO_PLATFORM_TYPE_GITHUB = 'PROTO_PLATFORM_TYPE_GITHUB',
-    PROTO_PLATFORM_TYPE_GITLAB = 'PROTO_PLATFORM_TYPE_GITLAB',
-    PROTO_PLATFORM_TYPE_BITBUCKET = 'PROTO_PLATFORM_TYPE_BITBUCKET',
-    PROTO_PLATFORM_TYPE_AZURE_DEVOPS = 'PROTO_PLATFORM_TYPE_AZURE_DEVOPS',
-}
-
-export interface RepositoryAuth {
-    token?: string;
-    username?: string;
-    password?: string;
-}
-
-export interface RepositoryData {
-    organizationId: string;
-    repositoryId: string;
-    repositoryName: string;
-    branch: string;
-    url: string;
-    provider: ProtoPlatformType;
-    auth?: RepositoryAuth | null;
-    commitSha?: string | null;
-    installationId?: string | number | null;
-    workspaceId?: string | number | null;
-    defaultBranch?: string | null;
-}
-
 export interface Point {
     row: number;
     column: number;
@@ -153,11 +123,6 @@ export interface EnrichedGraph {
     relationships: EnrichedGraphEdge[];
 }
 
-export interface GraphWithDir<T> {
-    graph: T;
-    dir: string;
-}
-
 export interface SerializedFileAnalysis {
     defines: string[];
     calls: Call[];
@@ -172,97 +137,45 @@ export interface SerializedCodeGraph {
     types: Record<string, TypeAnalysis>;
 }
 
-export type SerializedGraphWithDir = GraphWithDir<SerializedCodeGraph>;
-
 export interface SerializedGetGraphsResponseData {
-    baseGraph: SerializedGraphWithDir;
-    headGraph: SerializedGraphWithDir;
-    enrichHeadGraph: EnrichedGraph;
-}
-
-export interface GetGraphsRequest {
-    taskId: string;
-    headRepo: RepositoryData;
-    baseRepo?: RepositoryData | null;
+    graph: SerializedCodeGraph;
+    enrichedGraph: EnrichedGraph;
 }
 
 export interface GetGraphsResponseData {
-    baseGraph: GraphWithDir<CodeGraph>;
-    headGraph: GraphWithDir<CodeGraph>;
-    enrichHeadGraph: EnrichedGraph;
+    graph: CodeGraph;
+    enrichedGraph: EnrichedGraph;
 }
 
-export interface InitializeRepositoryRequest extends GetGraphsRequest {
-    baseRepo: RepositoryData;
-    filePaths?: string[];
-    priority?: TaskPriority;
+export interface InitializeContentFromDiffRequest {
+    files: {
+        id: string;
+        content: string;
+        filePath: string;
+        diff: string;
+    }[];
 }
 
-export interface InitializeRepositoryResponse {
+export interface InitializeContentFromDiffResponse {
     taskId: string;
 }
 
-export interface DeleteRepositoryRequest extends GetGraphsRequest {
-    baseRepo: RepositoryData;
-}
-
-export type DeleteRepositoryResponse = Record<string, never>;
-
-export interface GetContentFromDiffRequest extends GetGraphsRequest {
-    diff: string;
-    filePath: string;
+export enum FileContentFlag {
+    DIFF = 'diff',
+    FULL = 'full',
+    SIMPLE = 'simple',
 }
 
 export interface GetContentFromDiffResponse {
-    data: Uint8Array;
+    files: {
+        id: string;
+        content: string;
+        flag: FileContentFlag;
+    }[];
 }
 
 export interface StreamedResponse {
     data: Uint8Array;
-}
-
-export interface InitializeImpactAnalysisRequest extends GetGraphsRequest {
-    baseRepo: RepositoryData;
-    codeChunk: string;
-    fileName: string;
-    graphsTaskId: string;
-    priority?: TaskPriority;
-}
-
-export interface InitializeImpactAnalysisResponse {
-    taskId: string;
-}
-
-export interface GetImpactAnalysisRequest extends GetGraphsRequest {
-    baseRepo: RepositoryData;
-}
-
-export interface FunctionsAffect {
-    functionName: string;
-    filePath: string;
-    functionBody: string;
-}
-
-export interface FunctionsAffectResult {
-    oldFunction: string;
-    newFunction: string;
-    functionsAffect: FunctionsAffect[];
-}
-
-export interface FunctionSimilar {
-    functionName: string;
-    isSimilar: boolean;
-    explanation: string;
-}
-
-export interface FunctionSimilarity {
-    functionName: string;
-    similarFunctions: FunctionSimilar[];
-}
-
-export interface GetImpactAnalysisResponse {
-    functionsAffect: FunctionsAffectResult[];
-    functionSimilarity: FunctionSimilarity[];
 }
 
 export interface ValidateCodeItem {

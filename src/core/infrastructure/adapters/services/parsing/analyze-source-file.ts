@@ -1,45 +1,36 @@
-import * as fs from 'fs';
-import { getParserByFilePath } from './parsers/index.js';
-import { type BaseParser } from './parsers/base-parser.js';
+import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     type ParseContext,
     type ParserAnalysis,
 } from '@/core/domain/parsing/types/parser.js';
-import { getLanguageResolver } from './resolvers/index.js';
-import { type LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     type AnalysisNode,
     type Call,
     type FunctionAnalysis,
     type TypeAnalysis,
 } from '@/shared/types/ast.js';
+import { type BaseParser } from './parsers/base-parser.js';
+import { getParserByFilePath } from './parsers/index.js';
+import { NoOpResolver } from './resolvers/noop-resolver.js';
 
 export class SourceFileAnalyzer {
     private importPathResolver: LanguageResolver | null = null;
     private languageParser: BaseParser | null = null;
 
     async analyzeSourceFile(
-        rootDir: string,
         filePath: string,
         absolutePath: string,
+        inputContent: string,
     ): Promise<ParserAnalysis> {
         try {
-            await this.initializeImportResolver(rootDir);
-            if (!this.importPathResolver) {
-                console.warn(`No import resolver found for ${rootDir}`);
-                return this.emptyAnalysis();
-            }
+            this.importPathResolver = new NoOpResolver();
 
-            const content = await this.readFileContent(filePath);
-            if (!content) {
-                return this.emptyAnalysis();
-            }
-
-            const fileStats = await fs.promises.stat(filePath);
-            const fileSizeInMB = fileStats?.size / (1024 * 1024);
+            const content = inputContent;
+            const fileSizeInMB =
+                Buffer.byteLength(content, 'utf8') / (1024 * 1024);
             if (fileSizeInMB > 5) {
                 console.warn(
-                    `File too large for analysis (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
+                    `Content too large for analysis (${fileSizeInMB.toFixed(2)}MB): ${filePath}`,
                 );
                 return this.emptyAnalysis();
             }
@@ -78,47 +69,24 @@ export class SourceFileAnalyzer {
                 return this.emptyAnalysis();
             }
 
+            if (syntaxTree.rootNode.hasError) {
+                console.warn(`Syntax errors found in ${filePath}`);
+                return this.emptyAnalysis();
+            }
+
             this.languageParser.collectAllInOnePass(
                 syntaxTree.rootNode,
                 filePath,
                 absolutePath,
             );
 
-            const uniqueImports = Array.from(context.fileImports);
-            // 🚀 OTIMIZAÇÃO: Aumentar batch size para melhor throughput
-            const batchSize = 20;
-            const normalizedImports: string[] = [];
-
-            // 🚀 FASE 1: Use original import resolution (cache disabled - causing overhead)
-            for (let i = 0; i < uniqueImports.length; i += batchSize) {
-                const batch = uniqueImports.slice(i, i + batchSize);
-                const batchResults = await Promise.all(
-                    batch.map(async (imp) => {
-                        try {
-                            const resolved =
-                                this.languageParser!.resolveImportWithCache(
-                                    imp,
-                                    [],
-                                    filePath,
-                                );
-                            return resolved?.normalizedPath || imp;
-                        } catch (err) {
-                            console.error(
-                                `[PERFORMANCE] Import resolution failed for ${imp}:`,
-                                err,
-                            );
-                            return imp;
-                        }
-                    }),
-                );
-                normalizedImports.push(...batchResults);
-            }
+            const imports = Array.from(context.fileImports);
 
             return {
                 fileAnalysis: {
                     defines: Array.from(context.fileDefines),
                     calls: context.fileCalls,
-                    imports: normalizedImports,
+                    imports,
                     className: Array.from(context.fileClassNames),
                     nodes: context.analysisNodes,
                 },
@@ -134,17 +102,6 @@ export class SourceFileAnalyzer {
         }
     }
 
-    private async readFileContent(filePath: string): Promise<string | null> {
-        try {
-            await fs.promises.access(filePath, fs.constants.R_OK);
-
-            return await fs.promises.readFile(filePath, 'utf-8');
-        } catch (error) {
-            console.error(error);
-            return null;
-        }
-    }
-
     private emptyAnalysis(): ParserAnalysis {
         return {
             fileAnalysis: {
@@ -157,14 +114,5 @@ export class SourceFileAnalyzer {
             functions: new Map(),
             types: new Map(),
         };
-    }
-
-    private async initializeImportResolver(rootDir: string): Promise<void> {
-        const resolver = await getLanguageResolver(rootDir);
-        if (!resolver) {
-            return;
-        }
-        this.importPathResolver = resolver;
-        await resolver.initialize();
     }
 }

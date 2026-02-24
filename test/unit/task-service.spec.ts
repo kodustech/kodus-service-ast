@@ -1,13 +1,20 @@
 // Teste unitário para TaskService
 // Demonstra como testar services do NestJS
 
-import { TaskService } from '@/core/application/services/task/task.service.js';
+import {
+    TASK_JOB_DISPATCHER,
+    TaskService,
+    type ITaskJobDispatcher,
+} from '@/core/application/services/task/task.service.js';
+import { TASK_MANAGER_TOKEN } from '@/core/domain/task/contracts/task-manager.contract.js';
+import { TaskPersistenceService } from '@/core/infrastructure/persistence/task/task-persistence.service.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 describe('TaskService', () => {
     let service: TaskService;
     let mockTaskManager: any;
-    let mockTaskDispatcher: any;
+    let mockTaskDispatcher: jest.Mocked<ITaskJobDispatcher>;
+    let mockTaskPersistence: any;
 
     beforeEach(async () => {
         // Criar mocks para as dependências
@@ -19,16 +26,24 @@ describe('TaskService', () => {
             dispatch: jest.fn(),
         };
 
+        mockTaskPersistence = {
+            getTaskResult: jest.fn(),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 TaskService,
                 {
-                    provide: 'ITaskManagerService', // Mesmo token usado no service
+                    provide: TASK_MANAGER_TOKEN,
                     useValue: mockTaskManager,
                 },
                 {
-                    provide: 'TASK_JOB_DISPATCHER',
+                    provide: TASK_JOB_DISPATCHER,
                     useValue: mockTaskDispatcher,
+                },
+                {
+                    provide: TaskPersistenceService,
+                    useValue: mockTaskPersistence,
                 },
             ],
         }).compile();
@@ -45,8 +60,8 @@ describe('TaskService', () => {
             // Arrange
             const taskId = 'test-task-123';
             const mockInput = {
-                type: 'AST_INITIALIZE_REPOSITORY',
-                payload: { repoName: 'test' },
+                type: 'AST_INITIALIZE_DIFF_ANALYSIS',
+                payload: { files: [{ id: '1', filePath: '/a.ts' }] },
                 priority: 1,
             };
 
@@ -60,8 +75,8 @@ describe('TaskService', () => {
             expect(mockTaskManager.createTask).toHaveBeenCalledWith(1); // priority
             expect(mockTaskDispatcher.dispatch).toHaveBeenCalledWith({
                 taskId,
-                type: 'AST_INITIALIZE_REPOSITORY',
-                payload: { repoName: 'test' },
+                type: 'AST_INITIALIZE_DIFF_ANALYSIS',
+                payload: { files: [{ id: '1', filePath: '/a.ts' }] },
                 priority: 1,
                 metadata: undefined,
             });
@@ -73,8 +88,8 @@ describe('TaskService', () => {
             mockTaskManager.createTask.mockRejectedValue(error);
 
             const mockInput = {
-                type: 'AST_INITIALIZE_REPOSITORY',
-                payload: { repoName: 'test' },
+                type: 'AST_INITIALIZE_DIFF_ANALYSIS',
+                payload: { files: [{ id: '1', filePath: '/a.ts' }] },
             };
 
             // Act & Assert
@@ -92,8 +107,8 @@ describe('TaskService', () => {
             mockTaskManager.createTask.mockResolvedValue(taskId);
 
             const mockInput = {
-                type: 'AST_INITIALIZE_REPOSITORY',
-                payload: { repoName: 'test' },
+                type: 'AST_INITIALIZE_DIFF_ANALYSIS',
+                payload: { files: [{ id: '1', filePath: '/a.ts' }] },
                 metadata,
             };
 

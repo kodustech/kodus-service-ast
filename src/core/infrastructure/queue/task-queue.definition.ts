@@ -20,14 +20,9 @@ export interface TaskQueueMessage<TPayload = unknown> {
 
 export const TASK_QUEUE_BINDINGS: ReadonlyArray<QueueBinding> = [
     {
-        type: 'AST_INITIALIZE_REPOSITORY',
-        queue: QUEUE_CONFIG.REPO_QUEUE,
-        routingKey: QUEUE_CONFIG.REPO_ROUTING_KEY,
-    },
-    {
-        type: 'AST_INITIALIZE_IMPACT_ANALYSIS',
-        queue: QUEUE_CONFIG.IMPACT_QUEUE,
-        routingKey: QUEUE_CONFIG.IMPACT_ROUTING_KEY,
+        type: 'AST_INITIALIZE_DIFF_ANALYSIS',
+        queue: QUEUE_CONFIG.DIFF_QUEUE,
+        routingKey: QUEUE_CONFIG.DIFF_ROUTING_KEY,
     },
     {
         type: 'AST_VALIDATE_CODE',

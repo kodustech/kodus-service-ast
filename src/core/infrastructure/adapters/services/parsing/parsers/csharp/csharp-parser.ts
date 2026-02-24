@@ -1,15 +1,18 @@
-import { type Language, type SyntaxNode } from 'tree-sitter';
-import { BaseParser } from '../base-parser.js';
-import * as CSharpLang from 'tree-sitter-c-sharp';
-import { cSharpQueries } from './csharp-queries.js';
-import { type ParserQuery, type QueryType } from '../query.js';
-import { findNamedChildByType } from '@/shared/utils/ast-helpers.js';
 import {
     ChainType,
     type CallChain,
 } from '@/core/domain/parsing/types/parser.js';
-import { NodeType, type Scope } from '@/shared/types/ast.js';
 import { SUPPORTED_LANGUAGES } from '@/core/domain/parsing/types/supported-languages.js';
+import { NodeType, type Scope } from '@/shared/types/ast.js';
+import { findNamedChildByType } from '@/shared/utils/ast-helpers.js';
+import { createRequire } from 'module';
+import { type Language, type SyntaxNode } from 'tree-sitter';
+import { BaseParser } from '../base-parser.js';
+import { type ParserQuery, type QueryType } from '../query.js';
+import { cSharpQueries } from './csharp-queries.js';
+const require = createRequire(import.meta.url);
+const TreeSitterCSharp = require('tree-sitter-c-sharp');
+const CSharpLang = TreeSitterCSharp;
 
 export class CSharpParser extends BaseParser {
     private static readonly language = CSharpLang as Language;

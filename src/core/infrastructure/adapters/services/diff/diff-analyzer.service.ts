@@ -3,15 +3,10 @@ import {
     DiffHunk,
     ExtendedFunctionInfo,
 } from '@/core/domain/diff/types/diff-analyzer.types.js';
-import { LanguageResolver } from '@/core/domain/parsing/contracts/language-resolver.contract.js';
 import {
     getLanguageConfigForFilePath,
     LanguageConfig,
 } from '@/core/domain/parsing/types/supported-languages.js';
-import {
-    REPOSITORY_MANAGER_TOKEN,
-    type IRepositoryManager,
-} from '@/core/domain/repository/contracts/repository-manager.contract.js';
 import {
     EnrichedGraphEdge,
     EnrichedGraphNode,
@@ -21,13 +16,11 @@ import {
     Point,
     Range,
     RelationshipType,
-    RepositoryData,
 } from '@/shared/types/ast.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { parsePatch } from 'diff';
 import * as path from 'path';
 import { PinoLoggerService } from '../logger/pino.service.js';
-import { getLanguageResolver } from '../parsing/resolvers/index.js';
 
 enum RelatedNodeDirection {
     TO,
@@ -38,8 +31,6 @@ enum RelatedNodeDirection {
 @Injectable()
 export class DiffAnalyzerService {
     constructor(
-        @Inject(REPOSITORY_MANAGER_TOKEN)
-        private readonly repositoryManagerService: IRepositoryManager,
         @Inject(PinoLoggerService)
         private readonly logger: PinoLoggerService,
     ) {}
@@ -48,20 +39,27 @@ export class DiffAnalyzerService {
         filePath: string,
         diff: string,
         graphs: GetGraphsResponseData,
-        repoData: RepositoryData,
         taskId: string,
+        fileContent: string,
     ): Promise<string> {
+        const analysisStart = performance.now();
+
         this.logger.log({
             context: DiffAnalyzerService.name,
             message: `Getting relevant content for file`,
-            metadata: { filePath, taskId },
+            metadata: {
+                filePath,
+                taskId,
+                diffChars: diff?.length ?? 0,
+                contentChars: fileContent?.length ?? 0,
+            },
             serviceName: DiffAnalyzerService.name,
         });
 
-        if (!filePath || filePath.length === 0 || !path.isAbsolute(filePath)) {
+        if (!filePath || filePath.length === 0) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
-                message: `File path not provided or is not absolute: ${filePath}`,
+                message: `File path not provided: ${filePath}`,
                 metadata: { filePath },
                 serviceName: DiffAnalyzerService.name,
             });
@@ -79,22 +77,11 @@ export class DiffAnalyzerService {
             return '';
         }
 
-        const absoluteRootDir = graphs.headGraph.dir;
-        const resolver = await getLanguageResolver(absoluteRootDir);
-        if (!resolver) {
-            this.logger.error({
-                context: DiffAnalyzerService.name,
-                message: `No language resolver found for directory: ${absoluteRootDir}`,
-                metadata: { filePath },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return '';
-        }
-        await resolver.initialize();
-
         const metadata = {
             filePath: filePath || 'unknown',
             diff: diff ? diff.slice(0, 100) : 'no diff provided',
+            diffChars: diff?.length ?? 0,
+            contentChars: fileContent?.length ?? 0,
         };
 
         try {
@@ -108,23 +95,7 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const mainFileContent =
-                await this.repositoryManagerService.readFile({
-                    repoData,
-                    filePath,
-                    taskId,
-                    absolute: true,
-                });
-
-            if (!mainFileContent) {
-                this.logger.error({
-                    context: DiffAnalyzerService.name,
-                    message: `No content found for file ${filePath}`,
-                    metadata,
-                    serviceName: DiffAnalyzerService.name,
-                });
-                return '';
-            }
+            const mainFileContent = fileContent;
 
             const ranges = this.getModifiedRanges(diff, mainFileContent);
             if (ranges.length === 0) {
@@ -137,16 +108,38 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const mainFileNodes = this.getFileNodes(graphs, filePath);
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Modified ranges resolved',
+                metadata: {
+                    taskId,
+                    filePath,
+                    rangesCount: ranges.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
+            const mainFileNodes = this.getGraphNodes(graphs, filePath);
             if (mainFileNodes.length === 0) {
                 this.logger.warn({
                     context: DiffAnalyzerService.name,
-                    message: `No file nodes found for ${filePath}`,
+                    message: 'No graph nodes found for analysis',
                     metadata,
                     serviceName: DiffAnalyzerService.name,
                 });
                 return '';
             }
+
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'File-scoped graph nodes resolved',
+                metadata: {
+                    taskId,
+                    filePath,
+                    nodesCount: mainFileNodes.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
 
             const mainNodes = this.getNodesForRanges(mainFileNodes, ranges);
             if (mainNodes.length === 0) {
@@ -159,7 +152,19 @@ export class DiffAnalyzerService {
                 return '';
             }
 
-            const relationships = graphs.enrichHeadGraph.relationships;
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Primary nodes selected for modified ranges',
+                metadata: {
+                    taskId,
+                    filePath,
+                    mainNodesCount: mainNodes.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
+            const relationships = graphs.enrichedGraph.relationships;
+
             const withRelated = mainNodes.flatMap((node) => {
                 let direction = RelatedNodeDirection.BOTH;
                 if (node.type !== NodeType.NODE_TYPE_FUNCTION) {
@@ -167,7 +172,7 @@ export class DiffAnalyzerService {
                 }
 
                 const relatedNodes = this.getRelatedNodes(
-                    graphs.enrichHeadGraph.nodes,
+                    mainFileNodes,
                     relationships,
                     node,
                     filePath,
@@ -179,125 +184,61 @@ export class DiffAnalyzerService {
                 return [...relatedNodes, node];
             });
 
-            const groupedByFilePath = withRelated.reduce(
-                (accumulator, node) => {
-                    const key = node.filePath;
-
-                    if (!accumulator[key]) {
-                        accumulator[key] = [];
-                    }
-
-                    accumulator[key].push(node);
-
-                    return accumulator;
-                },
-                {} as Record<string, EnrichedGraphNode[]>,
+            const nodesRanges = withRelated.flatMap((node) =>
+                this.getNodeRanges(
+                    node,
+                    mainFileNodes,
+                    relationships,
+                    mainFileContent,
+                    filePath,
+                    languageConfig,
+                ),
             );
 
-            for (const [file] of Object.entries(groupedByFilePath)) {
-                if (file === filePath) {
-                    continue;
-                }
+            const mergedRanges = this.mergeRanges(nodesRanges);
 
-                const fileNodes = this.getFileNodes(graphs, file);
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Final content ranges prepared',
+                metadata: {
+                    taskId,
+                    filePath,
+                    relatedNodesCount: withRelated.length,
+                    rawRangesCount: nodesRanges.length,
+                    mergedRangesCount: mergedRanges.length,
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
 
-                if (fileNodes.length === 0) {
-                    this.logger.warn({
-                        context: DiffAnalyzerService.name,
-                        message: `No nodes found for file ${file}`,
-                        metadata,
-                        serviceName: DiffAnalyzerService.name,
-                    });
-                    continue;
-                }
-
-                const importNodes = this.getImportNodes(
-                    resolver,
-                    fileNodes,
-                    file,
-                    absoluteRootDir,
-                    [filePath],
-                );
-
-                groupedByFilePath[file].push(...importNodes);
-            }
-
-            const result: string[] = [];
-            for (const [file, nodes] of Object.entries(groupedByFilePath)) {
-                let fileContent: string | null;
-
-                if (file === filePath) {
-                    fileContent = mainFileContent;
-                } else {
-                    // If the node is from a different file, read that file's content
-                    fileContent = await this.repositoryManagerService.readFile({
-                        repoData,
-                        filePath: file,
-                        taskId,
-                        absolute: true,
-                    });
-                }
-
-                if (!fileContent) {
-                    this.logger.warn({
-                        context: DiffAnalyzerService.name,
-                        message: `No content found for file ${file}`,
-                        metadata,
-                        serviceName: DiffAnalyzerService.name,
-                    });
-                    continue;
-                }
-
-                let fileNodes: EnrichedGraphNode[];
-                if (file === filePath) {
-                    // Use the main file nodes if it's the same file
-                    fileNodes = mainFileNodes;
-                } else {
-                    // Otherwise, get the nodes for the other file
-                    fileNodes = this.getFileNodes(graphs, file);
-                }
-
-                const nodesRanges = nodes.flatMap((node) =>
-                    this.getNodeRanges(
-                        node,
-                        fileNodes,
-                        relationships,
-                        fileContent,
-                        file,
-                        languageConfig,
-                    ),
-                );
-
-                const mergedRanges = this.mergeRanges(nodesRanges);
-
-                const rangeContent = this.contentFromRanges(
-                    fileContent,
-                    mergedRanges,
-                    languageConfig,
-                );
-
-                const relativeFilePath = this.relativizePath(
-                    absoluteRootDir,
-                    file,
-                );
-
-                result.push(`<-- ${relativeFilePath} -->\n${rangeContent}`);
-            }
+            const rangeContent = this.contentFromRanges(
+                mainFileContent,
+                mergedRanges,
+                languageConfig,
+            );
 
             this.logger.log({
                 context: DiffAnalyzerService.name,
                 message: `Relevant content obtained`,
-                metadata: { taskId, ...metadata },
+                metadata: {
+                    taskId,
+                    ...metadata,
+                    outputChars: rangeContent.length,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
                 serviceName: DiffAnalyzerService.name,
             });
 
-            return result.join('\n\n');
+            return rangeContent;
         } catch (error) {
             this.logger.error({
                 context: DiffAnalyzerService.name,
                 message: `Failed to get relevant content`,
                 error,
-                metadata: { taskId, ...metadata },
+                metadata: {
+                    taskId,
+                    ...metadata,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
                 serviceName: DiffAnalyzerService.name,
             });
             return '';
@@ -662,6 +603,8 @@ export class DiffAnalyzerService {
             baseFilePath: string;
         },
     ): ChangeResult {
+        const analysisStart = performance.now();
+
         const result: ChangeResult = {
             added: [],
             modified: [],
@@ -740,9 +683,36 @@ export class DiffAnalyzerService {
                 }
             }
 
+            this.logger.debug({
+                context: DiffAnalyzerService.name,
+                message: 'Diff function analysis completed',
+                metadata: {
+                    prFilePath: prContent.prFilePath,
+                    baseFilePath: baseContent.baseFilePath,
+                    hunksCount: hunks.length,
+                    prFunctionsCount: prFunctions.length,
+                    baseFunctionsCount: baseFunctions.length,
+                    addedCount: result.added.length,
+                    modifiedCount: result.modified.length,
+                    deletedCount: result.deleted.length,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
+
             return result;
         } catch (error) {
-            console.error('Error analyzing diff:', error);
+            this.logger.error({
+                context: DiffAnalyzerService.name,
+                message: 'Error analyzing diff',
+                error,
+                metadata: {
+                    prFilePath: prContent.prFilePath,
+                    baseFilePath: baseContent.baseFilePath,
+                    durationMs: Math.round(performance.now() - analysisStart),
+                },
+                serviceName: DiffAnalyzerService.name,
+            });
             return result;
         }
     }
@@ -829,22 +799,21 @@ export class DiffAnalyzerService {
         return isOverlapping && hasRealChanges;
     }
 
-    private getFileNodes(
+    private getGraphNodes(
         graphs: GetGraphsResponseData,
         filePath: string,
     ): EnrichedGraphNode[] {
-        if (!graphs || !graphs.enrichHeadGraph) {
+        if (!graphs || !graphs.enrichedGraph) {
             this.logger.warn({
                 context: DiffAnalyzerService.name,
                 message: `Graphs not provided or invalid`,
-                metadata: { filePath },
                 serviceName: DiffAnalyzerService.name,
             });
             return [];
         }
 
-        return graphs.enrichHeadGraph.nodes.filter((node) =>
-            node.filePath.includes(filePath),
+        return graphs.enrichedGraph.nodes.filter(
+            (node) => node.filePath === filePath,
         );
     }
 
@@ -874,11 +843,13 @@ export class DiffAnalyzerService {
             // Pick the smallest node (by range size)
             const smallestNode = containingNodes.reduce((min, curr) => {
                 const minSize =
-                    min?.position?.endIndex && min?.position?.startIndex
+                    min?.position?.endIndex !== undefined &&
+                    min?.position?.startIndex !== undefined
                         ? min.position.endIndex - min.position.startIndex
                         : 0;
                 const currSize =
-                    curr?.position?.endIndex && curr?.position?.startIndex
+                    curr?.position?.endIndex !== undefined &&
+                    curr?.position?.startIndex !== undefined
                         ? curr.position.endIndex - curr.position.startIndex
                         : 0;
                 return currSize < minSize ? curr : min;
@@ -985,49 +956,14 @@ export class DiffAnalyzerService {
                 if (!node) {
                     return false;
                 }
+                if (node.filePath !== filePath) {
+                    return false;
+                }
                 if (nodeTypeFilter.length === 0) {
                     return true;
                 }
                 return nodeTypeFilter.includes(node.type);
             });
-
-        const otherFileFunctions = relatedNodes.filter(
-            (n: EnrichedGraphNode | null) =>
-                n &&
-                n.filePath !== filePath &&
-                n.type === NodeType.NODE_TYPE_FUNCTION,
-        );
-
-        const otherFileFunctionsClass = relations
-            .filter((relation) => {
-                // filter relations that connect functions to classes in other files
-                return (
-                    relation.type ===
-                        RelationshipType.RELATIONSHIP_TYPE_HAS_METHOD &&
-                    otherFileFunctions.some(
-                        (f: EnrichedGraphNode | null) =>
-                            f && f.id === relation.to,
-                    )
-                );
-            })
-            .map((relation) => {
-                // find the class node in the file nodes
-                const classNode = fileNodes.find(
-                    (n) =>
-                        n.id === relation.from &&
-                        n.type === NodeType.NODE_TYPE_CLASS,
-                );
-
-                return classNode || null;
-            })
-            .filter((n: EnrichedGraphNode | null) => n !== null);
-
-        // Combine related nodes from the same file and classes from other files
-        relatedNodes.push(
-            ...otherFileFunctionsClass.filter(
-                (node): node is EnrichedGraphNode => node !== null,
-            ),
-        );
 
         return relatedNodes;
     }
@@ -1038,63 +974,5 @@ export class DiffAnalyzerService {
         const row = lines.length - 1;
         const column = lines[lines.length - 1].length;
         return { row, column };
-    }
-
-    private getImportNodes(
-        resolver: LanguageResolver,
-        fileNodes: EnrichedGraphNode[],
-        fromFile: string,
-        rootDir: string,
-        paths: string[],
-    ): EnrichedGraphNode[] {
-        if (!fileNodes || !paths || paths.length === 0) {
-            this.logger.warn({
-                context: DiffAnalyzerService.name,
-                message: `Invalid input for getting import nodes`,
-                metadata: { fileNodes, paths },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return [];
-        }
-
-        return fileNodes.filter((node) => {
-            if (node.type !== NodeType.NODE_TYPE_IMPORT) {
-                return false;
-            }
-
-            const resolvedPath = resolver.resolveImport(
-                { origin: node.name, imported: [] },
-                fromFile,
-            );
-
-            if (!resolvedPath.normalizedPath.startsWith(rootDir)) {
-                return false;
-            }
-
-            return paths.some((path) =>
-                resolvedPath.normalizedPath.includes(path),
-            );
-        });
-    }
-
-    private relativizePath(
-        absoluteRootDir: string,
-        absoluteFilePath: string,
-    ): string {
-        if (!absoluteRootDir || !absoluteFilePath) {
-            this.logger.warn({
-                context: DiffAnalyzerService.name,
-                message: `Invalid paths for relativization`,
-                metadata: { absoluteRootDir, absoluteFilePath },
-                serviceName: DiffAnalyzerService.name,
-            });
-            return absoluteFilePath;
-        }
-
-        // Ensure the root directory ends with a separator
-        const normalizedRoot = path.normalize(absoluteRootDir);
-        const normalizedFile = path.normalize(absoluteFilePath);
-
-        return path.relative(normalizedRoot, normalizedFile);
     }
 }

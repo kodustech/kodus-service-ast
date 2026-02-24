@@ -1,12 +1,12 @@
 // queue.module.api.ts (ajustado)
-import { Module } from '@nestjs/common';
+import { TASK_JOB_DISPATCHER } from '@/core/application/services/task/task.service.js';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { Module } from '@nestjs/common';
 import { QueueConfigModule } from './queue-config.module.js';
 import { QUEUE_CONFIG } from './queue.constants.js';
-import { RABBITMQ_CONFIG } from './rabbit.constants.js';
-import type { RabbitMqConfig } from './rabbit.config.js';
 import { RabbitTaskDispatcher } from './rabbit-task-dispatcher.service.js';
-import { TASK_JOB_DISPATCHER } from '@/core/application/services/task/task.service.js';
+import type { RabbitMqConfig } from './rabbit.config.js';
+import { RABBITMQ_CONFIG } from './rabbit.constants.js';
 
 @Module({
     imports: [

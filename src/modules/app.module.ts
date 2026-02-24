@@ -11,7 +11,6 @@ import { RequestLoggerInterceptor } from '../core/infrastructure/http/intercepto
 import { ASTModule } from './ast.module.js';
 import { HealthModule } from './health.module.js';
 import { LogModule } from './log.module.js';
-import { LspModule } from './lsp.module.js';
 import { TaskModule } from './task.module.js';
 
 @Module({
@@ -24,7 +23,6 @@ import { TaskModule } from './task.module.js';
         HealthModule,
         TaskModule,
         ASTModule.forApi(), // API context with all use cases
-        LspModule.forApi(),
 
         // External integrations
         QueueModuleApi,

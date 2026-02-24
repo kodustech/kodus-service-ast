@@ -74,30 +74,21 @@ const runtime = getQueueRuntimeConfig();
                               },
                               // Queues de Tasks
                               {
-                                  name: QUEUE_CONFIG.REPO_ROUTING_KEY,
+                                  name: QUEUE_CONFIG.DIFF_ROUTING_KEY,
                                   options: buildTaskQueueOptions({
-                                      enableSingleActiveConsumer: true,
+                                      enableSingleActiveConsumer:
+                                          runtime.enableSingleActiveConsumer,
                                   }),
                                   bindToExchange: {
                                       exchange: QUEUE_CONFIG.EXCHANGE,
-                                      routingKey: QUEUE_CONFIG.REPO_ROUTING_KEY,
-                                  },
-                              },
-                              {
-                                  name: QUEUE_CONFIG.IMPACT_ROUTING_KEY,
-                                  options: buildTaskQueueOptions({
-                                      enableSingleActiveConsumer: true,
-                                  }),
-                                  bindToExchange: {
-                                      exchange: QUEUE_CONFIG.EXCHANGE,
-                                      routingKey:
-                                          QUEUE_CONFIG.IMPACT_ROUTING_KEY,
+                                      routingKey: QUEUE_CONFIG.DIFF_ROUTING_KEY,
                                   },
                               },
                               {
                                   name: QUEUE_CONFIG.VALIDATE_CODE_ROUTING_KEY,
                                   options: buildTaskQueueOptions({
-                                      enableSingleActiveConsumer: true,
+                                      enableSingleActiveConsumer:
+                                          runtime.enableSingleActiveConsumer,
                                   }),
                                   bindToExchange: {
                                       exchange: QUEUE_CONFIG.EXCHANGE,

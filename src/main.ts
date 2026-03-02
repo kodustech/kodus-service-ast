@@ -2,6 +2,7 @@ import './shared/utils/env-loader.js';
 import { NestFactory } from '@nestjs/core';
 import { RequestMethod } from '@nestjs/common';
 import {
+    getEnvVariableAsNumber,
     getEnvVariableAsNumberOrExit,
     getEnvVariableOrExit,
 } from './shared/utils/env.js';
@@ -18,13 +19,15 @@ PinoLoggerService.setupBootstrapErrorHandlers(bootstrapLogger);
 
 async function bootstrap() {
     const containerName = getEnvVariableOrExit('CONTAINER_NAME');
-    const apiPort = getEnvVariableAsNumberOrExit('API_PORT');
+    const apiPort =
+        getEnvVariableAsNumber('AST_PORT') ??
+        getEnvVariableAsNumberOrExit('API_PORT');
 
     /* ------------ validação simples de intervalo ---------------- */
     if (apiPort < 1 || apiPort > 65535) {
         bootstrapLogger.error(
             { containerName, apiPort },
-            'API_PORT must be a value between 1 and 65535',
+            'AST_PORT/API_PORT must be a value between 1 and 65535',
         );
         process.exit(1);
     }

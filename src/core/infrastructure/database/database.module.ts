@@ -69,9 +69,28 @@ const DEFAULT_SCHEMA = 'kodus_workflow';
                 const isDevelopment =
                     databaseEnv === 'development' || databaseEnv === 'local';
 
-                // Lógica simples: SSL baseado no ambiente
-                const useSSL = !isDevelopment; // DEV = false, PROD = true
-                const rejectUnauthorized = isDevelopment; // DEV = false, PROD = true
+                // SSL: explicit env vars take precedence over environment-based detection
+                const dbSSLEnv = getEnvVariable('DB_SSL');
+                const disableSSLEnv = getEnvVariable(
+                    'API_DATABASE_DISABLE_SSL',
+                );
+
+                let useSSL: boolean;
+                if (dbSSLEnv !== undefined) {
+                    useSSL = dbSSLEnv.toLowerCase() !== 'false';
+                } else if (disableSSLEnv !== undefined) {
+                    useSSL = disableSSLEnv.toLowerCase() !== 'true';
+                } else {
+                    useSSL = !isDevelopment;
+                }
+
+                const rejectUnauthorizedEnv = getEnvVariable(
+                    'DB_SSL_REJECT_UNAUTHORIZED',
+                );
+                const rejectUnauthorized =
+                    rejectUnauthorizedEnv !== undefined
+                        ? rejectUnauthorizedEnv.toLowerCase() !== 'false'
+                        : !isDevelopment;
 
                 const poolConfig = url
                     ? {

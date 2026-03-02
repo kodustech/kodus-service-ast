@@ -13,15 +13,21 @@ interface LogArguments {
 }
 
 const isProduction =
-    (process.env.API_NODE_ENV || 'production') === 'production';
-const shouldPrettyPrint = (process.env.API_LOG_PRETTY || 'false') === 'true';
+    (process.env.AST_NODE_ENV || process.env.API_NODE_ENV || 'production') ===
+    'production';
+const shouldPrettyPrint =
+    (process.env.AST_LOG_PRETTY || process.env.API_LOG_PRETTY || 'false') ===
+    'true';
 
 @Injectable()
 export class PinoLoggerService implements LoggerService {
     private static handlersRegistered = false;
 
     private baseLogger = pino({
-        level: process.env.API_LOG_LEVEL || 'info',
+        level:
+            process.env.AST_LOG_LEVEL ||
+            process.env.API_LOG_LEVEL ||
+            'info',
         base: {
             instance: process.env.NODE_APP_INSTANCE ?? '0',
             pid: false, // Not useful in containers/ECS - PID changes on restart
@@ -141,7 +147,10 @@ export class PinoLoggerService implements LoggerService {
      */
     public static createBootstrapLogger(): pino.Logger {
         return pino({
-            level: process.env.API_LOG_LEVEL || 'info',
+            level:
+                process.env.AST_LOG_LEVEL ||
+                process.env.API_LOG_LEVEL ||
+                'info',
             base: {
                 instance: process.env.NODE_APP_INSTANCE ?? '0',
             },
@@ -301,7 +310,10 @@ export class PinoLoggerService implements LoggerService {
         }
 
         return {
-            environment: process.env.API_NODE_ENV || 'unknown',
+            environment:
+                process.env.AST_NODE_ENV ||
+                process.env.API_NODE_ENV ||
+                'unknown',
             serviceName: serviceName ?? 'UnknownService',
             context,
             ...(Object.keys(metadata).length > 0 ? { metadata } : {}),

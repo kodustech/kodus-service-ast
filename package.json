@@ -51,7 +51,7 @@
         "@langchain/mongodb": "^1.1.0",
         "@langchain/openai": "^1.2.7",
         "@nestjs/common": "^11.1.13",
-        "@nestjs/core": "^11.1.13",
+        "@nestjs/core": "^11.1.18",
         "@nestjs/platform-express": "^11.1.13",
         "@nestjs/schedule": "^6.1.1",
         "@nestjs/terminus": "^11.0.0",
